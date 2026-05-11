@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import type { ThemeMode } from '../../hooks';
 
 export interface FlowToolbarProps {
   canUndo?: boolean;
@@ -14,6 +15,7 @@ export interface FlowToolbarProps {
   isPaused?: boolean;
   hasFlow?: boolean;
   flowName?: string;
+  themeMode?: ThemeMode;
   onSave?: () => void;
   onLoad?: () => void;
   onUndo?: () => void;
@@ -23,6 +25,7 @@ export interface FlowToolbarProps {
   onStop?: () => void;
   onStep?: () => void;
   onNew?: () => void;
+  onToggleTheme?: () => void;
 }
 
 /**
@@ -36,6 +39,7 @@ export function FlowToolbar({
   isPaused = false,
   hasFlow = false,
   flowName,
+  themeMode = 'auto',
   onSave,
   onLoad,
   onUndo,
@@ -45,9 +49,27 @@ export function FlowToolbar({
   onStop,
   onStep,
   onNew,
+  onToggleTheme,
 }: FlowToolbarProps) {
   // UX优化41: 添加快捷键帮助弹窗
   const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // UX优化103: 主题图标
+  const getThemeIcon = () => {
+    switch (themeMode) {
+      case 'light': return '☀️';
+      case 'dark': return '🌙';
+      case 'auto': return '🔄';
+    }
+  };
+
+  const getThemeTitle = () => {
+    switch (themeMode) {
+      case 'light': return '当前: 亮色主题 (点击切换)';
+      case 'dark': return '当前: 暗色主题 (点击切换)';
+      case 'auto': return '当前: 跟随系统 (点击切换)';
+    }
+  };
 
   return (
     <div className="flow-toolbar" data-testid="flow-toolbar" role="toolbar" aria-label="流程编辑工具栏">
@@ -180,6 +202,17 @@ export function FlowToolbar({
 
       {/* Help Group - UX优化41: 增强快捷键帮助 */}
       <div className="flow-toolbar__group flow-toolbar__group--help" role="group" aria-label="帮助">
+        {/* UX优化103: 主题切换按钮 */}
+        <button
+          className="flow-toolbar__btn flow-toolbar__btn--theme"
+          onClick={onToggleTheme}
+          title={getThemeTitle()}
+          data-testid="btn-theme"
+          type="button"
+          aria-label="切换主题"
+        >
+          {getThemeIcon()}
+        </button>
         <button
           className="flow-toolbar__btn flow-toolbar__btn--help"
           onClick={() => setShowShortcuts(!showShortcuts)}

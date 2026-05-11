@@ -7,10 +7,13 @@ import { ExecutionBar, ExecutionLog, executionEventToLogEntry } from './componen
 import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
 import { ToastProvider, useToast } from './components/common';
-import { useFlow, useExecution, useKeyboardShortcuts } from './hooks';
+import { useFlow, useExecution, useKeyboardShortcuts, useTheme } from './hooks';
 import type { BlockConfig as BlockConfigType } from './tauri/flow';
 
 function AppContent() {
+  // UX优化103: 主题管理
+  const { mode: themeMode, toggleTheme } = useTheme();
+
   const {
     flow,
     nodes,
@@ -266,6 +269,7 @@ function AppContent() {
         isPaused={isPaused}
         hasFlow={hasFlow}
         flowName={flow?.name}
+        themeMode={themeMode}
         onSave={handleSave}
         onLoad={handleLoad}
         onUndo={handleUndo}
@@ -275,6 +279,7 @@ function AppContent() {
         onStop={handleStop}
         onStep={handleStep}
         onNew={handleNewFlow}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Content */}

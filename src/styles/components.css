@@ -4280,3 +4280,851 @@
   }
 }
 
+
+.shortcuts-panel__section h5 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shortcuts-panel__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) 0;
+  font-size: var(--font-size-xs);
+}
+
+.shortcuts-panel__keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shortcuts-panel__keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+
+/* Status Bar Enhancements - UX优化42-44 */
+.app__status-item--stats {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.app__status-item--autosave {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+}
+
+.app__status-item--loading {
+  color: var(--color-warning, #ffc107);
+  font-size: var(--font-size-xs);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.app__status-item--error {
+  color: var(--color-danger);
+  font-size: var(--font-size-xs);
+}
+
+/* Config Validation States - UX优化45 */
+.block-config__input--invalid {
+  border-color: var(--color-danger);
+  background: rgba(220, 53, 69, 0.05);
+}
+
+.block-config__input--invalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+.block-config__validation-error {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+
+/* Enhanced Scrollbars - UX优化46 */
+.toolbox__content::-webkit-scrollbar,
+.block-config__content::-webkit-scrollbar,
+.execution-log__content::-webkit-scrollbar,
+.flow-list-modal__list::-webkit-scrollbar,
+.shortcuts-panel__content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.toolbox__content::-webkit-scrollbar-track,
+.block-config__content::-webkit-scrollbar-track,
+.execution-log__content::-webkit-scrollbar-track,
+.flow-list-modal__list::-webkit-scrollbar-track,
+.shortcuts-panel__content::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+  border-radius: 4px;
+}
+
+.toolbox__content::-webkit-scrollbar-thumb,
+.block-config__content::-webkit-scrollbar-thumb,
+.execution-log__content::-webkit-scrollbar-thumb,
+.flow-list-modal__list::-webkit-scrollbar-thumb,
+.shortcuts-panel__content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.toolbox__content::-webkit-scrollbar-thumb:hover,
+.block-config__content::-webkit-scrollbar-thumb:hover,
+.execution-log__content::-webkit-scrollbar-thumb:hover,
+.flow-list-modal__list::-webkit-scrollbar-thumb:hover,
+.shortcuts-panel__content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Drag Preview - UX优化47 */
+.block-drag-preview {
+  position: fixed;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0.9;
+  transform: translate(-50%, -50%);
+}
+
+/* Node Tooltips - UX优化61 */
+.block-node__tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast);
+  z-index: 100;
+}
+
+.block-node:hover .block-node__tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Entry Point Badge - UX优化62 */
+.block-node__entry-badge {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-success);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  border: 2px solid var(--color-bg-primary);
+}
+
+/* Disabled State Styles - UX优化64 */
+.block-node--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.block-node--disabled .block-node__header,
+.block-node--disabled .block-node__content {
+  pointer-events: none;
+}
+
+/* Image Preview Modal - UX优化65 */
+.image-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease;
+}
+
+.image-preview-modal__content {
+  max-width: 90%;
+  max-height: 90%;
+  position: relative;
+}
+
+.image-preview-modal__image {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.image-preview-modal__close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.image-preview-modal__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.image-preview-modal__info {
+  position: absolute;
+  bottom: -40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: var(--font-size-sm);
+}
+
+/* Connection Animation - UX优化66 */
+.block-connection--active {
+  stroke: var(--color-success);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px var(--color-success));
+}
+
+/* Log Filter/Search - UX优化81 */
+.execution-log__filter {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.execution-log__filter-btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.execution-log__filter-btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.execution-log__filter-btn--active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.execution-log__search {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-primary);
+}
+
+.execution-log__search:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+/* Color Legend - UX优化83 */
+.color-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.color-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.color-legend__color {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+
+/* Execution Timeline - UX优化84 */
+.execution-timeline {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--spacing-xs);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.execution-timeline__item {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.execution-timeline__item--completed {
+  background: var(--color-success);
+  color: white;
+}
+
+.execution-timeline__item--current {
+  background: var(--color-primary);
+  color: white;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.execution-timeline__item--error {
+  background: var(--color-danger);
+  color: white;
+}
+
+.execution-timeline__item--pending {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+
+/* ============================================================================
+   UX Optimization 101-120: Advanced UX Features
+   ============================================================================ */
+
+/* Dark Theme Component Overrides - UX优化101 */
+[data-theme="dark"] .flow-canvas {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+[data-theme="dark"] .block-node__header {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .react-flow__handle {
+  border-color: var(--color-bg-primary);
+}
+
+[data-theme="dark"] .react-flow__controls-button:hover {
+  background: var(--color-bg-tertiary);
+}
+
+[data-theme="dark"] .toast {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Theme Toggle Button - UX优化103 */
+.flow-toolbar__btn--theme {
+  min-width: 36px;
+  padding: var(--spacing-xs);
+}
+
+.flow-toolbar__btn--theme:hover {
+  background: var(--color-primary-light);
+}
+
+/* Focus Visible Enhancement - UX优化104 */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.block-node:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.flow-toolbar__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Skip Link - UX优化105 */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  z-index: 10000;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: var(--spacing-sm);
+}
+
+/* ARIA Live Region - UX优化106 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced Motion Support - UX优化91 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .block-connection--animated {
+    animation: none;
+  }
+  
+  .block-node--executing {
+    animation: none;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.4);
+  }
+}
+
+/* High Contrast Mode - UX优化92 */
+@media (prefers-contrast: high) {
+  :root {
+    --color-border: #000;
+    --color-text-primary: #000;
+    --color-text-secondary: #333;
+  }
+  
+  [data-theme="dark"] {
+    --color-border: #fff;
+    --color-text-primary: #fff;
+    --color-text-secondary: #ccc;
+  }
+  
+  .block-node {
+    border-width: 3px;
+  }
+  
+  .flow-toolbar__btn {
+    border-width: 2px;
+  }
+}
+
+/* Touch Target Size - UX优化93 */
+@media (pointer: coarse) {
+  .flow-toolbar__btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+  
+  .action-blocks__item,
+  .control-blocks__item {
+    min-height: 48px;
+    padding: var(--spacing-md);
+  }
+  
+  .react-flow__handle {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .context-menu__item {
+    min-height: 44px;
+  }
+}
+
+/* Print Styles - UX优化107 */
+@media print {
+  .flow-toolbar,
+  .toolbox,
+  .block-config,
+  .execution-bar,
+  .app__execution-log,
+  .toast-container {
+    display: none !important;
+  }
+  
+  .app__content {
+    display: block;
+  }
+  
+  .app__main {
+    width: 100%;
+  }
+  
+  .block-node {
+    break-inside: avoid;
+  }
+}
+
+/* Loading States Animation - UX优化108 */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-bg-tertiary) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Progress Ring - UX优化109 */
+.progress-ring {
+  width: 24px;
+  height: 24px;
+  transform: rotate(-90deg);
+}
+
+.progress-ring__circle {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--transition-normal);
+}
+
+/* Notification Badge - UX优化110 */
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--color-danger);
+  color: white;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--color-bg-primary);
+}
+
+/* Keyboard Navigation Indicator - UX优化111 */
+.keyboard-nav-active .block-node--selected {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+}
+
+/* Drag Handle Indicator - UX优化112 */
+.block-node__drag-handle {
+  position: absolute;
+  top: 50%;
+  left: -12px;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 24px;
+  background: var(--color-border);
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  cursor: grab;
+}
+
+.block-node:hover .block-node__drag-handle,
+.block-node--selected .block-node__drag-handle {
+  opacity: 1;
+}
+
+/* Zoom Level Indicator - UX优化113 */
+.zoom-indicator {
+  position: absolute;
+  bottom: var(--spacing-md);
+  left: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Mini Map - UX优化114 */
+.mini-map {
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-md);
+  width: 150px;
+  height: 100px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.mini-map__viewport {
+  position: absolute;
+  border: 2px solid var(--color-primary);
+  background: rgba(0, 160, 255, 0.1);
+  cursor: move;
+}
+
+/* Help Tooltips - UX优化115 */
+.help-tooltip {
+  position: absolute;
+  max-width: 250px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+  z-index: 1100;
+}
+
+.help-tooltip__title {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+}
+
+.help-tooltip__content {
+  color: var(--color-text-secondary);
+}
+
+/* Quick Actions Menu - UX优化116 */
+.quick-actions {
+  position: absolute;
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+}
+
+.quick-actions__btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-md);
+  transition: all var(--transition-fast);
+}
+
+.quick-actions__btn:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+}
+
+/* Status Indicator Animation - UX优化117 */
+@keyframes status-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.status-indicator--running {
+  animation: status-pulse 1.5s ease-in-out infinite;
+}
+
+/* Empty State Illustration - UX优化118 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.empty-state__icon {
+  font-size: 64px;
+  margin-bottom: var(--spacing-md);
+  opacity: 0.5;
+}
+
+.empty-state__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.empty-state__description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 300px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.empty-state__action {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.empty-state__action:hover {
+  background: var(--color-primary-hover);
+}
+
+/* Confirmation Toast - UX优化119 */
+.toast--confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.toast--confirmation__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+
+.toast--confirmation__btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.toast--confirmation__btn--primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+/* Keyboard Shortcut Toast - UX优化120 */
+.shortcut-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+}
+
+.shortcut-toast__keys {
+  display: flex;
+  gap: 2px;
+}
+
+.shortcut-toast__key {
+  padding: 2px 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* Final Touch - Smooth Transitions for Theme Changes */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* Exclude transitions for specific properties */
+.react-flow__node,
+.react-flow__edge {
+  transition: none;
+}

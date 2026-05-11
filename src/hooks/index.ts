@@ -20,3 +20,7 @@ export type {
   KeyboardShortcutHandlers, 
   UseKeyboardShortcutsOptions 
 } from './useKeyboardShortcuts';
+
+export { useTheme } from './useTheme';
+export type { ThemeMode, UseThemeReturn } from './useTheme';
+
