@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Connection } from 'reactflow';
 import './App.css';
 import './styles/index.css';
@@ -13,6 +13,12 @@ import type { BlockConfig as BlockConfigType } from './tauri/flow';
 function AppContent() {
   // UX优化103: 主题管理
   const { mode: themeMode, toggleTheme } = useTheme();
+
+  // UX优化121: 日志面板折叠状态
+  const [logCollapsed, setLogCollapsed] = useState(false);
+
+  // UX优化124: 快捷键帮助面板
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 
   const {
     flow,
@@ -259,6 +265,27 @@ function AppContent() {
     isExecuting,
   });
 
+  // UX优化124: 监听 ? 键显示快捷键帮助
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        // Only trigger if not in an input field
+        const target = e.target as HTMLElement;
+        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+          setShowShortcutHelp(prev => !prev);
+        }
+      }
+      // Escape to close modals
+      if (e.key === 'Escape') {
+        setShowShortcutHelp(false);
+        setShowFlowList(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="app">
       {/* Top Toolbar */}
@@ -399,8 +426,16 @@ function AppContent() {
       </div>
 
       {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}
-      <div className="app__execution-log">
-        <ExecutionLog entries={logEntries} maxHeight={180} />
+      <div className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}>
+        <ExecutionLog entries={logEntries} maxHeight={logCollapsed ? 40 : 180} />
+        {/* UX优化121: 折叠按钮 */}
+        <button
+          className="execution-log__collapse-btn"
+          onClick={() => setLogCollapsed(!logCollapsed)}
+          title={logCollapsed ? '展开日志' : '折叠日志'}
+        >
+          {logCollapsed ? '▲' : '▼'}
+        </button>
       </div>
 
       {/* Flow List Modal */}
@@ -461,6 +496,110 @@ function AppContent() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UX优化124: 快捷键帮助面板 */}
+      {showShortcutHelp && (
+        <div className="shortcut-cheatsheet" onClick={() => setShowShortcutHelp(false)}>
+          <div className="shortcut-cheatsheet__content" onClick={(e) => e.stopPropagation()}>
+            <div className="shortcut-cheatsheet__header">
+              <h3 className="shortcut-cheatsheet__title">⌨️ 快捷键速查</h3>
+              <button
+                className="shortcut-cheatsheet__close"
+                onClick={() => setShowShortcutHelp(false)}
+                type="button"
+              >
+                ×
+              </button>
+            </div>
+            <div className="shortcut-cheatsheet__content">
+              <div className="shortcut-cheatsheet__category">
+                <div className="shortcut-cheatsheet__category-title">📁 文件操作</div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>新建流程</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Ctrl</span>
+                    <span className="shortcut-cheatsheet__key">N</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>保存流程</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Ctrl</span>
+                    <span className="shortcut-cheatsheet__key">S</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>打开流程</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Ctrl</span>
+                    <span className="shortcut-cheatsheet__key">O</span>
+                  </div>
+                </div>
+              </div>
+              <div className="shortcut-cheatsheet__category">
+                <div className="shortcut-cheatsheet__category-title">✏️ 编辑操作</div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>撤销</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Ctrl</span>
+                    <span className="shortcut-cheatsheet__key">Z</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>重做</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Ctrl</span>
+                    <span className="shortcut-cheatsheet__key">Y</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>删除选中</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Delete</span>
+                  </div>
+                </div>
+              </div>
+              <div className="shortcut-cheatsheet__category">
+                <div className="shortcut-cheatsheet__category-title">▶️ 执行控制</div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>执行/继续</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">F5</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>停止执行</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Shift</span>
+                    <span className="shortcut-cheatsheet__key">F5</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>单步执行</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">F10</span>
+                  </div>
+                </div>
+              </div>
+              <div className="shortcut-cheatsheet__category">
+                <div className="shortcut-cheatsheet__category-title">🔧 其他</div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>显示快捷键帮助</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">?</span>
+                  </div>
+                </div>
+                <div className="shortcut-cheatsheet__item">
+                  <span>关闭弹窗</span>
+                  <div className="shortcut-cheatsheet__keys">
+                    <span className="shortcut-cheatsheet__key">Esc</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
