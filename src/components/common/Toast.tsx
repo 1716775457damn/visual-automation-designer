@@ -89,19 +89,19 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return '✓';
+        return '✅';
       case 'error':
-        return '✗';
+        return '❌';
       case 'warning':
-        return '⚠';
+        return '⚠️';
       case 'info':
       default:
-        return 'ℹ';
+        return 'ℹ️';
     }
   };
 
   return (
-    <div className={`toast toast--${toast.type}`}>
+    <div className={`toast toast--${toast.type}`} role="alert">
       <span className="toast__icon">{getIcon()}</span>
       <span className="toast__message">{toast.message}</span>
       <button

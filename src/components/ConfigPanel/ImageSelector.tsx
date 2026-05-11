@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useImageLibrary } from '../../hooks/useImageLibrary';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 export interface ImageSelectorProps {
   /** Currently selected image ID */
@@ -61,6 +62,7 @@ export function ImageSelector({
   const [isUploading, setIsUploading] = useState(false);
   const [isPasting, setIsPasting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
   // Filter images based on search query
   const filteredImages = useMemo(() => {
@@ -102,12 +104,18 @@ export function ImageSelector({
     }
   }, [pasteImageFromClipboard, onSelect]);
 
-  const handleDelete = useCallback(async (e: React.MouseEvent, imageId: string) => {
+  const handleDeleteClick = useCallback((e: React.MouseEvent, imageId: string, imageName: string) => {
     e.stopPropagation(); // Prevent selection when deleting
-    if (!confirm('确定要删除这张图片吗？')) {
-      return;
-    }
+    setDeleteConfirm({ id: imageId, name: imageName });
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteConfirm) return;
+    
+    const imageId = deleteConfirm.id;
+    setDeleteConfirm(null);
     setDeletingId(imageId);
+    
     try {
       await deleteImage(imageId);
       // If the deleted image was selected, clear selection
@@ -120,7 +128,7 @@ export function ImageSelector({
     } finally {
       setDeletingId(null);
     }
-  }, [deleteImage, selectedId, onSelect]);
+  }, [deleteConfirm, deleteImage, selectedId, onSelect]);
 
   const handleImageClick = useCallback((imageId: string) => {
     onSelect?.(imageId);
@@ -227,7 +235,7 @@ export function ImageSelector({
               {showDeleteButton && (
                 <button
                   className="image-selector__delete-btn"
-                  onClick={(e) => handleDelete(e, image.id)}
+                  onClick={(e) => handleDeleteClick(e, image.id, image.name)}
                   disabled={deletingId === image.id}
                   title="删除图片"
                   data-testid={`btn-delete-image-${image.id}`}
@@ -261,6 +269,18 @@ export function ImageSelector({
           )}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm !== null}
+        title="确认删除"
+        message={`确定要删除图片 "${deleteConfirm?.name}" 吗？此操作无法撤销。`}
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }
