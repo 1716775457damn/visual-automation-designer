@@ -17,6 +17,8 @@ export interface ImageSelectorProps {
   searchPlaceholder?: string;
   /** Whether to show upload button when empty */
   showUploadButton?: boolean;
+  /** Whether to show delete button on images */
+  showDeleteButton?: boolean;
   /** Custom empty state message */
   emptyMessage?: string;
   /** Custom class name */
@@ -31,12 +33,14 @@ export interface ImageSelectorProps {
  * - Search/filter functionality
  * - Support for empty state with upload option
  * - Grid layout for image thumbnails
+ * - Upload and delete functionality
  */
 export function ImageSelector({
   selectedId,
   onSelect,
   searchPlaceholder = '搜索图片...',
   showUploadButton = true,
+  showDeleteButton = true,
   emptyMessage = '暂无图片',
   className = '',
 }: ImageSelectorProps) {
@@ -45,11 +49,13 @@ export function ImageSelector({
     loading,
     error,
     selectAndUploadImage,
+    deleteImage,
     refreshImages,
   } = useImageLibrary();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter images based on search query
   const filteredImages = useMemo(() => {
@@ -75,6 +81,26 @@ export function ImageSelector({
       setIsUploading(false);
     }
   }, [selectAndUploadImage, onSelect]);
+
+  const handleDelete = useCallback(async (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation(); // Prevent selection when deleting
+    if (!confirm('确定要删除这张图片吗？')) {
+      return;
+    }
+    setDeletingId(imageId);
+    try {
+      await deleteImage(imageId);
+      // If the deleted image was selected, clear selection
+      if (selectedId === imageId) {
+        onSelect?.('');
+      }
+    } catch (err) {
+      console.error('Failed to delete image:', err);
+      alert('删除失败');
+    } finally {
+      setDeletingId(null);
+    }
+  }, [deleteImage, selectedId, onSelect]);
 
   const handleImageClick = useCallback((imageId: string) => {
     onSelect?.(imageId);
@@ -102,6 +128,20 @@ export function ImageSelector({
           </button>
         )}
       </div>
+
+      {/* Upload button - always visible at top */}
+      {showUploadButton && (
+        <div className="image-selector__upload-section">
+          <button
+            className="image-selector__upload-btn"
+            onClick={handleUpload}
+            disabled={isUploading || loading}
+            data-testid="btn-upload-image"
+          >
+            {isUploading ? '上传中...' : '+ 上传图片'}
+          </button>
+        </div>
+      )}
 
       {/* Loading state */}
       {loading && (
@@ -151,6 +191,20 @@ export function ImageSelector({
                 )}
               </div>
               <span className="image-selector__name">{image.name}</span>
+              
+              {/* Delete button */}
+              {showDeleteButton && (
+                <button
+                  className="image-selector__delete-btn"
+                  onClick={(e) => handleDelete(e, image.id)}
+                  disabled={deletingId === image.id}
+                  title="删除图片"
+                  data-testid={`btn-delete-image-${image.id}`}
+                >
+                  ×
+                </button>
+              )}
+              
               {selectedId === image.id && (
                 <div className="image-selector__check" data-testid={`selected-check-${image.id}`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -162,19 +216,9 @@ export function ImageSelector({
           ))}
 
           {/* Empty state */}
-          {images.length === 0 && (
+          {images.length === 0 && !showUploadButton && (
             <div className="image-selector__empty" data-testid="image-selector-empty">
               <p>{emptyMessage}</p>
-              {showUploadButton && (
-                <button
-                  className="image-selector__upload-btn"
-                  onClick={handleUpload}
-                  disabled={isUploading}
-                  data-testid="btn-upload-image"
-                >
-                  {isUploading ? '上传中...' : '上传图片'}
-                </button>
-              )}
             </div>
           )}
 
