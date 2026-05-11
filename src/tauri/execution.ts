@@ -1,0 +1,271 @@
+/**
+ * Execution Event Types and Listeners
+ * 
+ * Provides TypeScript types and event listeners for execution events
+ * emitted from the Rust backend during flow execution.
+ * 
+ * Validates: Requirements 5.2
+ */
+
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
+
+// ============================================================================
+// Execution Event Types
+// ============================================================================
+
+/** Block ID type */
+export type BlockId = string;
+
+/**
+ * Execution event types emitted from the backend
+ */
+export type ExecutionEventType =
+  | 'started'
+  | 'blockStarted'
+  | 'blockCompleted'
+  | 'blockError'
+  | 'flowCompleted'
+  | 'stopped'
+  | 'paused'
+  | 'resumed';
+
+/**
+ * Base interface for all execution events
+ */
+export interface ExecutionEventBase {
+  type: ExecutionEventType;
+  timestamp: string;
+}
+
+/**
+ * Flow execution started
+ */
+export interface ExecutionStartedEvent extends ExecutionEventBase {
+  type: 'started';
+}
+
+/**
+ * A block started executing
+ */
+export interface BlockStartedEvent extends ExecutionEventBase {
+  type: 'blockStarted';
+  blockId: BlockId;
+}
+
+/**
+ * A block completed execution
+ */
+export interface BlockCompletedEvent extends ExecutionEventBase {
+  type: 'blockCompleted';
+  blockId: BlockId;
+  success: boolean;
+}
+
+/**
+ * A block execution resulted in an error
+ */
+export interface BlockErrorEvent extends ExecutionEventBase {
+  type: 'blockError';
+  blockId: BlockId;
+  message: string;
+}
+
+/**
+ * Flow execution completed successfully
+ */
+export interface FlowCompletedEvent extends ExecutionEventBase {
+  type: 'flowCompleted';
+}
+
+/**
+ * Flow execution stopped
+ */
+export interface ExecutionStoppedEvent extends ExecutionEventBase {
+  type: 'stopped';
+  reason: string;
+}
+
+/**
+ * Flow execution paused
+ */
+export interface ExecutionPausedEvent extends ExecutionEventBase {
+  type: 'paused';
+  blockId: BlockId;
+}
+
+/**
+ * Flow execution resumed
+ */
+export interface ExecutionResumedEvent extends ExecutionEventBase {
+  type: 'resumed';
+  blockId: BlockId;
+}
+
+/**
+ * Union type of all execution events
+ */
+export type ExecutionEvent =
+  | ExecutionStartedEvent
+  | BlockStartedEvent
+  | BlockCompletedEvent
+  | BlockErrorEvent
+  | FlowCompletedEvent
+  | ExecutionStoppedEvent
+  | ExecutionPausedEvent
+  | ExecutionResumedEvent;
+
+// ============================================================================
+// Execution Status Types
+// ============================================================================
+
+/**
+ * Execution status enum
+ * Must match the Rust enum in events.rs
+ */
+export type ExecutionStatusType =
+  | 'idle'
+  | 'running'
+  | 'paused'
+  | 'completed'
+  | 'stopped'
+  | 'error';
+
+/**
+ * Execution status response from get_execution_status command
+ */
+export interface ExecutionStatusResponse {
+  status: ExecutionStatusType;
+  isActive: boolean;
+}
+
+// ============================================================================
+// Event Listener Functions
+// ============================================================================
+
+/**
+ * Listen for execution events from the backend
+ * 
+ * @param callback Function to call when an execution event is received
+ * @returns Unlisten function to cleanup the listener
+ * 
+ * @example
+ * ```typescript
+ * const unlisten = await onExecutionEvent((event) => {
+ *   switch (event.type) {
+ *     case 'started':
+ *       console.log('Execution started');
+ *       break;
+ *     case 'blockStarted':
+ *       console.log(`Block ${event.blockId} started`);
+ *       break;
+ *     case 'blockError':
+ *       console.error(`Block ${event.blockId} error: ${event.message}`);
+ *       break;
+ *     case 'flowCompleted':
+ *       console.log('Flow completed');
+ *       break;
+ *   }
+ * });
+ * 
+ * // Later, cleanup the listener
+ * unlisten();
+ * ```
+ */
+export async function onExecutionEvent(
+  callback: (event: ExecutionEvent) => void
+): Promise<UnlistenFn> {
+  return listen<ExecutionEvent>('execution-event', (event) => {
+    callback(event.payload);
+  });
+}
+
+/**
+ * Type guard for checking event type
+ */
+export function isStartedEvent(event: ExecutionEvent): event is ExecutionStartedEvent {
+  return event.type === 'started';
+}
+
+export function isBlockStartedEvent(event: ExecutionEvent): event is BlockStartedEvent {
+  return event.type === 'blockStarted';
+}
+
+export function isBlockCompletedEvent(event: ExecutionEvent): event is BlockCompletedEvent {
+  return event.type === 'blockCompleted';
+}
+
+export function isBlockErrorEvent(event: ExecutionEvent): event is BlockErrorEvent {
+  return event.type === 'blockError';
+}
+
+export function isFlowCompletedEvent(event: ExecutionEvent): event is FlowCompletedEvent {
+  return event.type === 'flowCompleted';
+}
+
+export function isStoppedEvent(event: ExecutionEvent): event is ExecutionStoppedEvent {
+  return event.type === 'stopped';
+}
+
+export function isPausedEvent(event: ExecutionEvent): event is ExecutionPausedEvent {
+  return event.type === 'paused';
+}
+
+export function isResumedEvent(event: ExecutionEvent): event is ExecutionResumedEvent {
+  return event.type === 'resumed';
+}
+
+// ============================================================================
+// Execution Command Wrappers
+// ============================================================================
+
+import { invoke } from '@tauri-apps/api/core';
+
+/**
+ * Start executing a flow
+ * @param flowId The flow ID to execute
+ * @returns true if execution started successfully
+ */
+export async function executeFlow(flowId: string): Promise<boolean> {
+  return invoke<boolean>('execute_flow', { flowId });
+}
+
+/**
+ * Execute a single step of a flow
+ * @param flowId The flow ID to execute
+ * @returns true if step executed successfully
+ */
+export async function stepExecution(flowId: string): Promise<boolean> {
+  return invoke<boolean>('step_execution', { flowId });
+}
+
+/**
+ * Stop the current execution
+ * @returns true if execution stopped successfully
+ */
+export async function stopExecution(): Promise<boolean> {
+  return invoke<boolean>('stop_execution');
+}
+
+/**
+ * Pause the current execution
+ * @returns true if execution paused successfully
+ */
+export async function pauseExecution(): Promise<boolean> {
+  return invoke<boolean>('pause_execution');
+}
+
+/**
+ * Resume a paused execution
+ * @returns true if execution resumed successfully
+ */
+export async function resumeExecution(): Promise<boolean> {
+  return invoke<boolean>('resume_execution');
+}
+
+/**
+ * Get the current execution status
+ * @returns The execution status response
+ */
+export async function getExecutionStatus(): Promise<ExecutionStatusResponse> {
+  return invoke<ExecutionStatusResponse>('get_execution_status');
+}

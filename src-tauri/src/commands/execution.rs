@@ -1,0 +1,425 @@
+//! Tauri commands for execution control
+//!
+//! This module provides Tauri command handlers for flow execution:
+//! - Start, stop, pause, resume execution
+//! - Single-step execution
+//! - Execution status queries
+//!
+//! Validates: Requirements 5.1, 5.2, 5.5, 5.6
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager, State};
+use tokio::sync::Mutex;
+
+use crate::core::execution::{Executor, ExecutionStatus};
+use crate::error::{AppError, Result};
+use crate::models::{FlowId, ImageId, ImageMetadata};
+
+/// Application state containing the execution state
+pub struct ExecutionState {
+    /// Active executor (if any)
+    executor: Arc<Mutex<Option<Executor>>>,
+    /// Current execution status
+    status: Arc<Mutex<ExecutionStatus>>,
+    /// App handle for creating executors
+    app_handle: AppHandle,
+}
+
+impl ExecutionState {
+    /// Create a new execution state
+    pub fn new(app_handle: &AppHandle) -> Self {
+        Self {
+            executor: Arc::new(Mutex::new(None)),
+            status: Arc::new(Mutex::new(ExecutionStatus::Idle)),
+            app_handle: app_handle.clone(),
+        }
+    }
+}
+
+// ============================================================================
+// Execution Control Commands
+// ============================================================================
+
+/// Start executing a flow.
+///
+/// # Arguments
+/// * `flow_id` - The flow ID to execute (as string)
+///
+/// # Returns
+/// true if execution started successfully
+///
+/// Validates: Requirements 5.1
+#[tauri::command]
+pub async fn execute_flow(
+    execution_state: State<'_, ExecutionState>,
+    flow_state: State<'_, FlowState>,
+    image_library_state: State<'_, ImageLibraryState>,
+    flow_id: String,
+) -> Result<bool> {
+    let flow_id = parse_flow_id(&flow_id)?;
+    
+    // Check if already running
+    {
+        let status = execution_state.status.lock().await;
+        if status.is_active() {
+            return Err(AppError::ExecutionFailed(
+                "Another flow is already running. Stop it first.".to_string()
+            ));
+        }
+    }
+    
+    // Load the flow
+    let flow = {
+        let mut manager = flow_state.manager.lock()
+            .map_err(|e| AppError::InternalError(
+                format!("Failed to lock flow manager: {}", e)
+            ))?;
+        manager.load_flow(&flow_id)?
+    };
+    
+    // Get image library
+    let image_library: HashMap<ImageId, ImageMetadata> = {
+        let manager = image_library_state.manager.lock()
+            .map_err(|e| AppError::InternalError(
+                format!("Failed to lock image library manager: {}", e)
+            ))?;
+        manager.list_images()?
+            .into_iter()
+            .map(|m| (m.id.clone(), m))
+            .collect()
+    };
+    
+    // Get images directory
+    let images_dir = execution_state.app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to get app data dir: {}", e)
+        ))?
+        .join("images");
+    
+    // Create executor
+    let mut executor = Executor::new(flow, execution_state.app_handle.clone(), images_dir);
+    executor.set_image_library(image_library);
+    
+    // Store executor and update status
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        *exec_guard = Some(executor);
+    }
+    
+    // Start execution
+    let result = {
+        let mut exec_guard = execution_state.executor.lock().await;
+        if let Some(ref mut executor) = *exec_guard {
+            executor.start().await?;
+        }
+        Ok::<_, AppError>(())
+    };
+    
+    match result {
+        Ok(()) => Ok(true),
+        Err(e) => {
+            // Reset state on error
+            let mut exec_guard = execution_state.executor.lock().await;
+            *exec_guard = None;
+            let mut status = execution_state.status.lock().await;
+            *status = ExecutionStatus::Error;
+            Err(e)
+        }
+    }
+}
+
+/// Execute a single step of a flow.
+///
+/// # Arguments
+/// * `flow_id` - The flow ID to execute (as string)
+///
+/// # Returns
+/// true if step executed successfully
+///
+/// Validates: Requirements 5.6
+#[tauri::command]
+pub async fn step_execution(
+    execution_state: State<'_, ExecutionState>,
+    flow_state: State<'_, FlowState>,
+    image_library_state: State<'_, ImageLibraryState>,
+    flow_id: String,
+) -> Result<bool> {
+    let flow_id = parse_flow_id(&flow_id)?;
+    
+    // Check current status
+    {
+        let status = execution_state.status.lock().await;
+        if *status == ExecutionStatus::Running {
+            return Err(AppError::ExecutionFailed(
+                "Cannot step while flow is running. Pause it first.".to_string()
+            ));
+        }
+    }
+    
+    // Check if we have an executor already
+    let has_executor = {
+        let exec_guard = execution_state.executor.lock().await;
+        exec_guard.is_some()
+    };
+    
+    if !has_executor {
+        // Need to create executor first (starting from entry block)
+        let flow = {
+            let mut manager = flow_state.manager.lock()
+                .map_err(|e| AppError::InternalError(
+                    format!("Failed to lock flow manager: {}", e)
+                ))?;
+            manager.load_flow(&flow_id)?
+        };
+        
+        // Get image library
+        let image_library: HashMap<ImageId, ImageMetadata> = {
+            let manager = image_library_state.manager.lock()
+                .map_err(|e| AppError::InternalError(
+                    format!("Failed to lock image library manager: {}", e)
+                ))?;
+            manager.list_images()?
+                .into_iter()
+                .map(|m| (m.id.clone(), m))
+                .collect()
+        };
+        
+        // Get images directory
+        let images_dir = execution_state.app_handle
+            .path()
+            .app_data_dir()
+            .map_err(|e| AppError::InternalError(
+                format!("Failed to get app data dir: {}", e)
+            ))?
+            .join("images");
+        
+        // Create executor
+        let mut executor = Executor::new(flow, execution_state.app_handle.clone(), images_dir);
+        executor.set_image_library(image_library);
+        
+        // Store executor
+        let mut exec_guard = execution_state.executor.lock().await;
+        *exec_guard = Some(executor);
+    }
+    
+    // Execute step
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        if let Some(ref mut executor) = *exec_guard {
+            executor.step().await?;
+        }
+    }
+    
+    Ok(true)
+}
+
+/// Stop the current execution.
+///
+/// # Returns
+/// true if execution stopped successfully
+///
+/// Validates: Requirements 5.5
+#[tauri::command]
+pub async fn stop_execution(
+    execution_state: State<'_, ExecutionState>,
+) -> Result<bool> {
+    // Check if running
+    {
+        let status = execution_state.status.lock().await;
+        if !status.is_active() {
+            return Err(AppError::ExecutionFailed(
+                "No flow is currently running.".to_string()
+            ));
+        }
+    }
+    
+    // Stop the executor
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        if let Some(ref mut executor) = *exec_guard {
+            executor.stop().await?;
+        }
+    }
+    
+    // Clear executor
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        *exec_guard = None;
+    }
+    
+    // Update status
+    {
+        let mut status = execution_state.status.lock().await;
+        *status = ExecutionStatus::Stopped;
+    }
+    
+    Ok(true)
+}
+
+/// Pause the current execution.
+///
+/// # Returns
+/// true if execution paused successfully
+///
+/// Validates: Requirements 5.5
+#[tauri::command]
+pub async fn pause_execution(
+    execution_state: State<'_, ExecutionState>,
+) -> Result<bool> {
+    // Check if running
+    {
+        let status = execution_state.status.lock().await;
+        if *status != ExecutionStatus::Running {
+            return Err(AppError::ExecutionFailed(
+                "Can only pause a running flow.".to_string()
+            ));
+        }
+    }
+    
+    // Pause the executor
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        if let Some(ref mut executor) = *exec_guard {
+            executor.pause().await?;
+        }
+    }
+    
+    // Update status
+    {
+        let mut status = execution_state.status.lock().await;
+        *status = ExecutionStatus::Paused;
+    }
+    
+    Ok(true)
+}
+
+/// Resume a paused execution.
+///
+/// # Returns
+/// true if execution resumed successfully
+///
+/// Validates: Requirements 5.5
+#[tauri::command]
+pub async fn resume_execution(
+    execution_state: State<'_, ExecutionState>,
+) -> Result<bool> {
+    // Check if paused
+    {
+        let status = execution_state.status.lock().await;
+        if *status != ExecutionStatus::Paused {
+            return Err(AppError::ExecutionFailed(
+                "Can only resume a paused flow.".to_string()
+            ));
+        }
+    }
+    
+    // Resume the executor
+    {
+        let mut exec_guard = execution_state.executor.lock().await;
+        if let Some(ref mut executor) = *exec_guard {
+            executor.resume().await?;
+        }
+    }
+    
+    // Update status
+    {
+        let mut status = execution_state.status.lock().await;
+        *status = ExecutionStatus::Running;
+    }
+    
+    Ok(true)
+}
+
+/// Get the current execution status.
+///
+/// # Returns
+/// The current ExecutionStatus
+///
+/// Validates: Requirements 5.2
+#[tauri::command]
+pub async fn get_execution_status(
+    execution_state: State<'_, ExecutionState>,
+) -> Result<ExecutionStatusResponse> {
+    let status = execution_state.status.lock().await;
+    
+    // Get status from executor if available
+    let executor_status = {
+        let exec_guard = execution_state.executor.lock().await;
+        if let Some(ref executor) = *exec_guard {
+            Some(executor.status().await)
+        } else {
+            None
+        }
+    };
+    
+    // Use executor status if available, otherwise use tracked status
+    let final_status = executor_status.unwrap_or(*status);
+    
+    Ok(ExecutionStatusResponse {
+        status: final_status,
+        is_active: final_status.is_active(),
+    })
+}
+
+// ============================================================================
+// Helper Functions and Types
+// ============================================================================
+
+/// Parse a flow ID from a string.
+fn parse_flow_id(id: &str) -> Result<FlowId> {
+    uuid::Uuid::parse_str(id)
+        .map(FlowId)
+        .map_err(|e| AppError::FlowNotFound(format!("Invalid flow ID '{}': {}", id, e)))
+}
+
+/// Execution status response for frontend
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutionStatusResponse {
+    /// Current execution status
+    pub status: ExecutionStatus,
+    /// Whether execution is active (running or paused)
+    pub is_active: bool,
+}
+
+// ============================================================================
+// Import FlowState and ImageLibraryState from other modules
+// ============================================================================
+
+use super::flow::FlowState;
+use super::image_library::ImageLibraryState;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_flow_id_valid() {
+        let uuid = uuid::Uuid::new_v4();
+        let id_str = uuid.to_string();
+        let result = parse_flow_id(&id_str);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().0, uuid);
+    }
+
+    #[test]
+    fn test_parse_flow_id_invalid() {
+        let result = parse_flow_id("not-a-uuid");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AppError::FlowNotFound(_)));
+    }
+
+    #[test]
+    fn test_execution_status_response_serialization() {
+        let response = ExecutionStatusResponse {
+            status: ExecutionStatus::Running,
+            is_active: true,
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("running"));
+        assert!(json.contains("isActive"));
+    }
+}

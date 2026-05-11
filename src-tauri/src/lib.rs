@@ -1,0 +1,147 @@
+//! Visual Automation Designer
+//! 
+//! A visual programming tool for creating screen automation workflows.
+
+/// Tauri command handlers
+pub mod commands;
+
+/// Core business logic modules
+pub mod core;
+
+/// Platform abstraction layer (screen capture, input)
+pub mod platform;
+
+/// Image matching module
+pub mod matching;
+
+/// Data models
+pub mod models;
+
+/// Error types
+pub mod error;
+
+/// Logging utilities for error and panic logging
+pub mod logging;
+
+// Re-export commonly used types
+pub use error::{AppError, Result};
+
+use commands::{FlowState, ImageLibraryState, ExecutionState};
+use tauri::{Manager, Emitter};
+use std::panic;
+
+/// Set up the panic handler to catch panics and log them
+fn setup_panic_handler(app_handle: &tauri::AppHandle) {
+    let app_handle_clone = app_handle.clone();
+    
+    panic::set_hook(Box::new(move |panic_info| {
+        // Extract panic information
+        let message = if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = panic_info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+        
+        // Extract location information
+        let location = panic_info.location().map(|loc| {
+            format!("{}:{}:{}", loc.file(), loc.line(), loc.column())
+        });
+        
+        // Log to file
+        logging::log_panic(&message, location.as_deref());
+        
+        // Log to console
+        log::error!("PANIC: {} at {:?}", message, location);
+        
+        // Emit error event to frontend if possible
+        let _ = app_handle_clone.emit("application-error", serde_json::json!({
+            "type": "panic",
+            "message": message,
+            "location": location,
+        }));
+    }));
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Initialize logging
+            env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+                .init();
+            
+            // Get app data directory
+            let app_data_dir = app.path().app_data_dir()
+                .expect("Failed to get app data directory");
+            
+            // Initialize error logger
+            logging::init_logger(app_data_dir.clone())
+                .expect("Failed to initialize error logger");
+            
+            // Set up panic handler
+            setup_panic_handler(&app.handle());
+            
+            // Initialize image library state
+            let image_library_state = ImageLibraryState::new(&app.handle())
+                .expect("Failed to initialize image library state");
+            app.manage(image_library_state);
+            
+            // Initialize flow state
+            let flow_state = FlowState::new(&app.handle())
+                .expect("Failed to initialize flow state");
+            app.manage(flow_state);
+            
+            // Initialize execution state
+            let execution_state = ExecutionState::new(&app.handle());
+            app.manage(execution_state);
+            
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            // Image library commands
+            commands::add_image,
+            commands::remove_image,
+            commands::rename_image,
+            commands::list_images,
+            commands::get_image,
+            // Flow management commands
+            commands::create_flow,
+            commands::save_flow,
+            commands::load_flow,
+            commands::list_flows,
+            commands::delete_flow,
+            commands::validate_flow,
+            // Block operation commands
+            commands::create_block,
+            commands::update_block_position,
+            commands::delete_block,
+            commands::update_block_config,
+            commands::set_entry_block,
+            // Connection operation commands
+            commands::create_connection,
+            commands::delete_connection,
+            // Undo/redo commands
+            commands::can_undo,
+            commands::can_redo,
+            commands::undo,
+            commands::redo,
+            // Execution control commands
+            commands::execute_flow,
+            commands::step_execution,
+            commands::stop_execution,
+            commands::pause_execution,
+            commands::resume_execution,
+            commands::get_execution_status,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

@@ -1,0 +1,108 @@
+{
+    "version":  "0.1.0",
+    "plugins":  {
+                    "shell":  {
+                                  "open":  true
+                              }
+                },
+    "productName":  "Visual Automation Designer",
+    "build":  {
+                  "frontendDist":  "../dist",
+                  "beforeBuildCommand":  "npm run build",
+                  "devUrl":  "http://localhost:5173",
+                  "beforeDevCommand":  "npm run dev"
+              },
+    "app":  {
+                "security":  {
+                                 "csp":  null
+                             },
+                "withGlobalTauri":  true,
+                "windows":  [
+                                {
+                                    "width":  1280,
+                                    "height":  800,
+                                    "minWidth":  800,
+                                    "fullscreen":  false,
+                                    "decorations":  true,
+                                    "minHeight":  600,
+                                    "transparent":  false,
+                                    "title":  "Visual Automation Designer",
+                                    "resizable":  true,
+                                    "center":  true
+                                }
+                            ]
+            },
+    "$schema":  "https://schema.tauri.app/config/2",
+    "bundle":  {
+                   "publisher":  "Visual Automation Designer Team",
+                   "category":  "Utility",
+                   "linux":  {
+                                 "deb":  {
+                                             "depends":  [
+                                                             "libgtk-3-0",
+                                                             "libwebkit2gtk-4.1-0",
+                                                             "libayatana-appindicator3-1"
+                                                         ]
+                                         },
+                                 "appimage":  {
+                                                  "bundleMediaFramework":  false
+                                              }
+                             },
+                   "license":  "MIT",
+                   "targets":  [
+                                   "msi",
+                                   "nsis",
+                                   "dmg",
+                                   "appimage",
+                                   "deb"
+                               ],
+                   "macOS":  {
+                                 "minimumSystemVersion":  "10.13",
+                                 "frameworks":  [
+
+                                                ],
+                                 "signingIdentity":  null,
+                                 "exceptionDomain":  null,
+                                 "entitlements":  null,
+                                 "providerShortName":  null
+                             },
+                   "windows":  {
+                                   "nsis":  {
+                                                "installMode":  "currentUser",
+                                                "installerIcon":  "icons/icon.ico",
+                                                "displayLanguageSelector":  true,
+                                                "languages":  [
+                                                                  "English",
+                                                                  "SimpChinese",
+                                                                  "TradChinese"
+                                                              ]
+                                            },
+                                   "digestAlgorithm":  "sha256",
+                                   "certificateThumbprint":  null,
+                                   "timestampUrl":  null,
+                                   "wix":  {
+                                               "language":  [
+                                                                "en-US",
+                                                                "zh-CN",
+                                                                "zh-TW"
+                                                            ]
+                                           }
+                               },
+                   "copyright":  "Copyright 2024 Visual Automation Designer Team",
+                   "longDescription":  "Visual Automation Designer is a visual programming application that allows users to create screen automation workflows by dragging and dropping blocks.",
+                   "icon":  [
+                                "icons/32x32.png",
+                                "icons/128x128.png",
+                                "icons/128x128@2x.png",
+                                "icons/icon.icns",
+                                "icons/icon.ico"
+                            ],
+                   "homepage":  "https://github.com/visual-automation-designer",
+                   "shortDescription":  "A visual programming tool for screen automation",
+                   "active":  true,
+                   "externalBin":  [
+
+                                   ]
+               },
+    "identifier":  "com.visualautomation.designer"
+}

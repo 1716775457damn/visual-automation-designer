@@ -1,0 +1,271 @@
+/**
+ * App Layout Styles
+ */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--color-bg-secondary);
+}
+
+.app__content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app__sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-primary);
+  border-color: var(--color-border);
+  overflow: hidden;
+}
+
+.app__sidebar--left {
+  width: 200px;
+  border-right: 1px solid var(--color-border);
+}
+
+.app__sidebar--right {
+  width: 280px;
+  border-left: 1px solid var(--color-border);
+}
+
+.app__main {
+  flex: 1;
+  overflow: hidden;
+}
+
+.app__status {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.app__status-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.app__status-item--running {
+  color: var(--color-status-running);
+  font-weight: 500;
+}
+
+.app__execution-log {
+  position: fixed;
+  bottom: 40px;
+  left: 200px;
+  right: 280px;
+  z-index: var(--z-index-overlay);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-shadow: var(--shadow-lg);
+  animation: slide-up 0.2s ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.config-placeholder {
+  padding: var(--spacing-md);
+}
+
+.config-placeholder h3 {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-md);
+}
+
+.config-placeholder p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Flow List Modal */
+.flow-list-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-index-modal, 1000);
+}
+
+.flow-list-modal__content {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.flow-list-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.flow-list-modal__header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.flow-list-modal__close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 0;
+  line-height: 1;
+}
+
+.flow-list-modal__close:hover {
+  color: var(--color-text-primary);
+}
+
+.flow-list-modal__actions {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.flow-list-modal__btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.flow-list-modal__btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.flow-list-modal__btn--primary {
+  background: var(--color-primary, #2196f3);
+  color: white;
+  border-color: var(--color-primary, #2196f3);
+}
+
+.flow-list-modal__btn--primary:hover {
+  background: var(--color-primary-dark, #1976d2);
+}
+
+.flow-list-modal__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+
+.flow-list-modal__empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--spacing-xl);
+}
+
+.flow-list-modal__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.flow-list-modal__item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.flow-list-modal__item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flow-list-modal__item-name {
+  font-weight: 500;
+}
+
+.flow-list-modal__item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.flow-list-modal__item-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.flow-list-modal__item-btn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+
+.flow-list-modal__item-btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.flow-list-modal__item-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flow-list-modal__item-btn--danger {
+  color: var(--color-danger, #f44336);
+  border-color: var(--color-danger, #f44336);
+}
+
+.flow-list-modal__item-btn--danger:hover {
+  background: var(--color-danger, #f44336);
+  color: white;
+}
+
+/* Status indicators */
+.app__status-item--loading {
+  color: var(--color-primary, #2196f3);
+}
+
+.app__status-item--error {
+  color: var(--color-danger, #f44336);
+}
+
+/* Ensure React Flow takes full height */
+.react-flow {
+  width: 100%;
+  height: 100%;
+}

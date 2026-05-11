@@ -1,0 +1,46 @@
+[package]
+name = "visual-automation-designer"
+version = "0.1.0"
+description = "Visual Automation Designer - A visual programming tool for screen automation"
+authors = ["Visual Automation Designer Team"]
+edition = "2021"
+
+[lib]
+name = "visual_automation_designer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+image = "0.24"
+thiserror = "2"
+async-trait = "0.1"
+# Async utilities
+futures = "0.3"
+# Screen capture and input simulation
+screenshots = "0.8"
+enigo = "0.3"
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["test-util"] }
+serial_test = "3"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -1,0 +1,81 @@
+/**
+ * CSS 变量定义
+ * 定义全局设计令牌
+ */
+
+:root {
+  /* 颜色系统 */
+  --color-primary: #00a0ff;
+  --color-primary-hover: #0088dd;
+  --color-primary-light: rgba(0, 160, 255, 0.1);
+  
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #17a2b8;
+  
+  /* 背景色 */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f5f5f5;
+  --color-bg-tertiary: #e8e8e8;
+  
+  /* 文字色 */
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-text-muted: #999999;
+  
+  /* 边框色 */
+  --color-border: #ddd;
+  --color-border-focus: var(--color-primary);
+  
+  /* 积木块颜色 */
+  --color-block-action: #4caf50;
+  --color-block-control: #2196f3;
+  --color-block-click: #ff9800;
+  --color-block-wait: #9c27b0;
+  --color-block-loop: #00bcd4;
+  --color-block-condition: #e91e63;
+  
+  /* 执行状态颜色 */
+  --color-status-idle: #999999;
+  --color-status-running: #28a745;
+  --color-status-paused: #ffc107;
+  --color-status-completed: #17a2b8;
+  --color-status-error: #dc3545;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* 圆角 */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.2);
+  
+  /* 字体 */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+  
+  /* 动画 */
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  
+  /* Z-index */
+  --z-index-toolbar: 100;
+  --z-index-modal: 200;
+  --z-index-dropdown: 150;
+  --z-index-tooltip: 250;
+}

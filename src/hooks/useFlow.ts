@@ -1,0 +1,673 @@
+/**
+ * useFlow - 流程管理 Hook
+ * 封装流程管理相关的 Tauri Command 调用
+ * 
+ * Validates: Requirements 2.2, 2.3, 2.4, 2.5, 2.6, 2.7
+ */
+
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Node, Edge, Connection, addEdge, NodeChange, applyNodeChanges, EdgeChange, applyEdgeChanges } from 'reactflow';
+import type { BlockNodeData } from '../components/FlowEditor/BlockNode';
+import {
+  createFlow as tauriCreateFlow,
+  saveFlow as tauriSaveFlow,
+  loadFlow as tauriLoadFlow,
+  listFlows as tauriListFlows,
+  deleteFlow as tauriDeleteFlow,
+  createBlock as tauriCreateBlock,
+  updateBlockPosition as tauriUpdateBlockPosition,
+  updateBlockConfig as tauriUpdateBlockConfig,
+  deleteBlock as tauriDeleteBlock,
+  createConnection as tauriCreateConnection,
+  deleteConnection as tauriDeleteConnection,
+  canUndoFlow as tauriCanUndo,
+  canRedoFlow as tauriCanRedo,
+  undoFlow as tauriUndo,
+  redoFlow as tauriRedo,
+  type Flow as TauriFlow,
+  type FlowMetadata,
+  type BlockNode as TauriBlockNode,
+  type BlockType,
+  type BlockConfig,
+  type BlockPosition,
+  type Connection as TauriConnection,
+} from '../tauri/flow';
+
+/**
+ * Frontend Flow type (extends Tauri Flow)
+ */
+export interface Flow extends TauriFlow {}
+
+/**
+ * Options for useFlow hook
+ */
+export interface UseFlowOptions {
+  initialFlow?: Flow;
+  initialNodes?: Node<BlockNodeData>[];
+  initialEdges?: Edge[];
+}
+
+/**
+ * Return type for useFlow hook
+ */
+export interface UseFlowReturn {
+  flow: Flow | null;
+  nodes: Node<BlockNodeData>[];
+  edges: Edge[];
+  flowList: FlowMetadata[];
+  loading: boolean;
+  error: Error | null;
+  createFlow: (name: string) => Promise<void>;
+  saveFlow: () => Promise<void>;
+  loadFlow: (id: string) => Promise<void>;
+  loadFlowList: () => Promise<void>;
+  deleteFlow: (id: string) => Promise<void>;
+  setNodes: React.Dispatch<React.SetStateAction<Node<BlockNodeData>[]>>;
+  setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
+  addNode: (type: string, category: string, position: { x: number; y: number }, config?: Record<string, unknown>) => Promise<string>;
+  updateNodePosition: (nodeId: string, position: { x: number; y: number }) => Promise<void>;
+  updateNodeConfig: (nodeId: string, config: BlockConfig) => Promise<void>;
+  deleteNode: (nodeId: string) => Promise<void>;
+  addConnection: (connection: Connection) => Promise<void>;
+  deleteConnection: (connectionId: string) => Promise<void>;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  canUndo: boolean;
+  canRedo: boolean;
+  handleNodesChange: (changes: NodeChange[]) => void;
+  handleEdgesChange: (changes: EdgeChange[]) => void;
+}
+
+/**
+ * Convert Tauri BlockNode to ReactFlow Node
+ */
+function blockNodeToReactFlowNode(block: TauriBlockNode): Node<BlockNodeData> {
+  const label = getNodeLabel(block.blockType);
+  const blockTypeStr = getBlockTypeString(block.blockType);
+  const blockCategory = getBlockCategory(block.blockType);
+  
+  return {
+    id: block.id,
+    type: 'blockNode',
+    position: { x: block.position.x, y: block.position.y },
+    data: {
+      label,
+      blockType: blockTypeStr as never, // Cast to satisfy TypeScript
+      blockCategory,
+      config: blockConfigToRecord(block.config),
+      executing: false,
+    },
+  };
+}
+
+/**
+ * Convert Tauri Connection to ReactFlow Edge
+ */
+function connectionToEdge(connection: TauriConnection): Edge {
+  return {
+    id: connection.id,
+    source: connection.source,
+    target: connection.target,
+    sourceHandle: connection.sourceHandle ?? undefined,
+    type: 'smoothstep',
+    animated: false,
+  };
+}
+
+/**
+ * Get node label from block type
+ */
+function getNodeLabel(blockType: BlockType): string {
+  if (blockType.type === 'action') {
+    const actionLabels: Record<string, string> = {
+      click: '点击',
+      wait_image: '等待图片',
+      wait_time: '等待时间',
+      input_text: '输入文本',
+    };
+    return actionLabels[blockType.action] || blockType.action;
+  } else {
+    const controlLabels: Record<string, string> = {
+      loop: '循环',
+      loop_infinite: '无限循环',
+      condition: '条件判断',
+    };
+    return controlLabels[blockType.control] || blockType.control;
+  }
+}
+
+/**
+ * Get block type string from BlockType
+ */
+function getBlockTypeString(blockType: BlockType): string {
+  if (blockType.type === 'action') {
+    return blockType.action;
+  } else {
+    return blockType.control;
+  }
+}
+
+/**
+ * Get block category from BlockType
+ */
+function getBlockCategory(blockType: BlockType): 'action' | 'control' {
+  return blockType.type;
+}
+
+/**
+ * Convert BlockConfig to plain record for display
+ */
+function blockConfigToRecord(config: BlockConfig): Record<string, unknown> {
+  return config as Record<string, unknown>;
+}
+
+/**
+ * Create default block config based on block type
+ */
+function createDefaultConfig(type: string, category: string): BlockConfig {
+  if (category === 'action') {
+    switch (type) {
+      case 'click':
+        return { type: 'click', mode: { mode: 'coordinates', x: 0, y: 0 }, count: 1 };
+      case 'wait_image':
+        return { type: 'wait_image', imageId: '', timeoutMs: 5000 };
+      case 'wait_time':
+        return { type: 'wait_time', durationMs: 1000 };
+      case 'input_text':
+        return { type: 'input_text', text: '', intervalMs: 50 };
+      default:
+        return { type: 'wait_time', durationMs: 1000 };
+    }
+  } else {
+    switch (type) {
+      case 'loop':
+        return { type: 'loop', count: 1 };
+      case 'loop_infinite':
+        return { type: 'loop_infinite' };
+      case 'condition':
+        return { type: 'condition', imageId: '', condition: 'image_exists', trueBranch: [], falseBranch: [] };
+      default:
+        return { type: 'loop', count: 1 };
+    }
+  }
+}
+
+/**
+ * Create BlockType from type string and category
+ */
+function createBlockType(type: string, category: string): BlockType {
+  if (category === 'action') {
+    return { type: 'action', action: type as never };
+  } else {
+    return { type: 'control', control: type as never };
+  }
+}
+
+/**
+ * useFlow Hook - 流程管理
+ * Manages flow state and communicates with Tauri backend
+ */
+export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
+  const { initialFlow, initialNodes = [], initialEdges = [] } = options;
+
+  const [flow, setFlow] = useState<Flow | null>(initialFlow || null);
+  const [nodes, setNodes] = useState<Node<BlockNodeData>[]>(initialNodes);
+  const [edges, setEdges] = useState<Edge[]>(initialEdges);
+  const [flowList, setFlowList] = useState<FlowMetadata[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  // Track if we've initialized
+  const initializedRef = useRef(false);
+
+  // Update undo/redo state when flow changes
+  const updateUndoRedoState = useCallback(async () => {
+    if (!flow) {
+      setCanUndo(false);
+      setCanRedo(false);
+      return;
+    }
+    try {
+      const [undo, redo] = await Promise.all([
+        tauriCanUndo(flow.id),
+        tauriCanRedo(flow.id),
+      ]);
+      setCanUndo(undo);
+      setCanRedo(redo);
+    } catch (err) {
+      console.warn('Failed to get undo/redo state:', err);
+      // Keep current state on error
+    }
+  }, [flow]);
+
+  // Initialize flow list on mount
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    
+    loadFlowList();
+  }, []);
+
+  // Update undo/redo state periodically when flow is active
+  useEffect(() => {
+    updateUndoRedoState();
+  }, [flow, updateUndoRedoState]);
+
+  // Create a new flow
+  const createFlow = useCallback(async (name: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const newFlow = await tauriCreateFlow(name);
+      setFlow(newFlow);
+      setNodes([]);
+      setEdges([]);
+      // Refresh flow list
+      await loadFlowList();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Save the current flow
+  const saveFlow = useCallback(async () => {
+    if (!flow) {
+      console.warn('No flow to save');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      // Build flow object from current state
+      const flowToSave: Flow = {
+        ...flow,
+        blocks: {},
+        connections: [],
+      };
+
+      // Convert nodes to blocks
+      for (const node of nodes) {
+        const blockType = createBlockType(
+          node.data.blockType,
+          node.data.blockCategory
+        );
+        const config = (node.data.config as BlockConfig) || createDefaultConfig(node.data.blockType, node.data.blockCategory);
+        
+        flowToSave.blocks[node.id] = {
+          id: node.id,
+          blockType,
+          position: { x: node.position.x, y: node.position.y },
+          config,
+          children: [],
+        };
+      }
+
+      // Convert edges to connections
+      for (const edge of edges) {
+        flowToSave.connections.push({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle ?? undefined,
+        });
+      }
+
+      await tauriSaveFlow(flowToSave);
+      console.log('Flow saved successfully');
+      
+      // Refresh flow list
+      await loadFlowList();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [flow, nodes, edges]);
+
+  // Load a flow by ID
+  const loadFlow = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loadedFlow = await tauriLoadFlow(id);
+      setFlow(loadedFlow);
+
+      // Convert blocks to nodes
+      const loadedNodes: Node<BlockNodeData>[] = Object.values(loadedFlow.blocks).map(
+        (block) => blockNodeToReactFlowNode(block)
+      );
+      setNodes(loadedNodes);
+
+      // Convert connections to edges
+      const loadedEdges: Edge[] = loadedFlow.connections.map((conn) =>
+        connectionToEdge(conn)
+      );
+      setEdges(loadedEdges);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load flow list
+  const loadFlowList = useCallback(async () => {
+    try {
+      const list = await tauriListFlows();
+      setFlowList(list);
+    } catch (err) {
+      console.warn('Failed to load flow list:', err);
+    }
+  }, []);
+
+  // Delete a flow
+  const deleteFlow = useCallback(async (id: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await tauriDeleteFlow(id);
+      
+      // If we deleted the current flow, clear it
+      if (flow?.id === id) {
+        setFlow(null);
+        setNodes([]);
+        setEdges([]);
+      }
+      
+      // Refresh flow list
+      await loadFlowList();
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [flow, loadFlowList]);
+
+  // Add a new node (block)
+  const addNode = useCallback(async (
+    type: string,
+    category: string,
+    position: { x: number; y: number },
+    config?: Record<string, unknown>
+  ): Promise<string> => {
+    if (!flow) {
+      console.warn('No flow to add node to');
+      // Create a local node without backend persistence
+      const nodeId = `node-${Date.now()}`;
+      const label = getNodeLabel(createBlockType(type, category));
+      const nodeConfig = (config as BlockConfig) || createDefaultConfig(type, category);
+      
+      const newNode: Node<BlockNodeData> = {
+        id: nodeId,
+        type: 'blockNode',
+        position,
+        data: {
+          label,
+          blockType: type as never,
+          blockCategory: category as never,
+          config: nodeConfig,
+          executing: false,
+        },
+      };
+      
+      setNodes((nds) => [...nds, newNode]);
+      return nodeId;
+    }
+
+    try {
+      const blockType = createBlockType(type, category);
+      const blockConfig = (config as BlockConfig) || createDefaultConfig(type, category);
+      const blockPosition: BlockPosition = { x: position.x, y: position.y };
+
+      const block = await tauriCreateBlock(flow.id, blockType, blockConfig, blockPosition);
+
+      // Add the new node to state
+      const newNode = blockNodeToReactFlowNode(block);
+      setNodes((nds) => [...nds, newNode]);
+
+      return block.id;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    }
+  }, [flow]);
+
+  // Update node position
+  const updateNodePosition = useCallback(async (
+    nodeId: string,
+    position: { x: number; y: number }
+  ): Promise<void> => {
+    // Optimistically update UI
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, position }
+          : node
+      )
+    );
+
+    if (!flow) {
+      console.warn('No flow to update node position in');
+      return;
+    }
+
+    try {
+      await tauriUpdateBlockPosition(flow.id, nodeId, { x: position.x, y: position.y });
+    } catch (err) {
+      console.warn('Failed to update block position on backend:', err);
+      // Don't throw for position updates - keep UI responsive
+    }
+  }, [flow]);
+
+  // Update node config
+  const updateNodeConfig = useCallback(async (
+    nodeId: string,
+    config: BlockConfig
+  ): Promise<void> => {
+    // Optimistically update UI
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === nodeId
+          ? { ...node, data: { ...node.data, config: config as Record<string, unknown> } }
+          : node
+      )
+    );
+
+    if (!flow) {
+      console.warn('No flow to update node config in');
+      return;
+    }
+
+    try {
+      await tauriUpdateBlockConfig(flow.id, nodeId, config);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    }
+  }, [flow]);
+
+  // Delete a node
+  const deleteNode = useCallback(async (nodeId: string): Promise<void> => {
+    // Optimistically update UI
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setEdges((eds) =>
+      eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
+    );
+
+    if (!flow) {
+      console.warn('No flow to delete node from');
+      return;
+    }
+
+    try {
+      await tauriDeleteBlock(flow.id, nodeId);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    }
+  }, [flow]);
+
+  // Add a connection
+  const addConnection = useCallback(async (connection: Connection): Promise<void> => {
+    const newEdge: Edge = {
+      id: `edge-${Date.now()}`,
+      source: connection.source!,
+      target: connection.target!,
+      sourceHandle: connection.sourceHandle,
+      targetHandle: connection.targetHandle,
+      type: 'smoothstep',
+      animated: false,
+    };
+    
+    // Optimistically update UI
+    setEdges((eds) => addEdge(newEdge, eds));
+
+    if (!flow) {
+      console.warn('No flow to add connection to');
+      return;
+    }
+
+    try {
+      await tauriCreateConnection(
+        flow.id,
+        connection.source!,
+        connection.target!,
+        connection.sourceHandle || undefined
+      );
+    } catch (err) {
+      console.warn('Failed to create connection on backend:', err);
+      // Don't throw for connection creation - keep UI responsive
+    }
+  }, [flow]);
+
+  // Delete a connection
+  const deleteConnection = useCallback(async (connectionId: string): Promise<void> => {
+    // Optimistically update UI
+    setEdges((eds) => eds.filter((edge) => edge.id !== connectionId));
+
+    if (!flow) {
+      console.warn('No flow to delete connection from');
+      return;
+    }
+
+    try {
+      await tauriDeleteConnection(flow.id, connectionId);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    }
+  }, [flow]);
+
+  // Undo
+  const undo = useCallback(async (): Promise<void> => {
+    if (!flow) {
+      console.warn('No flow to undo');
+      return;
+    }
+
+    try {
+      const result = await tauriUndo(flow.id);
+      if (result) {
+        setFlow(result);
+        setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
+        setEdges(result.connections.map(connectionToEdge));
+        await updateUndoRedoState();
+      }
+    } catch (err) {
+      console.warn('Undo failed:', err);
+    }
+  }, [flow, updateUndoRedoState]);
+
+  // Redo
+  const redo = useCallback(async (): Promise<void> => {
+    if (!flow) {
+      console.warn('No flow to redo');
+      return;
+    }
+
+    try {
+      const result = await tauriRedo(flow.id);
+      if (result) {
+        setFlow(result);
+        setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
+        setEdges(result.connections.map(connectionToEdge));
+        await updateUndoRedoState();
+      }
+    } catch (err) {
+      console.warn('Redo failed:', err);
+    }
+  }, [flow, updateUndoRedoState]);
+
+  // Handle nodes change from ReactFlow
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const nextNodes = applyNodeChanges(changes, nodes);
+      setNodes(nextNodes);
+      
+      // Handle position changes for persistence
+      changes.forEach((change) => {
+        if (change.type === 'position' && change.position && !change.dragging) {
+          // Only save on drag end
+          updateNodePosition(change.id, change.position);
+        }
+      });
+    },
+    [nodes, updateNodePosition]
+  );
+
+  // Handle edges change from ReactFlow
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      const nextEdges = applyEdgeChanges(changes, edges);
+      setEdges(nextEdges);
+    },
+    [edges]
+  );
+
+  return {
+    flow,
+    nodes,
+    edges,
+    flowList,
+    loading,
+    error,
+    createFlow,
+    saveFlow,
+    loadFlow,
+    loadFlowList,
+    deleteFlow,
+    setNodes,
+    setEdges,
+    addNode,
+    updateNodePosition,
+    updateNodeConfig,
+    deleteNode,
+    addConnection,
+    deleteConnection,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    handleNodesChange,
+    handleEdgesChange,
+  };
+}
+
+export default useFlow;
