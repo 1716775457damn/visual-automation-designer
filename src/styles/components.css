@@ -3315,3 +3315,485 @@
   outline-offset: 2px;
 }
 
+/* ============================================================================
+   UX Optimization 61-80: Enhanced Block Node & Interactive Features
+   ============================================================================ */
+
+/* Block node tooltip - UX优化61 */
+.block-node__tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+.block-node__tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--color-bg-primary);
+}
+
+/* Entry point badge - UX优化62 */
+.block-node__entry-badge {
+  position: absolute;
+  top: -12px;
+  left: -12px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 5;
+}
+
+/* Disabled overlay - UX优化63 */
+.block-node--disabled {
+  opacity: 0.6;
+}
+
+.block-node__disabled-overlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 14px;
+}
+
+/* Block node status indicators - UX优化64 */
+.block-node--success {
+  border-color: var(--color-success);
+}
+
+.block-node--error {
+  border-color: var(--color-danger);
+}
+
+/* Connection status animation - UX优化65 */
+.react-flow__edge--success {
+  animation: edge-success-pulse 0.5s ease;
+}
+
+@keyframes edge-success-pulse {
+  0% {
+    stroke: var(--color-success);
+    stroke-width: 4;
+  }
+  100% {
+    stroke-width: 2;
+  }
+}
+
+/* Quick action toolbar - UX优化66 */
+.quick-toolbar {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+}
+
+.quick-toolbar__btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quick-toolbar__btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.quick-toolbar__btn--active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+/* Image preview modal - UX优化67 */
+.image-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  animation: fadeIn 0.2s ease;
+}
+
+.image-preview-modal__content {
+  max-width: 90vw;
+  max-height: 90vh;
+  position: relative;
+}
+
+.image-preview-modal__image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+
+.image-preview-modal__close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--color-bg-primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-modal__info {
+  position: absolute;
+  bottom: -40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: var(--font-size-sm);
+}
+
+/* Context menu improvements - UX优化68 */
+.context-menu__item--active {
+  background: var(--color-primary-light);
+}
+
+.context-menu__item-badge {
+  margin-left: auto;
+  padding: 2px 6px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* Execution speed control - UX优化69 */
+.execution-speed-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.execution-speed-control__slider {
+  width: 80px;
+  height: 4px;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.execution-speed-control__slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Search highlight - UX优化70 */
+.search-highlight {
+  background: rgba(255, 235, 59, 0.4);
+  border-radius: 2px;
+}
+
+/* Drag ghost effect - UX优化71 */
+.block-node--dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* Connection preview enhancement - UX优化72 */
+.react-flow__connection-line--snap {
+  stroke-dasharray: none;
+  stroke: var(--color-success);
+}
+
+/* Block validation state - UX优化73 */
+.block-node--validating {
+  animation: validating-pulse 1s ease-in-out infinite;
+}
+
+@keyframes validating-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.1);
+  }
+}
+
+/* Flow mini-map controls - UX优化74 */
+.minimap-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-xl);
+}
+
+.minimap-controls__btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.minimap-controls__btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+/* Block connection type labels - UX优化75 */
+.connection-label {
+  position: absolute;
+  padding: 2px 8px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  transform: translate(-50%, -50%);
+}
+
+.connection-label--true {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.connection-label--false {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* Progress indicator for operations - UX优化76 */
+.operation-progress {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  z-index: 1100;
+}
+
+.operation-progress__spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--spacing-md);
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.operation-progress__text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Undo/redo stack preview - UX优化77 */
+.history-stack {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+}
+
+.history-stack__item {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.history-stack__item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.history-stack__item--current {
+  background: var(--color-primary-light);
+  font-weight: 500;
+}
+
+/* Block template library - UX优化78 */
+.template-library {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 300px;
+  height: 100%;
+  background: var(--color-bg-primary);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  transition: right 0.3s ease;
+  z-index: 1100;
+}
+
+.template-library--open {
+  right: 0;
+}
+
+.template-library__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.template-library__content {
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  height: calc(100% - 60px);
+}
+
+.template-item {
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.template-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Help onboarding - UX优化79 */
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+}
+
+.onboarding-step {
+  max-width: 500px;
+  padding: var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.onboarding-step__image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  margin-bottom: var(--spacing-md);
+}
+
+.onboarding-step__title {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.onboarding-step__description {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.onboarding-step__actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+/* Notification badge - UX优化80 */
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--color-danger);
+  color: white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-badge--warning {
+  background: var(--color-warning, #ffc107);
+  color: #333;
+}
+
+.notification-badge--info {
+  background: var(--color-primary);
+}
+
