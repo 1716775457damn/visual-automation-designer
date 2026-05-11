@@ -36,8 +36,10 @@ export function ActionBlocks({ onSelect }: ActionBlocksProps) {
           className="action-blocks__item"
           draggable
           onDragStart={(e) => {
+            console.log('Drag start:', block.type, 'action');
             e.dataTransfer.setData('blockType', block.type);
             e.dataTransfer.setData('blockCategory', 'action');
+            e.dataTransfer.effectAllowed = 'move';
           }}
           onClick={() => onSelect?.(block.type)}
           data-testid={`action-block-${block.type}`}

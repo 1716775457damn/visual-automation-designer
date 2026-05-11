@@ -37,8 +37,10 @@ export function ControlBlocks({ onSelect }: ControlBlocksProps) {
           className="control-blocks__item"
           draggable
           onDragStart={(e) => {
+            console.log('Drag start:', block.type, 'control');
             e.dataTransfer.setData('blockType', block.type);
             e.dataTransfer.setData('blockCategory', 'control');
+            e.dataTransfer.effectAllowed = 'move';
           }}
           onClick={() => onSelect?.(block.type)}
           data-testid={`control-block-${block.type}`}
