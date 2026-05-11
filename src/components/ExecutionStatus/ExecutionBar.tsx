@@ -18,19 +18,20 @@ export interface ExecutionBarProps {
 }
 
 const STATUS_LABELS: Record<ExecutionStatusType, string> = {
-  idle: '空闲',
+  idle: '就绪',
   running: '运行中',
   paused: '已暂停',
   completed: '已完成',
-  error: '错误',
+  error: '出错',
 };
 
-const STATUS_ICONS: Record<ExecutionStatusType, string> = {
-  idle: '○',
-  running: '●',
-  paused: '❚❚',
-  completed: '✓',
-  error: '✕',
+// UX优化: 使用更直观的emoji图标
+const STATUS_EMOJIS: Record<ExecutionStatusType, string> = {
+  idle: '⚪',
+  running: '🔵',
+  paused: '🟡',
+  completed: '🟢',
+  error: '🔴',
 };
 
 /**
@@ -61,13 +62,13 @@ export function ExecutionBar({
       aria-live="polite"
       aria-label={`执行状态: ${STATUS_LABELS[status]}`}
     >
-      {/* Status Indicator */}
+      {/* Status Indicator - UX优化: 使用emoji */}
       <div className="execution-bar__status">
         <span 
           className="execution-bar__indicator" 
           aria-hidden="true"
         >
-          {STATUS_ICONS[status]}
+          {STATUS_EMOJIS[status]}
         </span>
         <span className="execution-bar__label">
           {STATUS_LABELS[status]}
@@ -91,26 +92,26 @@ export function ExecutionBar({
             />
           </div>
           <span className="execution-bar__progress-text">
-            {completedBlocks}/{totalBlocks}
+            {completedBlocks}/{totalBlocks} ({progress}%)
           </span>
         </div>
       )}
 
-      {/* Current Block Name */}
-      {currentBlock && (
+      {/* Current Block Name - UX优化: 更清晰的显示 */}
+      {currentBlock && showProgress && (
         <div className="execution-bar__current">
-          当前: {currentBlock}
+          ▶ {currentBlock}
         </div>
       )}
 
-      {/* Error Message */}
+      {/* Error Message - UX优化: 更明显的错误提示 */}
       {status === 'error' && errorMessage && (
         <div 
           className="execution-bar__error" 
           data-testid="execution-error"
           role="alert"
         >
-          {errorMessage}
+          ❌ {errorMessage}
         </div>
       )}
     </div>

@@ -424,9 +424,11 @@ export function BlockConfig({
   onCancel,
 }: BlockConfigProps) {
   const [localConfig, setLocalConfig] = useState<Record<string, unknown>>(() => ({ ...config }));
+  const [hasChanges, setHasChanges] = useState(false);
 
   const handleConfigChange = useCallback((newConfig: Record<string, unknown>) => {
     setLocalConfig(newConfig);
+    setHasChanges(true);
   }, []);
 
   const handleSave = useCallback(() => {
@@ -490,10 +492,12 @@ export function BlockConfig({
     }
     
     onSave?.(finalConfig as unknown as Record<string, unknown>);
+    setHasChanges(false);
   }, [blockType, localConfig, onSave]);
 
   const handleCancel = useCallback(() => {
     setLocalConfig({ ...config });
+    setHasChanges(false);
     onCancel?.();
   }, [config, onCancel]);
 
@@ -529,12 +533,40 @@ export function BlockConfig({
     }
   }, [blockType, localConfig]);
 
+  // UX优化44: 获取验证错误信息
+  const validationMessage = useMemo(() => {
+    if (isValid) return null;
+    switch (blockType) {
+      case 'click':
+        return '请设置点击坐标或选择图片';
+      case 'wait_image':
+        return '请选择要等待的图片';
+      case 'wait_time':
+        return '请输入有效的等待时间';
+      case 'input_text':
+        return '请输入要模拟的文本';
+      case 'loop':
+        return '请输入有效的循环次数';
+      case 'condition':
+        return '请选择条件判断的图片';
+      default:
+        return '请完成配置';
+    }
+  }, [blockType, isValid]);
+
   return (
     <div className="block-config" data-testid={`block-config-${blockId}`}>
       <div className="block-config__header">
-        <h3>配置积木块</h3>
+        <h3>⚙️ 配置积木块</h3>
         <span className="block-config__type">{getBlockTypeName(blockType)}</span>
       </div>
+      
+      {/* UX优化44: 显示未保存提示 */}
+      {hasChanges && (
+        <div className="block-config__changes-indicator">
+          ⚠️ 有未保存的更改
+        </div>
+      )}
       
       <div className="block-config__content">
         <BlockSpecificConfig 
@@ -551,16 +583,23 @@ export function BlockConfig({
           disabled={!isValid}
           data-testid="btn-save-config"
         >
-          保存
+          ✓ 保存
         </button>
         <button
           className="block-config__btn"
           onClick={handleCancel}
           data-testid="btn-cancel-config"
         >
-          取消
+          ✕ 取消
         </button>
       </div>
+      
+      {/* UX优化44: 显示验证错误 */}
+      {!isValid && validationMessage && (
+        <div className="block-config__validation-error">
+          ⚠️ {validationMessage}
+        </div>
+      )}
     </div>
   );
 }

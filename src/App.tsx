@@ -356,32 +356,39 @@ function AppContent() {
           errorMessage={errorMessage || undefined}
         />
 
-        {/* Node/Edge Count */}
-        <span className="app__status-item">
-          积木块: {nodes.length}
+        {/* UX优化42: 增强的积木块/连接统计 */}
+        <span className="app__status-item app__status-item--stats">
+          🧩 {nodes.length} 积木块
         </span>
-        <span className="app__status-item">
-          连接: {edges.length}
+        <span className="app__status-item app__status-item--stats">
+          🔗 {edges.length} 连接
         </span>
 
         {/* Flow name */}
         {flow && (
           <span className="app__status-item app__status-item--flow">
-            流程: {flow.name}
+            📋 {flow.name}
+          </span>
+        )}
+
+        {/* UX优化43: 自动保存指示器 */}
+        {flow && !loading && (
+          <span className="app__status-item app__status-item--autosave">
+            已保存
           </span>
         )}
 
         {/* Loading indicator */}
         {loading && (
           <span className="app__status-item app__status-item--loading">
-            加载中...
+            ⏳ 加载中...
           </span>
         )}
 
         {/* Error display */}
         {error && (
           <span className="app__status-item app__status-item--error">
-            错误: {error.message}
+            ⚠️ {error.message}
           </span>
         )}
       </div>
