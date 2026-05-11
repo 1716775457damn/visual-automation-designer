@@ -1,7 +1,7 @@
 /**
- * FlowToolbar - Toolbar Component
- * Provides save, execute, undo and other operation buttons
- * 
+ * FlowToolbar - 工具栏组件
+ * 提供保存、执行、撤销等操作按钮
+ *
  * Validates: Requirements 2.6, 5.1, 5.5, 5.6, 7.1, 7.2
  */
 
@@ -10,6 +10,8 @@ export interface FlowToolbarProps {
   canRedo?: boolean;
   isExecuting?: boolean;
   isPaused?: boolean;
+  hasFlow?: boolean;
+  flowName?: string;
   onSave?: () => void;
   onLoad?: () => void;
   onUndo?: () => void;
@@ -18,17 +20,20 @@ export interface FlowToolbarProps {
   onPause?: () => void;
   onStop?: () => void;
   onStep?: () => void;
+  onNew?: () => void;
 }
 
 /**
- * FlowToolbar Component - Flow Editor Toolbar
- * Provides buttons for flow control, execution, and file operations
+ * FlowToolbar 组件 - 流程编辑工具栏
+ * 提供流程控制、执行和文件操作按钮
  */
 export function FlowToolbar({
   canUndo = false,
   canRedo = false,
   isExecuting = false,
   isPaused = false,
+  hasFlow = false,
+  flowName,
   onSave,
   onLoad,
   onUndo,
@@ -37,20 +42,40 @@ export function FlowToolbar({
   onPause,
   onStop,
   onStep,
+  onNew,
 }: FlowToolbarProps) {
   return (
     <div className="flow-toolbar" data-testid="flow-toolbar" role="toolbar" aria-label="流程编辑工具栏">
+      {/* Flow Name Display - UX优化1: 显示当前流程名称 */}
+      {flowName && (
+        <div className="flow-toolbar__flow-name" title={flowName}>
+          📁 {flowName}
+        </div>
+      )}
+      
       {/* File Operations Group */}
       <div className="flow-toolbar__group flow-toolbar__group--file" role="group" aria-label="文件操作">
+        {/* UX优化2: 添加新建按钮 */}
+        <button
+          className="flow-toolbar__btn"
+          onClick={onNew}
+          title="新建流程 (Ctrl+N)"
+          data-testid="btn-new"
+          type="button"
+          aria-label="新建流程"
+        >
+          ➕ 新建
+        </button>
         <button
           className="flow-toolbar__btn"
           onClick={onSave}
+          disabled={!hasFlow}
           title="保存 (Ctrl+S)"
           data-testid="btn-save"
           type="button"
           aria-label="保存流程"
         >
-          保存
+          💾 保存
         </button>
         <button
           className="flow-toolbar__btn"
@@ -60,7 +85,7 @@ export function FlowToolbar({
           type="button"
           aria-label="打开流程"
         >
-          打开
+          📂 打开
         </button>
       </div>
 
@@ -76,7 +101,7 @@ export function FlowToolbar({
           aria-label="撤销"
           aria-disabled={!canUndo}
         >
-          撤销
+          ↩️ 撤销
         </button>
         <button
           className="flow-toolbar__btn"
@@ -88,7 +113,7 @@ export function FlowToolbar({
           aria-label="重做"
           aria-disabled={!canRedo}
         >
-          重做
+          ↪️ 重做
         </button>
       </div>
 
@@ -99,25 +124,26 @@ export function FlowToolbar({
           <button
             className="flow-toolbar__btn flow-toolbar__btn--primary"
             onClick={onExecute}
-            title="执行 (F5)"
+            disabled={!hasFlow}
+            title={hasFlow ? "执行 (F5)" : "请先创建或加载流程"}
             data-testid="btn-execute"
             type="button"
             aria-label="执行流程"
           >
-            执行
+            ▶️ 执行
           </button>
         ) : (
           // Pause/Resume and Stop buttons (shown when executing)
           <>
             <button
-              className="flow-toolbar__btn"
+              className={`flow-toolbar__btn ${isPaused ? 'flow-toolbar__btn--primary' : ''}`}
               onClick={onPause}
               title={isPaused ? '继续 (F5)' : '暂停'}
               data-testid="btn-pause"
               type="button"
               aria-label={isPaused ? '继续执行' : '暂停执行'}
             >
-              {isPaused ? '继续' : '暂停'}
+              {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
             </button>
             <button
               className="flow-toolbar__btn flow-toolbar__btn--danger"
@@ -127,23 +153,36 @@ export function FlowToolbar({
               type="button"
               aria-label="停止执行"
             >
-              停止
+              ⏹️ 停止
             </button>
           </>
         )}
-        
+
         {/* Step button - always visible, disabled during running (not paused) execution */}
         <button
           className="flow-toolbar__btn"
           onClick={onStep}
-          disabled={isExecuting && !isPaused}
+          disabled={!hasFlow || (isExecuting && !isPaused)}
           title="单步执行 (F10)"
           data-testid="btn-step"
           type="button"
           aria-label="单步执行"
-          aria-disabled={isExecuting && !isPaused}
+          aria-disabled={!hasFlow || (isExecuting && !isPaused)}
         >
-          单步
+          ⏭️ 单步
+        </button>
+      </div>
+
+      {/* Help Group - UX优化3: 添加快捷键提示 */}
+      <div className="flow-toolbar__group flow-toolbar__group--help" role="group" aria-label="帮助">
+        <button
+          className="flow-toolbar__btn flow-toolbar__btn--help"
+          title="快捷键: Ctrl+N新建 | Ctrl+S保存 | Ctrl+O打开 | Ctrl+Z撤销 | F5执行 | F10单步"
+          data-testid="btn-help"
+          type="button"
+          aria-label="帮助"
+        >
+          ❓
         </button>
       </div>
     </div>

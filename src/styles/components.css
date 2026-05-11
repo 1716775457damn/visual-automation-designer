@@ -27,6 +27,21 @@
   background: var(--color-bg-primary);
   border-bottom: 1px solid var(--color-border);
   z-index: var(--z-index-toolbar);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.flow-toolbar__flow-name {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
 }
 
 .flow-toolbar__group {
@@ -51,10 +66,20 @@
   background: var(--color-bg-primary);
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .flow-toolbar__btn:hover:not(:disabled) {
   background: var(--color-bg-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.flow-toolbar__btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .flow-toolbar__btn:disabled {
@@ -75,6 +100,19 @@
 .flow-toolbar__btn--danger {
   color: var(--color-danger);
   border-color: var(--color-danger);
+}
+
+.flow-toolbar__btn--danger:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.flow-toolbar__btn--help {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  min-width: auto;
+}
+
+.flow-toolbar__group--help {
+  margin-left: auto;
 }
 
 /* BlockNode */
@@ -2134,4 +2172,278 @@
 
 .flow-list-modal__item-btn--danger:hover:not(:disabled) {
   background: rgba(220, 53, 69, 0.1);
+}
+
+/* ============================================================================
+   UX Optimization Styles
+   ============================================================================ */
+
+.config-placeholder__hint-box {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+
+.config-placeholder__hint-title {
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.config-placeholder__hint {
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Flow List Modal Enhancements */
+.flow-list-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.flow-list-modal__content {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.flow-list-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+
+.flow-list-modal__header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.flow-list-modal__close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+.flow-list-modal__close:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.flow-list-modal__actions {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.flow-list-modal__btn--primary {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+}
+
+.flow-list-modal__btn--primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.flow-list-modal__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+
+.flow-list-modal__empty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.flow-list-modal__empty-hint {
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.flow-list-modal__item {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  transition: all var(--transition-fast);
+  border: 2px solid transparent;
+}
+
+.flow-list-modal__item:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.flow-list-modal__item--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.flow-list-modal__item-info {
+  margin-bottom: var(--spacing-sm);
+}
+
+.flow-list-modal__item-name {
+  display: block;
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-xs);
+}
+
+.flow-list-modal__item-meta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+.flow-list-modal__item-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.flow-list-modal__item-btn {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.flow-list-modal__item-btn:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+}
+
+.flow-list-modal__item-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.flow-list-modal__item-btn--danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.flow-list-modal__item-btn--danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+}
+
+/* Error Message Enhancements */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.error-icon {
+  font-size: 20px;
+}
+
+.error-retry-btn {
+  margin-left: auto;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-danger);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+
+/* Status Bar Enhancements */
+.app__status-item--flow {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+
+/* Block Config Changes Indicator */
+.block-config__changes-indicator {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: rgba(255, 193, 7, 0.1);
+  color: #856404;
+  font-size: var(--font-size-xs);
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Drag and Drop Visual Feedback */
+.flow-canvas.drag-over {
+  background-color: rgba(59, 130, 246, 0.05);
+  border: 2px dashed var(--color-primary);
+}
+
+/* Block Node Hover Effects */
+.block-node:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+/* Tooltip Styles */
+[title] {
+  position: relative;
+}
+
+/* Loading Animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.loading-indicator {
+  animation: pulse 1.5s ease-in-out infinite;
 }

@@ -61,7 +61,7 @@ function AppContent() {
   const hasSelection = selectedNodeId !== null;
 
   // Convert execution log entries to log entries for display
-  const logEntries = executionLog.map((event, index) => 
+  const logEntries = executionLog.map((event, index) =>
     executionEventToLogEntry(event, index)
   );
 
@@ -79,7 +79,7 @@ function AppContent() {
   // Handle config save from BlockConfig component
   const handleConfigSave = useCallback(async (config: Record<string, unknown>) => {
     if (!selectedNodeId) return;
-    
+
     try {
       // The config from BlockConfig already includes the 'type' field
       await updateNodeConfig(selectedNodeId, config as BlockConfigType);
@@ -146,6 +146,10 @@ function AppContent() {
   }, [flow, stepExecution]);
 
   const handleSave = useCallback(async () => {
+    if (!flow) {
+      showToast('warning', '没有可保存的流程');
+      return;
+    }
     try {
       await saveFlow();
       showToast('success', '流程已保存');
@@ -153,12 +157,12 @@ function AppContent() {
       console.error('Failed to save flow:', err);
       showToast('error', '保存失败');
     }
-  }, [saveFlow, showToast]);
+  }, [flow, saveFlow, showToast]);
 
   const handleLoad = useCallback(async () => {
     // Toggle flow list display
     setShowFlowList((prev) => !prev);
-    
+
     // Refresh flow list
     try {
       await loadFlowList();
@@ -192,7 +196,7 @@ function AppContent() {
   }, [deleteFlow, showToast]);
 
   const handleNewFlow = useCallback(async () => {
-    const name = prompt('请输入流程名称：', '新流程');
+    const name = prompt('请输入流程名称：', `新流程_${new Date().toLocaleDateString()}`);
     if (name) {
       try {
         await createFlow(name);
@@ -260,6 +264,8 @@ function AppContent() {
         canRedo={canRedo}
         isExecuting={isExecuting}
         isPaused={isPaused}
+        hasFlow={hasFlow}
+        flowName={flow?.name}
         onSave={handleSave}
         onLoad={handleLoad}
         onUndo={handleUndo}
@@ -268,6 +274,7 @@ function AppContent() {
         onPause={handlePause}
         onStop={handleStop}
         onStep={handleStep}
+        onNew={handleNewFlow}
       />
 
       {/* Main Content */}
@@ -300,14 +307,17 @@ function AppContent() {
               <span>加载中...</span>
             </div>
           )}
-          
+
           {error && (
             <div className="error-message">
               <span className="error-icon">⚠️</span>
               <span>{error.message}</span>
+              <button onClick={() => window.location.reload()} className="error-retry-btn">
+                重试
+              </button>
             </div>
           )}
-          
+
           {selectedNode ? (
             <BlockConfig
               blockId={selectedNode.id}
@@ -322,9 +332,13 @@ function AppContent() {
               <h3>积木块配置</h3>
               <p>点击积木块进行配置</p>
               {!flow && (
-                <p className="config-placeholder__hint">
-                  提示：请先创建或加载流程
-                </p>
+                <div className="config-placeholder__hint-box">
+                  <p className="config-placeholder__hint-title">💡 快速开始</p>
+                  <p className="config-placeholder__hint">1. 点击"新建"创建流程</p>
+                  <p className="config-placeholder__hint">2. 从左侧拖动积木块到画布</p>
+                  <p className="config-placeholder__hint">3. 点击积木块配置参数</p>
+                  <p className="config-placeholder__hint">4. 点击"执行"运行流程</p>
+                </div>
               )}
             </div>
           )}
@@ -341,7 +355,7 @@ function AppContent() {
           completedBlocks={0}
           errorMessage={errorMessage || undefined}
         />
-        
+
         {/* Node/Edge Count */}
         <span className="app__status-item">
           积木块: {nodes.length}
@@ -349,21 +363,21 @@ function AppContent() {
         <span className="app__status-item">
           连接: {edges.length}
         </span>
-        
+
         {/* Flow name */}
         {flow && (
-          <span className="app__status-item">
+          <span className="app__status-item app__status-item--flow">
             流程: {flow.name}
           </span>
         )}
-        
+
         {/* Loading indicator */}
         {loading && (
           <span className="app__status-item app__status-item--loading">
             加载中...
           </span>
         )}
-        
+
         {/* Error display */}
         {error && (
           <span className="app__status-item app__status-item--error">
@@ -381,11 +395,11 @@ function AppContent() {
 
       {/* Flow List Modal */}
       {showFlowList && (
-        <div className="flow-list-modal">
-          <div className="flow-list-modal__content">
+        <div className="flow-list-modal" onClick={() => setShowFlowList(false)}>
+          <div className="flow-list-modal__content" onClick={(e) => e.stopPropagation()}>
             <div className="flow-list-modal__header">
-              <h3>流程列表</h3>
-              <button 
+              <h3>📋 流程列表</h3>
+              <button
                 className="flow-list-modal__close"
                 onClick={() => setShowFlowList(false)}
                 type="button"
@@ -394,20 +408,23 @@ function AppContent() {
               </button>
             </div>
             <div className="flow-list-modal__actions">
-              <button 
+              <button
                 className="flow-list-modal__btn flow-list-modal__btn--primary"
                 onClick={handleNewFlow}
                 type="button"
               >
-                新建流程
+                ➕ 新建流程
               </button>
             </div>
             <div className="flow-list-modal__list">
               {flowList.length === 0 ? (
-                <p className="flow-list-modal__empty">暂无保存的流程</p>
+                <div className="flow-list-modal__empty">
+                  <p>📭 暂无保存的流程</p>
+                  <p className="flow-list-modal__empty-hint">点击"新建流程"开始创建</p>
+                </div>
               ) : (
                 flowList.map((meta) => (
-                  <div key={meta.id} className="flow-list-modal__item">
+                  <div key={meta.id} className={`flow-list-modal__item ${flow?.id === meta.id ? 'flow-list-modal__item--active' : ''}`}>
                     <div className="flow-list-modal__item-info">
                       <span className="flow-list-modal__item-name">{meta.name}</span>
                       <span className="flow-list-modal__item-meta">
@@ -421,14 +438,14 @@ function AppContent() {
                         disabled={flow?.id === meta.id}
                         type="button"
                       >
-                        打开
+                        {flow?.id === meta.id ? '✓ 当前' : '打开'}
                       </button>
                       <button
                         className="flow-list-modal__item-btn flow-list-modal__item-btn--danger"
                         onClick={() => handleDeleteFlowById(meta.id)}
                         type="button"
                       >
-                        删除
+                        🗑️ 删除
                       </button>
                     </div>
                   </div>
