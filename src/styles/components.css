@@ -3797,3 +3797,486 @@
   background: var(--color-primary);
 }
 
+/* ============================================================================
+   UX Optimization 81-100: Enhanced Interactive Features
+   ============================================================================ */
+
+/* Execution log enhancements - UX优化81-85 */
+.execution-log__filters {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.execution-log__filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.execution-log__filter-btn:hover {
+  background: var(--color-bg-secondary);
+}
+
+.execution-log__filter-btn--active {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.execution-log__filter-count {
+  padding: 1px 4px;
+  background: var(--color-bg-tertiary);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.execution-log__search {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+.execution-log__search-input {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  padding-right: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.execution-log__search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.execution-log__search-clear {
+  position: absolute;
+  right: calc(var(--spacing-sm) + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: var(--color-bg-tertiary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.execution-log__icon {
+  font-size: 12px;
+}
+
+.execution-log__pause-hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-xs);
+  background: rgba(255, 193, 7, 0.9);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  color: #333;
+}
+
+/* Keyboard shortcut hints - UX优化86 */
+.keyboard-hint {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--font-size-sm);
+  display: flex;
+  gap: var(--spacing-md);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+}
+
+.keyboard-hint__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.keyboard-hint__key {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+/* Block type color legend - UX优化87 */
+.block-legend {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.block-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+}
+
+.block-legend__color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.block-legend__color--action {
+  background: #4caf50;
+}
+
+.block-legend__color--control {
+  background: #2196f3;
+}
+
+/* Execution timeline - UX优化88 */
+.execution-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-sm);
+}
+
+.execution-timeline__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+}
+
+.execution-timeline__item--completed {
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.execution-timeline__item--running {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.execution-timeline__item--pending {
+  background: var(--color-bg-secondary);
+}
+
+.execution-timeline__status {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.execution-timeline__connector {
+  width: 2px;
+  height: 12px;
+  background: var(--color-border);
+  margin-left: 7px;
+}
+
+/* Quick add menu - UX优化89 */
+.quick-add-menu {
+  position: fixed;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--spacing-xs);
+  z-index: 1000;
+}
+
+.quick-add-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+
+.quick-add-menu__item:hover {
+  background: var(--color-primary-light);
+}
+
+.quick-add-menu__shortcut {
+  margin-left: auto;
+  padding: 2px 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-family: monospace;
+}
+
+/* Flow statistics panel - UX优化90 */
+.flow-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.flow-stats__item {
+  text-align: center;
+}
+
+.flow-stats__value {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.flow-stats__label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Contextual help - UX优化91 */
+.contextual-help {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: var(--spacing-sm);
+  width: 250px;
+  padding: var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  z-index: 100;
+}
+
+.contextual-help__title {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.contextual-help__content {
+  color: var(--color-text-secondary);
+}
+
+/* Connection animation variants - UX优化92 */
+.react-flow__edge--waiting {
+  stroke: var(--color-warning, #ffc107);
+  animation: waiting-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes waiting-pulse {
+  0%, 100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.5;
+  }
+}
+
+/* Block preview on hover - UX优化93 */
+.block-preview {
+  position: absolute;
+  z-index: 100;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  max-width: 200px;
+  font-size: var(--font-size-xs);
+}
+
+/* Flow version history - UX优化94 */
+.version-history {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  width: 300px;
+  max-height: 80vh;
+  background: var(--color-bg-primary);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  overflow-y: auto;
+  z-index: 1100;
+}
+
+.version-history__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.version-history__item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.version-history__item:hover {
+  background: var(--color-bg-secondary);
+}
+
+.version-history__item--current {
+  background: var(--color-primary-light);
+}
+
+/* Smart suggestions - UX优化95 */
+.smart-suggestions {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-xs);
+}
+
+.smart-suggestions__title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-secondary);
+}
+
+.smart-suggestions__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+
+.smart-suggestions__item:hover {
+  background: var(--color-primary-light);
+}
+
+/* Performance indicator - UX优化96 */
+.performance-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.performance-indicator--good {
+  color: var(--color-success);
+}
+
+.performance-indicator--warning {
+  color: var(--color-warning, #ffc107);
+}
+
+.performance-indicator--poor {
+  color: var(--color-danger);
+}
+
+/* Accessibility improvements - UX优化97 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode - UX优化98 */
+@media (prefers-contrast: high) {
+  .block-node {
+    border-width: 3px;
+  }
+  
+  .react-flow__handle {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-bg-primary);
+  }
+  
+  .execution-log__entry {
+    border-left: 3px solid currentColor;
+  }
+}
+
+/* Focus trap indicator - UX优化99 */
+.focus-trap-indicator {
+  position: fixed;
+  top: var(--spacing-md);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  z-index: 1200;
+}
+
+/* Touch device optimizations - UX优化100 */
+@media (hover: none) and (pointer: coarse) {
+  .react-flow__handle {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .block-node {
+    min-width: 180px;
+    min-height: 60px;
+  }
+  
+  .flow-toolbar__btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    min-height: 44px;
+  }
+  
+  .execution-log__filter-btn {
+    padding: var(--spacing-sm);
+    min-height: 36px;
+  }
+}
+

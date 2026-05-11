@@ -5,7 +5,7 @@
  * Validates: Requirements 5.2, 5.4
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface LogEntry {
   id: string;
@@ -45,23 +45,19 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   resumed: '继续执行',
 };
 
-/**
- * Get message for log entry based on event
- * (Reserved for future use with custom message formatting)
- */
-// function getLogMessage(entry: LogEntry): string {
-//   const typeLabel = EVENT_TYPE_LABELS[entry.type] || entry.type;
-//   
-//   if (entry.blockId) {
-//     return `${typeLabel}: 积木块 ${entry.blockId.slice(0, 8)}`;
-//   }
-//   
-//   return typeLabel;
-// }
+// UX优化81: 日志类型图标
+const LOG_TYPE_ICONS: Record<LogEntry['type'], string> = {
+  info: 'ℹ️',
+  success: '✅',
+  error: '❌',
+  warning: '⚠️',
+};
 
 /**
  * ExecutionLog Component - Execution Log Display
  * Shows a scrollable list of execution log entries
+ * 
+ * UX优化81-85: Enhanced execution log
  */
 export function ExecutionLog({
   entries = [],
@@ -70,13 +66,19 @@ export function ExecutionLog({
 }: ExecutionLogProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(autoScroll);
+  // UX优化82: 筛选状态
+  const [filter, setFilter] = useState<LogEntry['type'] | 'all'>('all');
+  // UX优化83: 搜索查询
+  const [searchQuery, setSearchQuery] = useState('');
+  // UX优化84: 暂停自动滚动
+  const [isPaused, setIsPaused] = useState(false);
 
   // Auto-scroll to bottom when new entries are added
   useEffect(() => {
-    if (autoScroll && contentRef.current && shouldAutoScroll.current) {
+    if (autoScroll && contentRef.current && shouldAutoScroll.current && !isPaused) {
       contentRef.current.scrollTop = contentRef.current.scrollHeight;
     }
-  }, [entries, autoScroll]);
+  }, [entries, autoScroll, isPaused]);
 
   // Format time for display
   const formatTime = (date: Date): string => {
@@ -87,8 +89,24 @@ export function ExecutionLog({
     });
   };
 
+  // UX优化82: 筛选日志
+  const filteredEntries = entries.filter((entry) => {
+    if (filter !== 'all' && entry.type !== filter) return false;
+    if (searchQuery && !entry.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
+
   // Empty state
-  const isEmpty = entries.length === 0;
+  const isEmpty = filteredEntries.length === 0;
+
+  // UX优化85: 统计各类型日志数量
+  const counts = {
+    all: entries.length,
+    info: entries.filter(e => e.type === 'info').length,
+    success: entries.filter(e => e.type === 'success').length,
+    error: entries.filter(e => e.type === 'error').length,
+    warning: entries.filter(e => e.type === 'warning').length,
+  };
 
   return (
     <div
@@ -101,10 +119,45 @@ export function ExecutionLog({
     >
       {/* Header */}
       <div className="execution-log__header">
-        <h4>执行日志</h4>
+        <h4>📋 执行日志</h4>
         <span className="execution-log__count" aria-label={`${entries.length} 条记录`}>
-          {entries.length} 条记录
+          {entries.length} 条
         </span>
+      </div>
+
+      {/* UX优化82: 筛选器 */}
+      <div className="execution-log__filters">
+        {(['all', 'info', 'success', 'error', 'warning'] as const).map((type) => (
+          <button
+            key={type}
+            className={`execution-log__filter-btn ${filter === type ? 'execution-log__filter-btn--active' : ''}`}
+            onClick={() => setFilter(type)}
+            data-testid={`filter-${type}`}
+          >
+            {type === 'all' ? '📊' : LOG_TYPE_ICONS[type]} 
+            {type === 'all' ? '全部' : type === 'info' ? '信息' : type === 'success' ? '成功' : type === 'error' ? '错误' : '警告'}
+            <span className="execution-log__filter-count">{counts[type]}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* UX优化83: 搜索框 */}
+      <div className="execution-log__search">
+        <input
+          type="text"
+          placeholder="🔍 搜索日志..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="execution-log__search-input"
+        />
+        {searchQuery && (
+          <button
+            className="execution-log__search-clear"
+            onClick={() => setSearchQuery('')}
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -112,19 +165,25 @@ export function ExecutionLog({
         className="execution-log__content" 
         ref={contentRef}
         tabIndex={0}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
       >
         {isEmpty ? (
           <div className="execution-log__empty" role="status">
-            暂无日志
+            {searchQuery || filter !== 'all' ? '没有匹配的日志' : '暂无日志'}
           </div>
         ) : (
-          entries.map((entry) => (
+          filteredEntries.map((entry) => (
             <div
               key={entry.id}
               className={`execution-log__entry execution-log__entry--${entry.type}`}
               data-testid={`log-entry-${entry.id}`}
               role="listitem"
             >
+              {/* UX优化81: 类型图标 */}
+              <span className="execution-log__icon" aria-hidden="true">
+                {LOG_TYPE_ICONS[entry.type]}
+              </span>
               <span className="execution-log__time" aria-label={`时间: ${formatTime(entry.timestamp)}`}>
                 {formatTime(entry.timestamp)}
               </span>
@@ -140,6 +199,13 @@ export function ExecutionLog({
           ))
         )}
       </div>
+
+      {/* UX优化84: 自动滚动提示 */}
+      {isPaused && entries.length > 0 && (
+        <div className="execution-log__pause-hint">
+          ⏸️ 自动滚动已暂停
+        </div>
+      )}
     </div>
   );
 }

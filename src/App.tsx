@@ -393,12 +393,10 @@ function AppContent() {
         )}
       </div>
 
-      {/* Execution Log Panel (conditionally visible) */}
-      {logEntries.length > 0 && (
-        <div className="app__execution-log">
-          <ExecutionLog entries={logEntries} maxHeight={150} />
-        </div>
-      )}
+      {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}
+      <div className="app__execution-log">
+        <ExecutionLog entries={logEntries} maxHeight={180} />
+      </div>
 
       {/* Flow List Modal */}
       {showFlowList && (
