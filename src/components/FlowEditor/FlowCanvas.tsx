@@ -541,7 +541,13 @@ export const FlowCanvas = memo(function FlowCanvas({
   }, [contextMenu, nodeMenuItems, edgeMenuItems, canvasMenuItems]);
 
   return (
-    <div className="flow-canvas" ref={reactFlowWrapper} data-testid="flow-canvas">
+    <div 
+      className="flow-canvas" 
+      ref={reactFlowWrapper} 
+      data-testid="flow-canvas"
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       <ReactFlowProvider>
         <ReactFlow
           nodes={nodesWithExecutingState}
@@ -552,8 +558,6 @@ export const FlowCanvas = memo(function FlowCanvas({
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
           onInit={setReactFlowInstance}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
           onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={onEdgeContextMenu}
           onPaneContextMenu={onPaneContextMenu}

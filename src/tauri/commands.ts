@@ -159,6 +159,13 @@ export async function listImages(): Promise<ImageMetadata[]> {
   return invoke<ImageMetadata[]>('list_images');
 }
 
+/**
+ * 从 base64 数据添加图片（用于剪贴板粘贴）
+ */
+export async function addImageFromBase64(base64Data: string, name: string): Promise<ImageMetadata> {
+  return invoke<ImageMetadata>('add_image_from_base64', { base64Data, name });
+}
+
 // ============================================================================
 // 流程管理相关命令
 // ============================================================================

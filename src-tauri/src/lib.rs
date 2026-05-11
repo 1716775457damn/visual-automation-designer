@@ -109,6 +109,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Image library commands
             commands::add_image,
+            commands::add_image_from_base64,
             commands::remove_image,
             commands::rename_image,
             commands::list_images,

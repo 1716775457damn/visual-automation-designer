@@ -1069,6 +1069,47 @@
   margin-bottom: var(--spacing-sm);
 }
 
+.image-selector__actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.image-selector__upload-btn,
+.image-selector__paste-btn {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
+}
+
+.image-selector__paste-btn {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.image-selector__upload-btn:hover:not(:disabled),
+.image-selector__paste-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.image-selector__paste-btn:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+}
+
+.image-selector__upload-btn:disabled,
+.image-selector__paste-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .image-selector__delete-btn {
   position: absolute;
   top: 2px;

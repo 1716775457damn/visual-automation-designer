@@ -6,6 +6,7 @@
 
 use tauri::{AppHandle, State};
 use std::sync::Mutex;
+use base64::{Engine as _, engine::general_purpose};
 
 use crate::core::image_library::ImageLibraryManager;
 use crate::error::{AppError, Result};
@@ -153,6 +154,68 @@ fn parse_image_id(id: &str) -> Result<ImageId> {
         .map_err(|e| AppError::ImageNotFound(
             format!("Invalid image ID '{}': {}", id, e)
         ))
+}
+
+/// Add an image from base64 data (for clipboard paste).
+///
+/// # Arguments
+/// * `base64_data` - Base64 encoded image data (with or without data URL prefix)
+/// * `name` - Display name for the image
+///
+/// # Returns
+/// The created ImageMetadata on success, or an error
+#[tauri::command]
+pub fn add_image_from_base64(
+    state: State<'_, ImageLibraryState>,
+    app_handle: AppHandle,
+    base64_data: String,
+    name: String,
+) -> Result<ImageMetadata> {
+    // Remove data URL prefix if present (e.g., "data:image/png;base64,")
+    let base64_clean = if base64_data.contains(",") {
+        base64_data.split(",").nth(1).unwrap_or(&base64_data).to_string()
+    } else {
+        base64_data
+    };
+    
+    // Decode base64 to bytes
+    let image_bytes = general_purpose::STANDARD
+        .decode(&base64_clean)
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to decode base64 image data: {}", e)
+        ))?;
+    
+    // Detect image format and encode as PNG
+    let img = image::load_from_memory(&image_bytes)
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to load image from bytes: {}", e)
+        ))?;
+    
+    // Encode as PNG
+    let mut png_bytes = Vec::new();
+    img.write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageOutputFormat::Png)
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to encode image as PNG: {}", e)
+        ))?;
+    
+    // Save to temp file
+    let temp_dir = std::env::temp_dir();
+    let file_name = format!("{}_{}.png", name.replace(" ", "_"), chrono::Utc::now().timestamp());
+    let temp_path = temp_dir.join(&file_name);
+    
+    std::fs::write(&temp_path, &png_bytes)
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to write temp image file: {}", e)
+        ))?;
+    
+    // Add to library
+    let manager = state.manager.lock()
+        .map_err(|e| AppError::InternalError(
+            format!("Failed to lock image library manager: {}", e)
+        ))?;
+    
+    let path_str = temp_path.to_string_lossy().to_string();
+    manager.add_image(&path_str, name)
 }
 
 #[cfg(test)]

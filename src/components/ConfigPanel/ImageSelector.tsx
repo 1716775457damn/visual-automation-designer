@@ -1,7 +1,7 @@
 /**
  * ImageSelector - 图片选择器组件
  * 从图片库选择图片，支持搜索和筛选
- * 
+ *
  * Validates: Requirements 3.6
  */
 
@@ -19,6 +19,8 @@ export interface ImageSelectorProps {
   showUploadButton?: boolean;
   /** Whether to show delete button on images */
   showDeleteButton?: boolean;
+  /** Whether to show paste button */
+  showPasteButton?: boolean;
   /** Custom empty state message */
   emptyMessage?: string;
   /** Custom class name */
@@ -27,13 +29,13 @@ export interface ImageSelectorProps {
 
 /**
  * ImageSelector 组件 - 图片选择器
- * 
+ *
  * Features:
  * - Display images from library
  * - Search/filter functionality
  * - Support for empty state with upload option
  * - Grid layout for image thumbnails
- * - Upload and delete functionality
+ * - Upload, paste, and delete functionality
  */
 export function ImageSelector({
   selectedId,
@@ -41,6 +43,7 @@ export function ImageSelector({
   searchPlaceholder = '搜索图片...',
   showUploadButton = true,
   showDeleteButton = true,
+  showPasteButton = true,
   emptyMessage = '暂无图片',
   className = '',
 }: ImageSelectorProps) {
@@ -49,12 +52,14 @@ export function ImageSelector({
     loading,
     error,
     selectAndUploadImage,
+    pasteImageFromClipboard,
     deleteImage,
     refreshImages,
   } = useImageLibrary();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isPasting, setIsPasting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter images based on search query
@@ -81,6 +86,21 @@ export function ImageSelector({
       setIsUploading(false);
     }
   }, [selectAndUploadImage, onSelect]);
+
+  const handlePaste = useCallback(async () => {
+    setIsPasting(true);
+    try {
+      const metadata = await pasteImageFromClipboard();
+      if (metadata) {
+        onSelect?.(metadata.id);
+      }
+    } catch (err) {
+      console.error('Failed to paste image:', err);
+      alert('粘贴失败，请确保剪贴板中有图片');
+    } finally {
+      setIsPasting(false);
+    }
+  }, [pasteImageFromClipboard, onSelect]);
 
   const handleDelete = useCallback(async (e: React.MouseEvent, imageId: string) => {
     e.stopPropagation(); // Prevent selection when deleting
@@ -129,9 +149,9 @@ export function ImageSelector({
         )}
       </div>
 
-      {/* Upload button - always visible at top */}
+      {/* Upload and Paste buttons - always visible at top */}
       {showUploadButton && (
-        <div className="image-selector__upload-section">
+        <div className="image-selector__actions">
           <button
             className="image-selector__upload-btn"
             onClick={handleUpload}
@@ -140,6 +160,17 @@ export function ImageSelector({
           >
             {isUploading ? '上传中...' : '+ 上传图片'}
           </button>
+          {showPasteButton && (
+            <button
+              className="image-selector__paste-btn"
+              onClick={handlePaste}
+              disabled={isPasting || loading}
+              data-testid="btn-paste-image"
+              title="从剪贴板粘贴图片 (Ctrl+V)"
+            >
+              {isPasting ? '粘贴中...' : '📋 粘贴'}
+            </button>
+          )}
         </div>
       )}
 
@@ -173,8 +204,8 @@ export function ImageSelector({
             >
               <div className="image-selector__thumbnail">
                 {image.filePath ? (
-                  <img 
-                    src={image.filePath} 
+                  <img
+                    src={image.filePath}
                     alt={image.name}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
@@ -191,7 +222,7 @@ export function ImageSelector({
                 )}
               </div>
               <span className="image-selector__name">{image.name}</span>
-              
+
               {/* Delete button */}
               {showDeleteButton && (
                 <button
@@ -204,7 +235,7 @@ export function ImageSelector({
                   ×
                 </button>
               )}
-              
+
               {selectedId === image.id && (
                 <div className="image-selector__check" data-testid={`selected-check-${image.id}`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
