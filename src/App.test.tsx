@@ -4,6 +4,12 @@ import App from './App';
 
 const createFlowMock = vi.fn();
 const addNodeMock = vi.fn();
+const saveFlowMock = vi.fn();
+const executeFlowMock = vi.fn();
+let flowState = {
+  flow: null as null | { id: string; name: string; blocks: Record<string, unknown>; connections: unknown[] },
+  isDirty: false,
+};
 
 vi.mock('./hooks', async () => {
   const actual = await vi.importActual<typeof import('./hooks')>('./hooks');
@@ -11,15 +17,15 @@ vi.mock('./hooks', async () => {
   return {
     ...actual,
     useFlow: () => ({
-      flow: null,
+      flow: flowState.flow,
       nodes: [],
       edges: [],
       flowList: [],
       loading: false,
       error: null,
-      isDirty: false,
+      isDirty: flowState.isDirty,
       createFlow: createFlowMock,
-      saveFlow: vi.fn(),
+      saveFlow: saveFlowMock,
       loadFlow: vi.fn(),
       loadFlowList: vi.fn(),
       deleteFlow: vi.fn(),
@@ -40,7 +46,7 @@ vi.mock('./hooks', async () => {
       currentBlockId: null,
       executionLog: [],
       errorMessage: null,
-      executeFlow: vi.fn(),
+      executeFlow: executeFlowMock,
       pauseExecution: vi.fn(),
       resumeExecution: vi.fn(),
       stopExecution: vi.fn(),
@@ -66,7 +72,11 @@ vi.mock('./components/App', () => ({
 
 vi.mock('./components/FlowEditor', () => ({
   FlowCanvas: () => <div data-testid="flow-canvas" />,
-  FlowToolbar: () => <div data-testid="flow-toolbar" />,
+  FlowToolbar: ({ onExecute }: { onExecute?: () => void }) => (
+    <div data-testid="flow-toolbar">
+      <button type="button" onClick={onExecute}>执行流程</button>
+    </div>
+  ),
 }));
 
 vi.mock('./components/ExecutionStatus', () => ({
@@ -95,8 +105,11 @@ describe('App quick-create entry points', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    flowState = { flow: null, isDirty: false };
     createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
     addNodeMock.mockResolvedValue('node-1');
+    saveFlowMock.mockResolvedValue(undefined);
+    executeFlowMock.mockResolvedValue(undefined);
   });
 
   it('creates a quick flow from onboarding CTA', async () => {
@@ -152,5 +165,28 @@ describe('App node placement feedback', () => {
     });
 
     expect(screen.queryByText('click 已添加到当前视口')).not.toBeInTheDocument();
+  });
+});
+
+describe('App execution uses saved flow state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      isDirty: true,
+    };
+    saveFlowMock.mockResolvedValue(undefined);
+    executeFlowMock.mockResolvedValue(undefined);
+  });
+
+  it('saves dirty changes before execution', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+
+    await waitFor(() => {
+      expect(saveFlowMock).toHaveBeenCalledTimes(1);
+      expect(executeFlowMock).toHaveBeenCalledWith('flow-1');
+    });
   });
 });

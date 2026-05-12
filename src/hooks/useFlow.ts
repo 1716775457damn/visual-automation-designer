@@ -204,6 +204,26 @@ function createBlockType(type: string, category: string): BlockType {
   }
 }
 
+function normalizeConfigFromEdges(
+  config: BlockConfig,
+  blockType: string,
+  outgoingEdges: Edge[]
+): BlockConfig {
+  if (blockType === 'condition' && config.type === 'condition') {
+    return {
+      ...config,
+      trueBranch: outgoingEdges
+        .filter((edge) => edge.sourceHandle === 'true')
+        .map((edge) => edge.target),
+      falseBranch: outgoingEdges
+        .filter((edge) => edge.sourceHandle === 'false')
+        .map((edge) => edge.target),
+    };
+  }
+
+  return config;
+}
+
 /**
  * useFlow Hook - 流程管理
  * Manages flow state and communicates with Tauri backend
@@ -325,7 +345,9 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
           node.data.blockType,
           node.data.blockCategory
         );
-        const config = (node.data.config as BlockConfig) || createDefaultConfig(node.data.blockType, node.data.blockCategory);
+        const baseConfig = (node.data.config as BlockConfig) || createDefaultConfig(node.data.blockType, node.data.blockCategory);
+        const outgoingEdges = edges.filter((edge) => edge.source === node.id);
+        const config = normalizeConfigFromEdges(baseConfig, node.data.blockType, outgoingEdges);
         
         flowToSave.blocks[node.id] = {
           id: node.id,

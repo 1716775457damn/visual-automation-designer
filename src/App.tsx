@@ -313,6 +313,9 @@ function AppContent() {
       return;
     }
     try {
+      if (isDirty) {
+        await saveFlow();
+      }
       resetProgress(nodes.length);
       await tauriExecuteFlow(flow.id);
       showToast('info', '开始执行流程');
@@ -320,7 +323,7 @@ function AppContent() {
       console.error('Failed to execute flow:', err);
       showToast('error', '执行失败');
     }
-  }, [flow, nodes.length, resetProgress, tauriExecuteFlow, showToast]);
+  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, tauriExecuteFlow, showToast]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'paused') {
@@ -341,13 +344,16 @@ function AppContent() {
       return;
     }
     try {
+      if (isDirty) {
+        await saveFlow();
+      }
       resetProgress(nodes.length);
       await stepExecution(flow.id);
     } catch (err) {
       console.error('Failed to step execution:', err);
       showToast('error', '单步执行失败');
     }
-  }, [flow, nodes.length, resetProgress, showToast, stepExecution]);
+  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, showToast, stepExecution]);
 
   const handleSave = useCallback(async () => {
     if (!flow) {
