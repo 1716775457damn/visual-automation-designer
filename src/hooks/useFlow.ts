@@ -254,6 +254,19 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     }
   }, [flow]);
 
+  const refreshUndoRedoForFlow = useCallback(async (flowId: string) => {
+    try {
+      const [undo, redo] = await Promise.all([
+        tauriCanUndo(flowId),
+        tauriCanRedo(flowId),
+      ]);
+      setCanUndo(undo);
+      setCanRedo(redo);
+    } catch (err) {
+      console.error('Failed to get undo/redo state:', err);
+    }
+  }, []);
+
   // Initialize flow list on mount
   useEffect(() => {
     if (initializedRef.current) return;
@@ -432,6 +445,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const newNode = blockNodeToReactFlowNode(block);
       setNodes((nds) => [...nds, newNode]);
       setIsDirty(true);
+      await refreshUndoRedoForFlow(activeFlowId);
 
       return block.id;
     } catch (err) {
@@ -463,11 +477,12 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
     try {
       await tauriUpdateBlockPosition(flow.id, nodeId, { x: position.x, y: position.y });
+      await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
       console.warn('Failed to update block position on backend:', err);
       // Don't throw for position updates - keep UI responsive
     }
-  }, [flow]);
+  }, [flow, refreshUndoRedoForFlow]);
 
   // Update node config
   const updateNodeConfig = useCallback(async (
@@ -491,12 +506,13 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
     try {
       await tauriUpdateBlockConfig(flow.id, nodeId, config);
+      await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;
     }
-  }, [flow]);
+  }, [flow, refreshUndoRedoForFlow]);
 
   // Delete a node
   const deleteNode = useCallback(async (nodeId: string): Promise<void> => {
@@ -514,12 +530,13 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
     try {
       await tauriDeleteBlock(flow.id, nodeId);
+      await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;
     }
-  }, [flow]);
+  }, [flow, refreshUndoRedoForFlow]);
 
   // Add a connection
   const addConnection = useCallback(async (connection: Connection): Promise<void> => {
@@ -536,12 +553,13 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       );
       setEdges((eds) => addEdge(connectionToEdge(createdConnection), eds));
       setIsDirty(true);
+      await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;
     }
-  }, [flow]);
+  }, [flow, refreshUndoRedoForFlow]);
 
   // Delete a connection
   const deleteConnection = useCallback(async (connectionId: string): Promise<void> => {
@@ -556,12 +574,13 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
     try {
       await tauriDeleteConnection(flow.id, connectionId);
+      await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;
     }
-  }, [flow]);
+  }, [flow, refreshUndoRedoForFlow]);
 
   // Undo
   const undo = useCallback(async (): Promise<void> => {
