@@ -214,6 +214,48 @@ describe('Flow Tauri Commands', () => {
       expect(result).toBe(true);
     });
 
+    it('should serialize wait image config for tauri commands', async () => {
+      mockInvoke.mockResolvedValueOnce(true);
+
+      const newConfig: BlockConfig = { type: 'wait_image', imageId: 'image-1', timeoutMs: 2500 };
+      await updateBlockConfig('test-flow-id', 'test-block-id', newConfig);
+
+      expect(mockInvoke).toHaveBeenCalledWith('update_block_config', {
+        flowId: 'test-flow-id',
+        blockId: 'test-block-id',
+        config: {
+          type: 'wait_image',
+          image_id: 'image-1',
+          timeout_ms: 2500,
+        },
+      });
+    });
+
+    it('should serialize condition config for tauri commands', async () => {
+      mockInvoke.mockResolvedValueOnce(true);
+
+      const newConfig: BlockConfig = {
+        type: 'condition',
+        imageId: 'image-1',
+        condition: 'image_exists',
+        trueBranch: ['block-a'],
+        falseBranch: ['block-b'],
+      };
+      await updateBlockConfig('test-flow-id', 'test-block-id', newConfig);
+
+      expect(mockInvoke).toHaveBeenCalledWith('update_block_config', {
+        flowId: 'test-flow-id',
+        blockId: 'test-block-id',
+        config: {
+          type: 'condition',
+          image_id: 'image-1',
+          condition: 'image_exists',
+          true_branch: ['block-a'],
+          false_branch: ['block-b'],
+        },
+      });
+    });
+
     it('should delete a block', async () => {
       mockInvoke.mockResolvedValueOnce(true);
 

@@ -247,6 +247,85 @@ export interface ValidationResponse {
   warnings: ValidationErrorResponse[];
 }
 
+type TauriBlockConfigPayload =
+  | {
+      type: 'click';
+      mode:
+        | { mode: 'coordinates'; x: number; y: number }
+        | { mode: 'image'; image_id: string };
+      count: number;
+    }
+  | {
+      type: 'wait_image';
+      image_id: string;
+      timeout_ms?: number;
+    }
+  | {
+      type: 'wait_time';
+      duration_ms: number;
+    }
+  | {
+      type: 'input_text';
+      text: string;
+      interval_ms?: number;
+    }
+  | {
+      type: 'loop';
+      count: number;
+    }
+  | {
+      type: 'loop_infinite';
+    }
+  | {
+      type: 'condition';
+      image_id: string;
+      condition: ConditionOp;
+      true_branch: BlockId[];
+      false_branch: BlockId[];
+    };
+
+function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
+  switch (config.type) {
+    case 'click':
+      return {
+        type: 'click',
+        mode: config.mode.mode === 'image'
+          ? { mode: 'image', image_id: config.mode.imageId }
+          : config.mode,
+        count: config.count,
+      };
+    case 'wait_image':
+      return {
+        type: 'wait_image',
+        image_id: config.imageId,
+        timeout_ms: config.timeoutMs,
+      };
+    case 'wait_time':
+      return {
+        type: 'wait_time',
+        duration_ms: config.durationMs,
+      };
+    case 'input_text':
+      return {
+        type: 'input_text',
+        text: config.text,
+        interval_ms: config.intervalMs,
+      };
+    case 'loop':
+      return config;
+    case 'loop_infinite':
+      return config;
+    case 'condition':
+      return {
+        type: 'condition',
+        image_id: config.imageId,
+        condition: config.condition,
+        true_branch: config.trueBranch,
+        false_branch: config.falseBranch,
+      };
+  }
+}
+
 // ============================================================================
 // Flow Management Commands
 // ============================================================================
@@ -268,6 +347,7 @@ export async function createFlow(name: string): Promise<Flow> {
       createdAt: now,
       updatedAt: now,
     };
+
     store.flows[flow.id] = flow;
     store.undoStacks[flow.id] = [];
     store.redoStacks[flow.id] = [];
@@ -413,7 +493,7 @@ export async function createBlock(
     return block;
   }
 
-  return invoke<BlockNode>('create_block', { flowId, blockType, config, position });
+  return invoke<BlockNode>('create_block', { flowId, blockType, config: toTauriBlockConfig(config), position });
 }
 
 /**
@@ -471,7 +551,7 @@ export async function updateBlockConfig(
     return true;
   }
 
-  return invoke<boolean>('update_block_config', { flowId, blockId, config });
+  return invoke<boolean>('update_block_config', { flowId, blockId, config: toTauriBlockConfig(config) });
 }
 
 /**
