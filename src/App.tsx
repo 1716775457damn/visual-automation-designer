@@ -15,6 +15,8 @@ type PendingUnsavedAction =
   | { type: 'load_flow'; flowId: string }
   | { type: 'create_flow_dialog' };
 
+type PendingPlacement = { type: string; category: string };
+
 function isInputLikeElement(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
 
@@ -86,6 +88,7 @@ function AppContent() {
   const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
+  const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
   // Determine execution states
@@ -181,8 +184,29 @@ function AppContent() {
   }, [addNode, showToast]);
 
   const handleToolboxSelect = useCallback((type: string, category: string) => {
+    setPendingPlacement(null);
     void handleAddNode(type, category, getQuickAddPosition());
   }, [getQuickAddPosition, handleAddNode]);
+
+  const handleArmPlacement = useCallback((type: string, category: string) => {
+    setPendingPlacement({ type, category });
+    showToast('info', `请选择白板位置放置 ${type}`);
+  }, [showToast]);
+
+  const handlePlacePendingNode = useCallback((position: { x: number; y: number }) => {
+    if (!pendingPlacement) {
+      return;
+    }
+
+    const snappedPosition = {
+      x: Math.round(position.x / 20) * 20,
+      y: Math.round(position.y / 20) * 20,
+    };
+
+    const { type, category } = pendingPlacement;
+    setPendingPlacement(null);
+    void handleAddNode(type, category, snappedPosition);
+  }, [handleAddNode, pendingPlacement]);
 
   const handleDeleteNode = useCallback(async (nodeId: string) => {
     try {
@@ -475,7 +499,7 @@ function AppContent() {
       <div className="app__content">
         {/* Left Sidebar - Toolbox */}
         <aside className="app__sidebar app__sidebar--left">
-          <Toolbox onBlockSelect={handleToolboxSelect} />
+          <Toolbox onBlockSelect={handleToolboxSelect} onArmPlacement={handleArmPlacement} />
         </aside>
 
         {/* Center - Flow Canvas */}
@@ -489,6 +513,8 @@ function AppContent() {
             onConnect={handleConnect}
             executingBlockId={currentBlockId}
             onAddNode={handleAddNode}
+            pendingPlacement={pendingPlacement}
+            onPlacePendingNode={handlePlacePendingNode}
             onViewportCenterReady={(getCenter) => {
               viewportCenterRef.current = getCenter;
             }}

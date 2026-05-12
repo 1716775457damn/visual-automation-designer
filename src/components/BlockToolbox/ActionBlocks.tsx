@@ -26,13 +26,14 @@ const ACTION_BLOCKS: ActionBlockItem[] = [
 
 export interface ActionBlocksProps {
   onSelect?: (type: ActionType) => void;
+  onArmPlacement?: (type: ActionType) => void;
   searchQuery?: string;
 }
 
 /**
  * ActionBlocks 组件 - 动作积木块列表
  */
-export function ActionBlocks({ onSelect, searchQuery = '' }: ActionBlocksProps) {
+export function ActionBlocks({ onSelect, onArmPlacement, searchQuery = '' }: ActionBlocksProps) {
   const [draggingType, setDraggingType] = useState<string | null>(null);
 
   const createDragPayload = (type: ActionType) => JSON.stringify({
@@ -88,6 +89,18 @@ export function ActionBlocks({ onSelect, searchQuery = '' }: ActionBlocksProps) 
               {block.shortcut}
             </span>
           )}
+          <button
+            className="action-blocks__place-btn"
+            type="button"
+            title="在白板上指定位置放置"
+            aria-label={`在白板上指定位置放置 ${block.label}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onArmPlacement?.(block.type);
+            }}
+          >
+            ◎
+          </button>
         </div>
       ))}
     </div>

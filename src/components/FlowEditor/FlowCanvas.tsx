@@ -113,6 +113,8 @@ export interface FlowCanvasProps {
   onEdgeDelete?: (edgeId: string) => void;
   onNodeConfig?: (nodeId: string) => void;
   onAddNode?: (type: string, category: string, position: { x: number; y: number }) => void;
+  pendingPlacement?: { type: string; category: string } | null;
+  onPlacePendingNode?: (position: { x: number; y: number }) => void;
   onViewportCenterReady?: (getCenter: () => { x: number; y: number } | null) => void;
   executingBlockId?: string | null;
 }
@@ -132,6 +134,8 @@ export const FlowCanvas = memo(function FlowCanvas({
   onEdgeDelete,
   onNodeConfig,
   onAddNode,
+  pendingPlacement,
+  onPlacePendingNode,
   onViewportCenterReady,
   executingBlockId,
 }: FlowCanvasProps) {
@@ -240,9 +244,19 @@ export const FlowCanvas = memo(function FlowCanvas({
 
   // Handle pane click to deselect - memoized
   const onPaneClick = useCallback(() => {
+    if (pendingPlacement && onPlacePendingNode && reactFlowInstance && reactFlowWrapper.current) {
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const centeredPosition = reactFlowInstance.project({
+        x: bounds.width / 2,
+        y: bounds.height / 2,
+      });
+      onPlacePendingNode(centeredPosition);
+      return;
+    }
+
     onNodeSelect?.(null);
     setContextMenu(null);
-  }, [onNodeSelect]);
+  }, [onNodeSelect, onPlacePendingNode, pendingPlacement, reactFlowInstance]);
 
   // Handle drag over - memoized
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -402,6 +416,26 @@ export const FlowCanvas = memo(function FlowCanvas({
     [reactFlowInstance]
   );
 
+  const onPaneMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      if (!pendingPlacement || !onPlacePendingNode || !reactFlowInstance || !reactFlowWrapper.current) {
+        return;
+      }
+
+      if ((event.buttons & 1) !== 1) {
+        return;
+      }
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const position = reactFlowInstance.project({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
+      onPlacePendingNode(position);
+    },
+    [onPlacePendingNode, pendingPlacement, reactFlowInstance]
+  );
+
   // Close context menu
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -547,7 +581,7 @@ export const FlowCanvas = memo(function FlowCanvas({
 
   return (
     <div 
-      className={`flow-canvas ${isDropActive ? 'flow-canvas--drop-active' : ''}`}
+      className={`flow-canvas ${isDropActive ? 'flow-canvas--drop-active' : ''} ${pendingPlacement ? 'flow-canvas--placement-armed' : ''}`}
       ref={reactFlowWrapper} 
       data-testid="flow-canvas"
       onDragOver={onDragOver}
@@ -563,6 +597,7 @@ export const FlowCanvas = memo(function FlowCanvas({
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
+          onPaneMouseMove={onPaneMouseMove}
           onInit={setReactFlowInstance}
           onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={onEdgeContextMenu}
@@ -593,7 +628,7 @@ export const FlowCanvas = memo(function FlowCanvas({
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Panel position="top-left">
             <div className="flow-canvas__hint">
-              从工具箱拖拽积木块到画布
+              {pendingPlacement ? `点击白板放置: ${pendingPlacement.type}` : '从工具箱拖拽积木块到画布'}
             </div>
           </Panel>
         </ReactFlow>

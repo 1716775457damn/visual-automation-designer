@@ -4698,6 +4698,108 @@
     linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
 }
 
+/* ==========================================================================
+   Workspace Visual Pass - desktop workbench polish
+   ========================================================================== */
+
+.toolbox__header h3 {
+  letter-spacing: 0.04em;
+}
+
+.toolbox__search-input {
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+  color: var(--color-text-primary);
+}
+
+.toolbox__search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.toolbox__search-clear:hover {
+  background: var(--color-bg-primary);
+}
+
+.action-blocks__place-btn,
+.control-blocks__place-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+  color: var(--color-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.action-blocks__place-btn:hover,
+.control-blocks__place-btn:hover {
+  background: var(--color-primary);
+  color: white;
+  transform: scale(1.05);
+}
+
+.flow-canvas--placement-armed {
+  cursor: crosshair;
+}
+
+.flow-canvas--placement-armed::after {
+  content: '单击白板放置元件';
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 20%, var(--color-bg-primary) 80%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 50%, var(--color-border) 50%);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-md);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.block-node {
+  overflow: hidden;
+}
+
+.block-node:hover {
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.12);
+}
+
+.block-node__header {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.execution-log {
+  background: color-mix(in srgb, var(--color-bg-primary) 94%, transparent);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16);
+}
+
+.execution-log__header {
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, var(--color-bg-primary) 24%);
+}
+
+.execution-log__content {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-secondary) 90%, transparent) 100%);
+}
+
+.block-config {
+  background: color-mix(in srgb, var(--color-bg-primary) 95%, transparent);
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.block-config__header {
+  background: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-primary) 28%);
+}
+
+.block-config__input,
+.block-config__select,
+.block-config__textarea {
+  color: var(--color-text-primary);
+}
+
 [data-theme="dark"] .toolbox__header,
 [data-theme="dark"] .toolbox__footer,
 [data-theme="dark"] .toolbox__section-header:hover,

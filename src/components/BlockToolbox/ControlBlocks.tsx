@@ -25,13 +25,14 @@ const CONTROL_BLOCKS: ControlBlockItem[] = [
 
 export interface ControlBlocksProps {
   onSelect?: (type: ControlType) => void;
+  onArmPlacement?: (type: ControlType) => void;
   searchQuery?: string;
 }
 
 /**
  * ControlBlocks 组件 - 控制积木块列表
  */
-export function ControlBlocks({ onSelect, searchQuery = '' }: ControlBlocksProps) {
+export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: ControlBlocksProps) {
   const [draggingType, setDraggingType] = useState<string | null>(null);
 
   const createDragPayload = (type: ControlType) => JSON.stringify({
@@ -87,6 +88,18 @@ export function ControlBlocks({ onSelect, searchQuery = '' }: ControlBlocksProps
               {block.shortcut}
             </span>
           )}
+          <button
+            className="control-blocks__place-btn"
+            type="button"
+            title="在白板上指定位置放置"
+            aria-label={`在白板上指定位置放置 ${block.label}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onArmPlacement?.(block.type);
+            }}
+          >
+            ◎
+          </button>
         </div>
       ))}
     </div>

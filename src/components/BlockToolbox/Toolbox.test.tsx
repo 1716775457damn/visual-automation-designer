@@ -20,4 +20,13 @@ describe('Toolbox', () => {
 
     expect(onBlockSelect).toHaveBeenCalledWith('loop', 'control');
   });
+
+  it('calls onArmPlacement when the place button is clicked', () => {
+    const onArmPlacement = vi.fn();
+    render(<Toolbox onArmPlacement={onArmPlacement} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /在白板上指定位置放置/i })[0]);
+
+    expect(onArmPlacement).toHaveBeenCalled();
+  });
 });

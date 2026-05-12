@@ -11,12 +11,13 @@ import { ControlBlocks } from './ControlBlocks';
 
 export interface ToolboxProps {
   onBlockSelect?: (type: string, category: string) => void;
+  onArmPlacement?: (type: string, category: string) => void;
 }
 
 /**
  * Toolbox 组件 - 积木块工具箱容器
  */
-export function Toolbox({ onBlockSelect }: ToolboxProps) {
+export function Toolbox({ onBlockSelect, onArmPlacement }: ToolboxProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showActions, setShowActions] = useState(true);
   const [showControls, setShowControls] = useState(true);
@@ -62,6 +63,7 @@ export function Toolbox({ onBlockSelect }: ToolboxProps) {
           {showActions && (
             <ActionBlocks
               onSelect={(type) => onBlockSelect?.(type, 'action')}
+              onArmPlacement={(type) => onArmPlacement?.(type, 'action')}
               searchQuery={searchQuery}
             />
           )}
@@ -81,6 +83,7 @@ export function Toolbox({ onBlockSelect }: ToolboxProps) {
           {showControls && (
             <ControlBlocks
               onSelect={(type) => onBlockSelect?.(type, 'control')}
+              onArmPlacement={(type) => onArmPlacement?.(type, 'control')}
               searchQuery={searchQuery}
             />
           )}
