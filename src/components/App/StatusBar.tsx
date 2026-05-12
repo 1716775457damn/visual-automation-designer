@@ -1,3 +1,4 @@
+import type { ValidationErrorResponse } from '../../tauri';
 import { ExecutionBar } from '../ExecutionStatus';
 
 export interface StatusBarProps {
@@ -11,6 +12,8 @@ export interface StatusBarProps {
   loading: boolean;
   isDirty: boolean;
   flowError?: Error | null;
+  flowValidationError?: ValidationErrorResponse | null;
+  flowValidationWarning?: ValidationErrorResponse | null;
   placementLabel?: string | null;
 }
 
@@ -25,9 +28,15 @@ export function StatusBar({
   loading,
   isDirty,
   flowError,
+  flowValidationError,
+  flowValidationWarning,
   placementLabel,
 }: StatusBarProps) {
   const saveStatusLabel = loading ? '同步中' : isDirty ? '未保存' : '已同步';
+  const validationMessage = flowValidationError?.message ?? flowValidationWarning?.message ?? null;
+  const validationClassName = flowValidationError
+    ? 'app__status-item app__status-item--error'
+    : 'app__status-item app__status-item--warning';
 
   return (
     <div className="app__status">
@@ -53,6 +62,7 @@ export function StatusBar({
         )}
         {loading && <span className="app__status-item app__status-item--loading">⏳ 加载中...</span>}
         {flowError && <span className="app__status-item app__status-item--error">⚠️ {flowError.message}</span>}
+        {!flowError && validationMessage && <span className={validationClassName}>⚠️ {validationMessage}</span>}
       </div>
     </div>
   );

@@ -75,14 +75,20 @@ vi.mock('./components/App', () => ({
   FlowListModal: () => null,
   NewFlowDialog: () => null,
   ShortcutCheatsheet: () => null,
-  StatusBar: () => null,
+  StatusBar: ({ flowValidationError, flowValidationWarning }: { flowValidationError?: { message?: string } | null; flowValidationWarning?: { message?: string } | null }) => (
+    <div data-testid="status-bar-mock">
+      {flowValidationError?.message && <span>{flowValidationError.message}</span>}
+      {flowValidationWarning?.message && <span>{flowValidationWarning.message}</span>}
+    </div>
+  ),
 }));
 
 vi.mock('./components/FlowEditor', () => ({
   FlowCanvas: () => <div data-testid="flow-canvas" />,
-  FlowToolbar: ({ onExecute }: { onExecute?: () => void }) => (
+  FlowToolbar: ({ onExecute, onSave }: { onExecute?: () => void; onSave?: () => void }) => (
     <div data-testid="flow-toolbar">
       <button type="button" onClick={onExecute}>执行流程</button>
+      <button type="button" onClick={onSave}>保存流程</button>
     </div>
   ),
 }));
@@ -213,6 +219,28 @@ describe('App execution uses saved flow state', () => {
     await waitFor(() => {
       expect(executeFlowMock).not.toHaveBeenCalled();
       expect(screen.getByText('执行失败')).toBeInTheDocument();
+      expect(screen.getByText('Both condition branches are empty')).toBeInTheDocument();
+    });
+  });
+
+  it('shows validation warnings after save', async () => {
+    tauriFlowMocks.validateFlow.mockResolvedValueOnce({
+      isValid: true,
+      errors: [],
+      warnings: [{ code: 'ZERO_WAIT_TIME', message: 'Wait time is zero' }],
+    });
+
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      isDirty: false,
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '保存流程' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Wait time is zero')).toBeInTheDocument();
     });
   });
 });

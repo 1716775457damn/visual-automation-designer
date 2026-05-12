@@ -9,7 +9,7 @@ import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
 import { ConfirmDialog, ToastProvider, useToast } from './components/common';
 import { useFlow, useExecution, useKeyboardShortcuts, useTheme } from './hooks';
-import type { BlockConfig as BlockConfigType, Flow as TauriFlow } from './tauri/flow';
+import type { BlockConfig as BlockConfigType, Flow as TauriFlow, ValidationErrorResponse } from './tauri/flow';
 import { validateFlow } from './tauri/flow';
 
 type PendingUnsavedAction =
@@ -94,6 +94,8 @@ function AppContent() {
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
   const [recentNodeId, setRecentNodeId] = useState<string | null>(null);
+  const [flowValidationError, setFlowValidationError] = useState<ValidationErrorResponse | null>(null);
+  const [flowValidationWarning, setFlowValidationWarning] = useState<ValidationErrorResponse | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -350,11 +352,26 @@ function AppContent() {
     }
 
     const validation = await validateFlow(currentFlow);
+    setFlowValidationError(validation.errors[0] ?? null);
+    setFlowValidationWarning(validation.warnings[0] ?? null);
     if (!validation.isValid && validation.errors.length > 0) {
       throw new Error(validation.errors[0].message);
     }
 
     return true;
+  }, [buildCurrentFlowForValidation]);
+
+  const refreshValidationState = useCallback(async () => {
+    const currentFlow = buildCurrentFlowForValidation();
+    if (!currentFlow) {
+      setFlowValidationError(null);
+      setFlowValidationWarning(null);
+      return;
+    }
+
+    const validation = await validateFlow(currentFlow);
+    setFlowValidationError(validation.errors[0] ?? null);
+    setFlowValidationWarning(validation.warnings[0] ?? null);
   }, [buildCurrentFlowForValidation]);
 
   const handleSetEntryNode = useCallback(async (nodeId: string) => {
@@ -425,12 +442,13 @@ function AppContent() {
     }
     try {
       await saveFlow();
+      await refreshValidationState();
       showToast('success', '流程已保存');
     } catch (err) {
       console.error('Failed to save flow:', err);
       showToast('error', '保存失败');
     }
-  }, [flow, saveFlow, showToast]);
+  }, [flow, refreshValidationState, saveFlow, showToast]);
 
   const handleLoad = useCallback(async () => {
     // Toggle flow list display
@@ -756,6 +774,8 @@ function AppContent() {
         loading={loading}
         isDirty={isDirty}
         flowError={error}
+        flowValidationError={flowValidationError}
+        flowValidationWarning={flowValidationWarning}
         placementLabel={pendingPlacement?.type ?? null}
       />
 
