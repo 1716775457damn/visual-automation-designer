@@ -2,6 +2,33 @@
 
 A visual programming tool for creating screen automation workflows using a drag-and-drop interface.
 
+## Downloads
+
+Download desktop builds from the GitHub Releases page:
+
+- Releases: `https://github.com/1716775457damn/visual-automation-designer/releases`
+
+Recommended assets by platform:
+
+- Windows: `.exe`, `.msi`, or `.nsis.zip`
+- macOS: `.dmg`
+- Linux: `.AppImage` or `.deb`
+
+Notes:
+
+- Release assets appear after the GitHub Actions release workflow finishes for each platform.
+- Some operating systems may warn about unsigned applications.
+- If a release page opens but assets are missing, check the Actions page for the build status.
+
+## Features
+
+- Drag-and-drop flow editor built with React Flow
+- Tauri desktop shell with Rust execution backend
+- Flow save/load/delete support
+- Execution controls for run, pause, resume, stop, and step
+- Execution log panel and keyboard shortcuts
+- Undo/redo history integration for core editing operations
+
 ## Tech Stack
 
 - **Application Framework**: Tauri 2.0

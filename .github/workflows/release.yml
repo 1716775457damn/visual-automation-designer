@@ -62,7 +62,22 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Visual Automation Designer ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: true
+          releaseBody: |
+            ## Release Notes
+
+            Visual Automation Designer ${{ github.ref_name }} is now available.
+
+            ### Downloads
+
+            - Windows: download the `.exe`, `.msi`, or `.nsis.zip` asset
+            - macOS: download the `.dmg` asset
+            - Linux: download the `.AppImage` or `.deb` asset
+
+            ### Notes
+
+            - Windows SmartScreen or macOS Gatekeeper may show a warning for unsigned builds.
+            - If one platform asset is missing, wait for the corresponding workflow job to finish.
+            - See the repository README for development setup and project details.
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
