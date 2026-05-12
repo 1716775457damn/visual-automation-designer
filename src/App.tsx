@@ -102,6 +102,7 @@ function AppContent() {
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
+  const buildDialogFlowName = useCallback(() => `新流程_${new Date().toLocaleDateString()}`, []);
 
   const ensureFlowForEditing = useCallback(async () => {
     if (flow) {
@@ -151,14 +152,14 @@ function AppContent() {
       return;
     }
 
-    setNewFlowName(`新流程_${new Date().toLocaleDateString()}`);
+    setNewFlowName(buildDialogFlowName());
     setShowNewFlowDialog(true);
-  }, [isDirty]);
+  }, [buildDialogFlowName, isDirty]);
 
   const proceedWithNewFlowDialog = useCallback(() => {
-    setNewFlowName(`新流程_${new Date().toLocaleDateString()}`);
+    setNewFlowName(buildDialogFlowName());
     setShowNewFlowDialog(true);
-  }, []);
+  }, [buildDialogFlowName]);
 
   const createFlowWithFeedback = useCallback(async (name: string, errorLabel: string) => {
     try {
