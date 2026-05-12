@@ -246,6 +246,36 @@ function applyEntryPointFlag(nodes: Node<BlockNodeData>[], entryBlock?: string):
   }));
 }
 
+function synchronizeNodeSemantics(
+  nodes: Node<BlockNodeData>[],
+  edges: Edge[],
+  entryBlock?: string
+): Node<BlockNodeData>[] {
+  const normalizedNodes = nodes.map((node) => {
+    const currentConfig = node.data.config as BlockConfig | undefined;
+    if (!currentConfig) {
+      return node;
+    }
+
+    const outgoingEdges = edges.filter((edge) => edge.source === node.id);
+    const normalizedConfig = normalizeConfigFromEdges(currentConfig, node.data.blockType, outgoingEdges);
+
+    if (normalizedConfig === currentConfig) {
+      return node;
+    }
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        config: normalizedConfig as Record<string, unknown>,
+      },
+    };
+  });
+
+  return applyEntryPointFlag(normalizedNodes, entryBlock);
+}
+
 /**
  * useFlow Hook - 流程管理
  * Manages flow state and communicates with Tauri backend
@@ -399,7 +429,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
       await tauriSaveFlow(flowToSave);
       setFlow(flowToSave);
-      setNodes((currentNodes) => applyEntryPointFlag(currentNodes, flowToSave.entryBlock));
+      setNodes((currentNodes) => synchronizeNodeSemantics(currentNodes, edges, flowToSave.entryBlock));
       setIsDirty(false);
       
       // Refresh flow list
@@ -421,16 +451,16 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const loadedFlow = await tauriLoadFlow(id);
       setFlow(loadedFlow);
 
-      // Convert blocks to nodes
-      const loadedNodes: Node<BlockNodeData>[] = Object.values(loadedFlow.blocks).map((block) =>
-        blockNodeToReactFlowNode(block, loadedFlow.entryBlock === block.id)
-      );
-      setNodes(loadedNodes);
-
       // Convert connections to edges
       const loadedEdges: Edge[] = loadedFlow.connections.map((conn) =>
         connectionToEdge(conn)
       );
+
+      // Convert blocks to nodes
+      const loadedNodes: Node<BlockNodeData>[] = Object.values(loadedFlow.blocks).map((block) =>
+        blockNodeToReactFlowNode(block, loadedFlow.entryBlock === block.id)
+      );
+      setNodes(synchronizeNodeSemantics(loadedNodes, loadedEdges, loadedFlow.entryBlock));
       setEdges(loadedEdges);
       setIsDirty(false);
     } catch (err) {
@@ -491,7 +521,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
       // Add the new node to state
       const newNode = blockNodeToReactFlowNode(block, !flow?.entryBlock);
-      setNodes((nds) => applyEntryPointFlag([...nds, newNode], flow?.entryBlock ?? block.id));
+      setNodes((nds) => synchronizeNodeSemantics([...nds, newNode], edges, flow?.entryBlock ?? block.id));
       setIsDirty(true);
       await refreshUndoRedoForFlow(activeFlowId);
 
@@ -567,8 +597,9 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     // Optimistically update UI
     setNodes((nds) => {
       const nextNodes = nds.filter((node) => node.id !== nodeId);
+      const nextEdges = edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
       const nextEntryBlock = flow?.entryBlock === nodeId ? nextNodes[0]?.id : flow?.entryBlock;
-      return applyEntryPointFlag(nextNodes, nextEntryBlock);
+      return synchronizeNodeSemantics(nextNodes, nextEdges, nextEntryBlock);
     });
     setEdges((eds) =>
       eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
@@ -603,7 +634,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         connection.target!,
         connection.sourceHandle || undefined
       );
-      setEdges((eds) => addEdge(connectionToEdge(createdConnection), eds));
+      setEdges((eds) => {
+        const nextEdges = addEdge(connectionToEdge(createdConnection), eds);
+        setNodes((nds) => synchronizeNodeSemantics(nds, nextEdges, flow.entryBlock));
+        return nextEdges;
+      });
       setIsDirty(true);
       await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
@@ -616,7 +651,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   // Delete a connection
   const deleteConnection = useCallback(async (connectionId: string): Promise<void> => {
     // Optimistically update UI
-    setEdges((eds) => eds.filter((edge) => edge.id !== connectionId));
+    setEdges((eds) => {
+      const nextEdges = eds.filter((edge) => edge.id !== connectionId);
+      setNodes((nds) => synchronizeNodeSemantics(nds, nextEdges, flow?.entryBlock));
+      return nextEdges;
+    });
     setIsDirty(true);
 
     if (!flow) {
@@ -642,9 +681,9 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
     const nextEntryBlock = nodeId ?? undefined;
     setFlow((currentFlow) => currentFlow ? { ...currentFlow, entryBlock: nextEntryBlock } : currentFlow);
-    setNodes((currentNodes) => applyEntryPointFlag(currentNodes, nextEntryBlock));
+    setNodes((currentNodes) => synchronizeNodeSemantics(currentNodes, edges, nextEntryBlock));
     setIsDirty(true);
-  }, [flow]);
+  }, [edges, flow]);
 
   // Undo
   const undo = useCallback(async (): Promise<void> => {
@@ -657,7 +696,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const result = await tauriUndo(flow.id);
       if (result) {
         setFlow(result);
-        setNodes(Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)));
+        setNodes(synchronizeNodeSemantics(
+          Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)),
+          result.connections.map(connectionToEdge),
+          result.entryBlock
+        ));
         setEdges(result.connections.map(connectionToEdge));
         setIsDirty(true);
         await updateUndoRedoState();
@@ -678,7 +721,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const result = await tauriRedo(flow.id);
       if (result) {
         setFlow(result);
-        setNodes(Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)));
+        setNodes(synchronizeNodeSemantics(
+          Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)),
+          result.connections.map(connectionToEdge),
+          result.entryBlock
+        ));
         setEdges(result.connections.map(connectionToEdge));
         setIsDirty(true);
         await updateUndoRedoState();

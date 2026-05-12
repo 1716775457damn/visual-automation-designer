@@ -4,6 +4,8 @@ import { useFlow } from './useFlow';
 
 const mocks = vi.hoisted(() => ({
   createBlock: vi.fn(),
+  createConnection: vi.fn(),
+  deleteConnection: vi.fn(),
   canUndo: vi.fn(),
   canRedo: vi.fn(),
   listFlows: vi.fn(),
@@ -18,6 +20,8 @@ vi.mock('../tauri/flow', async () => {
     listFlows: mocks.listFlows,
     saveFlow: mocks.saveFlow,
     createBlock: mocks.createBlock,
+    createConnection: mocks.createConnection,
+    deleteConnection: mocks.deleteConnection,
     canUndoFlow: mocks.canUndo,
     canRedoFlow: mocks.canRedo,
   };
@@ -34,6 +38,13 @@ describe('useFlow undo/redo state', () => {
       config: { type: 'click', mode: { mode: 'coordinates', x: 0, y: 0 }, count: 1 },
       children: [],
     });
+    mocks.createConnection.mockImplementation(async (_flowId, source, target, sourceHandle) => ({
+      id: `edge-${source}-${target}-${sourceHandle ?? 'default'}`,
+      source,
+      target,
+      sourceHandle,
+    }));
+    mocks.deleteConnection.mockResolvedValue(true);
     mocks.saveFlow.mockResolvedValue(true);
     mocks.canUndo.mockResolvedValue(true);
     mocks.canRedo.mockResolvedValue(false);
@@ -213,5 +224,55 @@ describe('useFlow undo/redo state', () => {
     const savedFlow = mocks.saveFlow.mock.calls[mocks.saveFlow.mock.calls.length - 1]?.[0];
     expect(savedFlow.entryBlock).toBe('loop-1');
     expect(result.current.nodes.find((node) => node.id === 'loop-1')?.data.isEntryPoint).toBe(true);
+  });
+
+  it('synchronizes condition branches immediately when connections change', async () => {
+    const { result } = renderHook(() => useFlow({
+      initialFlow: {
+        id: 'flow-1',
+        name: 'Test Flow',
+        blocks: {},
+        connections: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      initialNodes: [
+        {
+          id: 'condition-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '条件判断',
+            blockType: 'condition',
+            blockCategory: 'control',
+            config: { type: 'condition', imageId: 'image-1', condition: 'image_exists', trueBranch: [], falseBranch: [] },
+            executing: false,
+          },
+        },
+      ] as never,
+      initialEdges: [] as never,
+    }));
+
+    await act(async () => {
+      await result.current.addConnection({ source: 'condition-1', target: 'true-1', sourceHandle: 'true' } as never);
+      await result.current.addConnection({ source: 'condition-1', target: 'false-1', sourceHandle: 'false' } as never);
+    });
+
+    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.config).toMatchObject({
+      trueBranch: ['true-1'],
+      falseBranch: ['false-1'],
+    });
+
+    const trueEdgeId = result.current.edges.find((edge) => edge.sourceHandle === 'true')?.id;
+    expect(trueEdgeId).toBeTruthy();
+
+    await act(async () => {
+      await result.current.deleteConnection(trueEdgeId!);
+    });
+
+    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.config).toMatchObject({
+      trueBranch: [],
+      falseBranch: ['false-1'],
+    });
   });
 });
