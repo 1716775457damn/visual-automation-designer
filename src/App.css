@@ -169,6 +169,149 @@
   color: var(--color-text-secondary);
 }
 
+.config-placeholder__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.config-placeholder__action-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.config-placeholder__action-btn--secondary {
+  background: color-mix(in srgb, var(--color-bg-primary) 90%, transparent);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.config-placeholder__action-btn:hover {
+  filter: brightness(1.04);
+}
+
+.app__onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(5, 10, 18, 0.54);
+  backdrop-filter: blur(14px);
+}
+
+.app__onboarding-card {
+  width: min(720px, 100%);
+  padding: 24px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+}
+
+.app__onboarding-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.app__onboarding-eyebrow {
+  margin: 0 0 8px 0;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.app__onboarding-title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+  color: var(--color-text-primary);
+}
+
+.app__onboarding-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-primary) 84%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.app__onboarding-steps {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.app__onboarding-step {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 78%, var(--color-bg-primary) 22%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.app__onboarding-step p {
+  margin: 6px 0 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.app__onboarding-step-index {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 700;
+}
+
+.app__onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.app__onboarding-btn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app__onboarding-btn--secondary {
+  background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
 /* Flow List Modal */
 .flow-list-modal {
   position: fixed;

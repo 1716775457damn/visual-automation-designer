@@ -17,6 +17,8 @@ type PendingUnsavedAction =
 
 type PendingPlacement = { type: string; category: string };
 
+const ONBOARDING_DISMISSED_KEY = 'vad-onboarding-dismissed';
+
 function isInputLikeElement(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
 
@@ -90,6 +92,13 @@ function AppContent() {
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
   const [recentNodeId, setRecentNodeId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) !== 'true';
+  });
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
@@ -224,6 +233,11 @@ function AppContent() {
     setPendingPlacement(null);
     showToast('info', '已取消精确放置模式');
   }, [showToast]);
+
+  const handleDismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
+    window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true');
+  }, []);
 
   const handlePlacePendingNode = useCallback((position: { x: number; y: number }) => {
     if (!pendingPlacement) {
@@ -693,6 +707,60 @@ function AppContent() {
         onConfirm={() => void confirmUnsavedAction()}
         onCancel={cancelUnsavedAction}
       />
+
+      {showOnboarding && (
+        <div className="app__onboarding" role="dialog" aria-modal="true">
+          <div className="app__onboarding-card">
+            <div className="app__onboarding-header">
+              <div>
+                <p className="app__onboarding-eyebrow">Visual Automation Designer</p>
+                <h2 className="app__onboarding-title">先从一个简单流程开始</h2>
+              </div>
+              <button className="app__onboarding-close" type="button" onClick={handleDismissOnboarding}>
+                ×
+              </button>
+            </div>
+            <div className="app__onboarding-steps">
+              <div className="app__onboarding-step">
+                <span className="app__onboarding-step-index">1</span>
+                <div>
+                  <strong>创建流程</strong>
+                  <p>点击顶部“新建”，或者直接点击左侧元件自动生成快速流程。</p>
+                </div>
+              </div>
+              <div className="app__onboarding-step">
+                <span className="app__onboarding-step-index">2</span>
+                <div>
+                  <strong>放置元件</strong>
+                  <p>支持拖拽、点击放到视口中心，或用“◎”进入精确放置模式。</p>
+                </div>
+              </div>
+              <div className="app__onboarding-step">
+                <span className="app__onboarding-step-index">3</span>
+                <div>
+                  <strong>配置并执行</strong>
+                  <p>新建节点后会自动选中，右侧修改参数，最后点击执行。</p>
+                </div>
+              </div>
+            </div>
+            <div className="app__onboarding-actions">
+              <button className="app__onboarding-btn app__onboarding-btn--secondary" type="button" onClick={handleDismissOnboarding}>
+                稍后再看
+              </button>
+              <button
+                className="app__onboarding-btn"
+                type="button"
+                onClick={() => {
+                  handleDismissOnboarding();
+                  void handleCreateFlow();
+                }}
+              >
+                立即创建流程
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <NewFlowDialog
         isOpen={showNewFlowDialog}

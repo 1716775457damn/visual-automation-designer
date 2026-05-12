@@ -19,6 +19,11 @@ def main() -> None:
         print_result("toolbox_present", page.locator("[data-testid=toolbox]").count() > 0)
         print_result("canvas_present", page.locator("[data-testid=flow-canvas]").count() > 0)
 
+        onboarding_close = page.locator(".app__onboarding-close")
+        if onboarding_close.count() > 0:
+            onboarding_close.click()
+            page.wait_for_timeout(150)
+
         initial_nodes = page.locator("[data-testid^='block-node-']").count()
         print_result("initial_nodes", initial_nodes)
 
