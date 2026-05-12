@@ -190,8 +190,12 @@ function AppContent() {
 
   const handleArmPlacement = useCallback((type: string, category: string) => {
     setPendingPlacement({ type, category });
-    showToast('info', `请选择白板位置放置 ${type}`);
+    showToast('info', `已进入精确放置模式：请在白板上点击放置 ${type}`);
   }, [showToast]);
+
+  const handleCancelPlacement = useCallback(() => {
+    setPendingPlacement(null);
+  }, []);
 
   const handlePlacePendingNode = useCallback((position: { x: number; y: number }) => {
     if (!pendingPlacement) {
@@ -448,6 +452,7 @@ function AppContent() {
       }
       // Escape to close modals
       if (e.key === 'Escape') {
+        setPendingPlacement(null);
         setShowShortcutHelp(false);
         setShowFlowList(false);
       }
@@ -499,7 +504,12 @@ function AppContent() {
       <div className="app__content">
         {/* Left Sidebar - Toolbox */}
         <aside className="app__sidebar app__sidebar--left">
-          <Toolbox onBlockSelect={handleToolboxSelect} onArmPlacement={handleArmPlacement} />
+          <Toolbox
+            onBlockSelect={handleToolboxSelect}
+            onArmPlacement={handleArmPlacement}
+            pendingPlacementLabel={pendingPlacement?.type ?? null}
+            onCancelPlacement={handleCancelPlacement}
+          />
         </aside>
 
         {/* Center - Flow Canvas */}

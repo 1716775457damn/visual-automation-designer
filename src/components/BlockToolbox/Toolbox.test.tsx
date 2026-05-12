@@ -29,4 +29,13 @@ describe('Toolbox', () => {
 
     expect(onArmPlacement).toHaveBeenCalled();
   });
+
+  it('shows placement banner and allows cancelling placement', () => {
+    const onCancelPlacement = vi.fn();
+    render(<Toolbox pendingPlacementLabel="click" onCancelPlacement={onCancelPlacement} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /当前放置: click/i }));
+
+    expect(onCancelPlacement).toHaveBeenCalledTimes(1);
+  });
 });

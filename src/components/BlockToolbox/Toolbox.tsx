@@ -12,12 +12,14 @@ import { ControlBlocks } from './ControlBlocks';
 export interface ToolboxProps {
   onBlockSelect?: (type: string, category: string) => void;
   onArmPlacement?: (type: string, category: string) => void;
+  pendingPlacementLabel?: string | null;
+  onCancelPlacement?: () => void;
 }
 
 /**
  * Toolbox 组件 - 积木块工具箱容器
  */
-export function Toolbox({ onBlockSelect, onArmPlacement }: ToolboxProps) {
+export function Toolbox({ onBlockSelect, onArmPlacement, pendingPlacementLabel, onCancelPlacement }: ToolboxProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showActions, setShowActions] = useState(true);
   const [showControls, setShowControls] = useState(true);
@@ -94,6 +96,11 @@ export function Toolbox({ onBlockSelect, onArmPlacement }: ToolboxProps) {
       <div className="toolbox__footer">
         <p className="toolbox__tip">💡 提示：右键画布可快速添加</p>
         <p className="toolbox__tip toolbox__tip--accent">单击会优先添加到当前视口中心</p>
+        {pendingPlacementLabel && (
+          <button className="toolbox__placement-banner" type="button" onClick={onCancelPlacement}>
+            当前放置: {pendingPlacementLabel} · 点击取消
+          </button>
+        )}
       </div>
     </div>
   );
