@@ -160,15 +160,21 @@ function AppContent() {
     setShowNewFlowDialog(true);
   }, []);
 
-  const createQuickFlow = useCallback(async () => {
+  const createFlowWithFeedback = useCallback(async (name: string, errorLabel: string) => {
     try {
-      await createFlow(buildQuickFlowName());
+      const createdFlow = await createFlow(name);
       showToast('success', '流程已创建');
+      return createdFlow;
     } catch (err) {
-      console.error('Failed to create quick flow:', err);
+      console.error(errorLabel, err);
       showToast('error', '创建失败');
+      return null;
     }
-  }, [buildQuickFlowName, createFlow, showToast]);
+  }, [createFlow, showToast]);
+
+  const createQuickFlow = useCallback(async () => {
+    await createFlowWithFeedback(buildQuickFlowName(), 'Failed to create quick flow:');
+  }, [buildQuickFlowName, createFlowWithFeedback]);
 
   // Get selected node data for config panel
   const selectedNode = useMemo(() => {
@@ -415,16 +421,12 @@ function AppContent() {
       return;
     }
 
-    try {
-      await createFlow(trimmedName);
+    const createdFlow = await createFlowWithFeedback(trimmedName, 'Failed to create flow:');
+    if (createdFlow) {
       setShowNewFlowDialog(false);
       setNewFlowName('');
-      showToast('success', '流程已创建');
-    } catch (err) {
-      console.error('Failed to create flow:', err);
-      showToast('error', '创建失败');
     }
-  }, [createFlow, newFlowName, showToast]);
+  }, [createFlowWithFeedback, newFlowName, showToast]);
 
   const cancelCreateFlow = useCallback(() => {
     setShowNewFlowDialog(false);
