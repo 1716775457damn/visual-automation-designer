@@ -12,7 +12,7 @@ use tempfile::TempDir;
 use visual_automation_designer_lib::models::{
     BlockConfig, BlockId, BlockNode, BlockPosition, BlockType,
     ActionType, ControlType, ClickMode, ConditionOp,
-    Connection, Flow, FlowId, FlowMetadata,
+    Connection, Flow,
     ImageId,
 };
 use visual_automation_designer_lib::core::{
@@ -362,7 +362,7 @@ fn test_complete_workflow() {
     fs::create_dir_all(&images_dir).expect("Failed to create images dir");
     
     // 1. Create image library
-    let mut image_manager = ImageLibraryManager::new(&images_dir)
+    let image_manager = ImageLibraryManager::new(&images_dir)
         .expect("Failed to create image library manager");
     
     // 2. Create test image

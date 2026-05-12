@@ -26,7 +26,7 @@ pub struct CacheKey {
 
 impl CacheKey {
     /// Create a new cache key from image ID and screen capture
-    pub fn new(image_id: &ImageId, template: &DynamicImage, screen: &DynamicImage) -> Self {
+    pub fn new(_image_id: &ImageId, template: &DynamicImage, screen: &DynamicImage) -> Self {
         let image_hash = Self::hash_image(template);
         let screen_hash = Self::hash_screen_region(screen);
         

@@ -89,7 +89,7 @@ impl FlowOperation {
                 block: block.clone(),
                 removed_connections: vec![], // Will be populated when executing
             },
-            FlowOperation::DeleteBlock { flow_id, block, removed_connections } => {
+            FlowOperation::DeleteBlock { flow_id, block, removed_connections: _ } => {
                 FlowOperation::CreateBlock {
                     flow_id: flow_id.clone(),
                     block: block.clone(),
@@ -224,12 +224,11 @@ impl History {
     }
 
     /// Pop an operation from the redo stack
-    /// Returns the operation to apply for redo (the inverse of the undo inverse)
+    /// Returns the original operation to re-apply for redo
     pub fn pop_redo(&mut self) -> Option<FlowOperation> {
         if let Some(operation) = self.redo_stack.pop_back() {
-            let inverse = operation.inverse();
-            self.undo_stack.push_back(operation);
-            Some(inverse)
+            self.undo_stack.push_back(operation.clone());
+            Some(operation)
         } else {
             None
         }

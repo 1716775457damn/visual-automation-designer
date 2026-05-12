@@ -760,6 +760,9 @@ pub struct ValidationResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::History;
+    use crate::models::block::{ActionType, ClickMode};
+    use std::sync::Mutex;
 
     #[test]
     fn test_parse_flow_id_valid() {
@@ -807,5 +810,76 @@ mod tests {
         let result = parse_connection_id("not-a-uuid");
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), AppError::InvalidFlow(_)));
+    }
+
+    #[test]
+    fn test_history_undo_redo_create_block() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = FlowState {
+            manager: Mutex::new(FlowManager::new(temp_dir.path()).unwrap()),
+            validator: Mutex::new(FlowValidator::new()),
+            history: Mutex::new(History::new()),
+        };
+
+        let flow = {
+            let mut manager = state.manager.lock().unwrap();
+            manager.create_flow("History Flow".to_string()).unwrap()
+        };
+
+        let block = BlockNode::new(
+            BlockType::Action { action: ActionType::Click },
+            BlockPosition::new(10.0, 20.0),
+            BlockConfig::Click {
+                mode: ClickMode::Coordinates { x: 1, y: 2 },
+                count: 1,
+            },
+        );
+
+        push_history(&state, FlowOperation::CreateBlock {
+            flow_id: flow.id.clone(),
+            block: block.clone(),
+        }).unwrap();
+
+        let undone = apply_history_operation(&state, &flow.id, {
+            let mut history = state.history.lock().unwrap();
+            history.pop_undo().unwrap()
+        }).unwrap();
+        assert!(undone.blocks.is_empty());
+
+        let redone = apply_history_operation(&state, &flow.id, {
+            let mut history = state.history.lock().unwrap();
+            history.pop_redo().unwrap()
+        }).unwrap();
+        assert!(redone.blocks.contains_key(&block.id));
+    }
+
+    #[test]
+    fn test_can_undo_and_can_redo_track_flow_specific_history() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = FlowState {
+            manager: Mutex::new(FlowManager::new(temp_dir.path()).unwrap()),
+            validator: Mutex::new(FlowValidator::new()),
+            history: Mutex::new(History::new()),
+        };
+
+        let flow = {
+            let mut manager = state.manager.lock().unwrap();
+            manager.create_flow("Flow A".to_string()).unwrap()
+        };
+
+        let other_flow = {
+            let mut manager = state.manager.lock().unwrap();
+            manager.create_flow("Flow B".to_string()).unwrap()
+        };
+
+        push_history(&state, FlowOperation::SetEntryBlock {
+            flow_id: flow.id.clone(),
+            old_entry: None,
+            new_entry: None,
+        }).unwrap();
+
+        let history = state.history.lock().unwrap();
+        assert!(matches!(history.peek_undo(), Some(op) if op.flow_id() == &flow.id));
+        assert!(!matches!(history.peek_undo(), Some(op) if op.flow_id() == &other_flow.id));
     }
 }

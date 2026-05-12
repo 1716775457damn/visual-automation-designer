@@ -167,7 +167,7 @@ fn parse_image_id(id: &str) -> Result<ImageId> {
 #[tauri::command]
 pub fn add_image_from_base64(
     state: State<'_, ImageLibraryState>,
-    app_handle: AppHandle,
+    _app_handle: AppHandle,
     base64_data: String,
     name: String,
 ) -> Result<ImageMetadata> {
