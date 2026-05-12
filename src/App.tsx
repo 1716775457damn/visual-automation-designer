@@ -9,7 +9,8 @@ import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
 import { ConfirmDialog, ToastProvider, useToast } from './components/common';
 import { useFlow, useExecution, useKeyboardShortcuts, useTheme } from './hooks';
-import type { BlockConfig as BlockConfigType } from './tauri/flow';
+import type { BlockConfig as BlockConfigType, Flow as TauriFlow } from './tauri/flow';
+import { validateFlow } from './tauri/flow';
 
 type PendingUnsavedAction =
   | { type: 'load_flow'; flowId: string }
@@ -307,6 +308,55 @@ function AppContent() {
     }
   }, [deleteConnection, showToast]);
 
+  const buildCurrentFlowForValidation = useCallback((): TauriFlow | null => {
+    if (!flow) {
+      return null;
+    }
+
+    const flowToValidate: TauriFlow = {
+      ...flow,
+      blocks: {},
+      connections: [],
+    };
+
+    for (const node of nodes) {
+      flowToValidate.blocks[node.id] = {
+        id: node.id,
+        blockType: node.data.blockCategory === 'action'
+          ? { type: 'action', action: node.data.blockType as never }
+          : { type: 'control', control: node.data.blockType as never },
+        position: { x: node.position.x, y: node.position.y },
+        config: node.data.config as BlockConfigType,
+        children: edges.filter((edge) => edge.source === node.id).map((edge) => edge.target),
+      };
+    }
+
+    for (const edge of edges) {
+      flowToValidate.connections.push({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? undefined,
+      });
+    }
+
+    return flowToValidate;
+  }, [edges, flow, nodes]);
+
+  const validateBeforeExecution = useCallback(async () => {
+    const currentFlow = buildCurrentFlowForValidation();
+    if (!currentFlow) {
+      return true;
+    }
+
+    const validation = await validateFlow(currentFlow);
+    if (!validation.isValid && validation.errors.length > 0) {
+      throw new Error(validation.errors[0].message);
+    }
+
+    return true;
+  }, [buildCurrentFlowForValidation]);
+
   const handleSetEntryNode = useCallback(async (nodeId: string) => {
     try {
       await setEntryBlock(nodeId);
@@ -327,6 +377,7 @@ function AppContent() {
       if (isDirty) {
         await saveFlow();
       }
+      await validateBeforeExecution();
       resetProgress(nodes.length);
       await tauriExecuteFlow(flow.id);
       showToast('info', '开始执行流程');
@@ -334,7 +385,7 @@ function AppContent() {
       console.error('Failed to execute flow:', err);
       showToast('error', '执行失败');
     }
-  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, tauriExecuteFlow, showToast]);
+  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, tauriExecuteFlow, showToast, validateBeforeExecution]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'paused') {
@@ -358,13 +409,14 @@ function AppContent() {
       if (isDirty) {
         await saveFlow();
       }
+      await validateBeforeExecution();
       resetProgress(nodes.length);
       await stepExecution(flow.id);
     } catch (err) {
       console.error('Failed to step execution:', err);
       showToast('error', '单步执行失败');
     }
-  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, showToast, stepExecution]);
+  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, showToast, stepExecution, validateBeforeExecution]);
 
   const handleSave = useCallback(async () => {
     if (!flow) {

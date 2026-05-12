@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+const tauriFlowMocks = vi.hoisted(() => ({
+  validateFlow: vi.fn(),
+}));
+
 const createFlowMock = vi.fn();
 const addNodeMock = vi.fn();
 const saveFlowMock = vi.fn();
@@ -63,6 +67,10 @@ vi.mock('./hooks', async () => {
   };
 });
 
+vi.mock('./tauri/flow', () => ({
+  validateFlow: tauriFlowMocks.validateFlow,
+}));
+
 vi.mock('./components/App', () => ({
   FlowListModal: () => null,
   NewFlowDialog: () => null,
@@ -110,6 +118,7 @@ describe('App quick-create entry points', () => {
     addNodeMock.mockResolvedValue('node-1');
     saveFlowMock.mockResolvedValue(undefined);
     executeFlowMock.mockResolvedValue(undefined);
+    tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
   });
 
   it('creates a quick flow from onboarding CTA', async () => {
@@ -187,6 +196,23 @@ describe('App execution uses saved flow state', () => {
     await waitFor(() => {
       expect(saveFlowMock).toHaveBeenCalledTimes(1);
       expect(executeFlowMock).toHaveBeenCalledWith('flow-1');
+    });
+  });
+
+  it('blocks execution when validation fails', async () => {
+    tauriFlowMocks.validateFlow.mockResolvedValueOnce({
+      isValid: false,
+      errors: [{ code: 'EMPTY_CONDITION_BRANCHES', message: 'Both condition branches are empty' }],
+      warnings: [],
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+
+    await waitFor(() => {
+      expect(executeFlowMock).not.toHaveBeenCalled();
+      expect(screen.getByText('执行失败')).toBeInTheDocument();
     });
   });
 });
