@@ -87,6 +87,79 @@ pub struct Executor {
     matcher: Arc<Mutex<CachedImageMatcher>>,
 }
 
+/// Lightweight control handle for an active executor.
+#[derive(Clone)]
+pub struct ExecutionController {
+    status: Arc<Mutex<ExecutionStatus>>,
+    stop_signal: watch::Sender<bool>,
+    paused: Arc<Mutex<bool>>,
+    context: Arc<Mutex<ExecutionContext>>,
+    app_handle: AppHandle,
+}
+
+impl ExecutionController {
+    /// Get the current execution status.
+    pub async fn status(&self) -> ExecutionStatus {
+        *self.status.lock().await
+    }
+
+    /// Pause execution.
+    pub async fn pause(&self) -> Result<()> {
+        let status = self.status().await;
+        if status != ExecutionStatus::Running {
+            return Err(AppError::ExecutionFailed("Can only pause a running flow".to_string()));
+        }
+
+        *self.paused.lock().await = true;
+
+        if let Some(block_id) = self.context.lock().await.current_block().cloned() {
+            self.app_handle
+                .emit("execution-event", ExecutionEvent::paused(block_id))
+                .map_err(|e| AppError::InternalError(format!("Failed to emit event: {}", e)))?;
+        }
+
+        *self.status.lock().await = ExecutionStatus::Paused;
+        Ok(())
+    }
+
+    /// Resume execution.
+    pub async fn resume(&self) -> Result<()> {
+        let status = self.status().await;
+        if status != ExecutionStatus::Paused {
+            return Err(AppError::ExecutionFailed("Can only resume a paused flow".to_string()));
+        }
+
+        *self.paused.lock().await = false;
+
+        if let Some(block_id) = self.context.lock().await.current_block().cloned() {
+            self.app_handle
+                .emit("execution-event", ExecutionEvent::resumed(block_id))
+                .map_err(|e| AppError::InternalError(format!("Failed to emit event: {}", e)))?;
+        }
+
+        *self.status.lock().await = ExecutionStatus::Running;
+        Ok(())
+    }
+
+    /// Stop execution.
+    pub async fn stop(&self) -> Result<()> {
+        let status = self.status().await;
+        if !status.is_active() {
+            return Err(AppError::ExecutionFailed("Flow is not running".to_string()));
+        }
+
+        *self.paused.lock().await = false;
+        let _ = self.stop_signal.send(true);
+
+        self.app_handle
+            .emit("execution-event", ExecutionEvent::stopped("User requested stop".to_string()))
+            .map_err(|e| AppError::InternalError(format!("Failed to emit event: {}", e)))?;
+
+        *self.status.lock().await = ExecutionStatus::Stopped;
+        Ok(())
+    }
+}
+
 impl Executor {
     /// Create a new executor
     pub fn new(flow: Flow, app_handle: AppHandle, images_dir: std::path::PathBuf) -> Self {
@@ -113,6 +186,17 @@ impl Executor {
     /// Set the image library
     pub fn set_image_library(&mut self, library: HashMap<ImageId, ImageMetadata>) {
         self.image_library = library;
+    }
+
+    /// Create a control handle that can manage this executor while it runs in the background.
+    pub fn controller(&self) -> ExecutionController {
+        ExecutionController {
+            status: Arc::clone(&self.status),
+            stop_signal: self.stop_signal.clone(),
+            paused: Arc::clone(&self.paused),
+            context: Arc::clone(&self.context),
+            app_handle: self.app_handle.clone(),
+        }
     }
 
     /// Get the current execution status

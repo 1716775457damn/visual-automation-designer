@@ -16,6 +16,6 @@ pub mod history;
 // Re-export core types
 pub use blocks::{Block, BlockResult, BlockError, ClickBlock, WaitImageBlock, WaitTimeBlock, InputTextBlock, LoopBlock, InfiniteLoopBlock, ConditionalBlock};
 pub use flow::{FlowManager, FlowValidator, FlowSerializer};
-pub use execution::{Executor, ExecutionContext, ExecutionEvent, ExecutionStatus};
+pub use execution::{ExecutionController, Executor, ExecutionContext, ExecutionEvent, ExecutionStatus};
 pub use image_library::ImageLibraryManager;
 pub use history::{History, FlowOperation, OperationApplier, DefaultOperationApplier};

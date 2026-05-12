@@ -5,8 +5,6 @@
  * Validates: Requirements 3.5
  */
 
-{}
-
 export type ParamType = 'string' | 'number' | 'boolean' | 'select';
 
 export interface ParamSchema {

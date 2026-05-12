@@ -61,6 +61,7 @@ export interface UseExecutionReturn {
   stopExecution: () => Promise<void>;
   getExecutionStatus: () => Promise<ExecutionStatusType>;
   clearLog: () => void;
+  resetProgress: (totalBlocks: number) => void;
 }
 
 /**
@@ -71,7 +72,7 @@ export function useExecution(): UseExecutionReturn {
   const [status, setStatus] = useState<ExecutionStatusType>('idle');
   const [currentBlockId, setCurrentBlockId] = useState<string | null>(null);
   const [executionLog, setExecutionLog] = useState<InternalExecutionEvent[]>([]);
-  const [totalBlocks] = useState<number>(0);
+  const [totalBlocks, setTotalBlocks] = useState<number>(0);
   const [completedBlocks, setCompletedBlocks] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
@@ -81,6 +82,12 @@ export function useExecution(): UseExecutionReturn {
   // Add event to log
   const addEvent = useCallback((event: InternalExecutionEvent) => {
     setExecutionLog((prev) => [...prev, event]);
+  }, []);
+
+  const addEventRef = useRef(addEvent);
+
+  useEffect(() => {
+    addEventRef.current = addEvent;
   }, []);
 
   // Set up event listener on mount
@@ -100,7 +107,7 @@ export function useExecution(): UseExecutionReturn {
               setCurrentBlockId(null);
               setCompletedBlocks(0);
               setErrorMessage(null);
-              addEvent({
+              addEventRef.current({
                 type: 'started',
                 timestamp: new Date(event.timestamp),
               });
@@ -108,7 +115,7 @@ export function useExecution(): UseExecutionReturn {
 
             case 'blockStarted':
               setCurrentBlockId(event.blockId);
-              addEvent({
+              addEventRef.current({
                 type: 'block_started',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
@@ -117,7 +124,7 @@ export function useExecution(): UseExecutionReturn {
 
             case 'blockCompleted':
               setCompletedBlocks((prev) => prev + 1);
-              addEvent({
+              addEventRef.current({
                 type: 'block_completed',
                 blockId: event.blockId,
                 success: event.success,
@@ -126,7 +133,7 @@ export function useExecution(): UseExecutionReturn {
               break;
 
             case 'blockError':
-              addEvent({
+              addEventRef.current({
                 type: 'block_error',
                 blockId: event.blockId,
                 error: event.message,
@@ -137,7 +144,7 @@ export function useExecution(): UseExecutionReturn {
             case 'flowCompleted':
               setStatus('completed');
               setCurrentBlockId(null);
-              addEvent({
+              addEventRef.current({
                 type: 'flow_completed',
                 timestamp: new Date(event.timestamp),
               });
@@ -146,7 +153,7 @@ export function useExecution(): UseExecutionReturn {
             case 'stopped':
               setStatus('idle');
               setCurrentBlockId(null);
-              addEvent({
+              addEventRef.current({
                 type: 'stopped',
                 timestamp: new Date(event.timestamp),
               });
@@ -154,7 +161,7 @@ export function useExecution(): UseExecutionReturn {
 
             case 'paused':
               setStatus('paused');
-              addEvent({
+              addEventRef.current({
                 type: 'paused',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
@@ -163,7 +170,7 @@ export function useExecution(): UseExecutionReturn {
 
             case 'resumed':
               setStatus('running');
-              addEvent({
+              addEventRef.current({
                 type: 'resumed',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
@@ -184,12 +191,11 @@ export function useExecution(): UseExecutionReturn {
         unlisten();
       }
     };
-  }, [addEvent]);
+  }, []);
 
   // Execute a flow
   const executeFlow = useCallback(async (flowId: string): Promise<void> => {
     try {
-      setStatus('running');
       setErrorMessage(null);
       setCompletedBlocks(0);
       
@@ -200,13 +206,13 @@ export function useExecution(): UseExecutionReturn {
     } catch (error) {
       setStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Execution failed');
-      addEvent({
+      addEventRef.current({
         type: 'block_error',
         error: error instanceof Error ? error.message : 'Execution failed',
         timestamp: new Date(),
       });
     }
-  }, [addEvent]);
+  }, []);
 
   // Execute a single step
   const stepExecution = useCallback(async (flowId: string): Promise<void> => {
@@ -217,20 +223,20 @@ export function useExecution(): UseExecutionReturn {
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Step execution failed');
-      addEvent({
+      addEventRef.current({
         type: 'block_error',
         error: error instanceof Error ? error.message : 'Step execution failed',
         timestamp: new Date(),
       });
     }
-  }, [addEvent]);
+  }, []);
 
   // Pause execution
   const pauseExecution = useCallback(async (): Promise<void> => {
     try {
       const result = await tauriPauseExecution();
-      if (result) {
-        setStatus('paused');
+      if (!result) {
+        setErrorMessage('暂停执行失败');
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Pause failed');
@@ -241,8 +247,8 @@ export function useExecution(): UseExecutionReturn {
   const resumeExecution = useCallback(async (): Promise<void> => {
     try {
       const result = await tauriResumeExecution();
-      if (result) {
-        setStatus('running');
+      if (!result) {
+        setErrorMessage('恢复执行失败');
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Resume failed');
@@ -253,13 +259,8 @@ export function useExecution(): UseExecutionReturn {
   const stopExecution = useCallback(async (): Promise<void> => {
     try {
       const result = await tauriStopExecution();
-      if (result) {
-        setStatus('idle');
-        setCurrentBlockId(null);
-        addEvent({
-          type: 'stopped',
-          timestamp: new Date(),
-        });
+      if (!result) {
+        setErrorMessage('停止执行失败');
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Stop failed');
@@ -285,6 +286,13 @@ export function useExecution(): UseExecutionReturn {
     setErrorMessage(null);
   }, []);
 
+  const resetProgress = useCallback((nextTotalBlocks: number) => {
+    setTotalBlocks(nextTotalBlocks);
+    setCompletedBlocks(0);
+    setCurrentBlockId(null);
+    setErrorMessage(null);
+  }, []);
+
   return {
     status,
     currentBlockId,
@@ -299,6 +307,7 @@ export function useExecution(): UseExecutionReturn {
     stopExecution,
     getExecutionStatus,
     clearLog,
+    resetProgress,
   };
 }
 

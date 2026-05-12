@@ -12,6 +12,7 @@ use tauri::{AppHandle, Manager, State};
 
 use crate::core::flow::{FlowManager, FlowValidator};
 use crate::core::flow::validator::ValidationSeverity;
+use crate::core::{DefaultOperationApplier, FlowOperation, History, OperationApplier};
 use crate::error::{AppError, Result};
 use crate::models::block::{BlockConfig, BlockId, BlockNode, BlockPosition, BlockType};
 use crate::models::flow::{Connection, ConnectionId, Flow, FlowId, FlowMetadata};
@@ -20,6 +21,7 @@ use crate::models::flow::{Connection, ConnectionId, Flow, FlowId, FlowMetadata};
 pub struct FlowState {
     pub manager: Mutex<FlowManager>,
     pub validator: Mutex<FlowValidator>,
+    pub history: Mutex<History>,
 }
 
 impl FlowState {
@@ -36,8 +38,28 @@ impl FlowState {
         Ok(Self {
             manager: Mutex::new(manager),
             validator: Mutex::new(validator),
+            history: Mutex::new(History::new()),
         })
     }
+}
+
+fn push_history(state: &FlowState, operation: FlowOperation) -> Result<()> {
+    let mut history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
+    })?;
+    history.push(operation);
+    Ok(())
+}
+
+fn apply_history_operation(state: &FlowState, fid: &FlowId, operation: FlowOperation) -> Result<Flow> {
+    let mut manager = state.manager.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock flow manager: {}", e))
+    })?;
+    let mut flow = manager.load_flow(fid)?;
+    let mut applier = DefaultOperationApplier;
+    applier.apply_operation(&mut flow, &operation)?;
+    manager.save_flow(&flow)?;
+    Ok(flow)
 }
 
 // ============================================================================
@@ -59,7 +81,15 @@ pub fn create_flow(state: State<'_, FlowState>, name: String) -> Result<Flow> {
         AppError::InternalError(format!("Failed to lock flow manager: {}", e))
     })?;
 
-    manager.create_flow(name)
+    let flow = manager.create_flow(name)?;
+    drop(manager);
+
+    let mut history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
+    })?;
+    history.clear_for_flow(&flow.id);
+
+    Ok(flow)
 }
 
 /// Save a flow to disk.
@@ -134,6 +164,13 @@ pub fn delete_flow(state: State<'_, FlowState>, id: String) -> Result<bool> {
     })?;
 
     manager.delete_flow(&flow_id)?;
+    drop(manager);
+
+    let mut history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
+    })?;
+    history.clear_for_flow(&flow_id);
+
     Ok(true)
 }
 
@@ -216,10 +253,17 @@ pub fn create_block(
     // Create and add the block
     let block = BlockNode::new(block_type, position, config);
     let block_id = block.id.clone();
+    let history_block = block.clone();
     flow.add_block(block);
 
     // Save the updated flow
     manager.save_flow(&flow)?;
+    drop(manager);
+
+    push_history(&state, FlowOperation::CreateBlock {
+        flow_id: fid,
+        block: history_block,
+    })?;
 
     // Return the block from the flow
     Ok(flow.get_block(&block_id).unwrap().clone())
@@ -255,13 +299,21 @@ pub fn update_block_position(
 
     // Update the block position
     if let Some(block) = flow.get_block_mut(&bid) {
-        block.position = position;
+        let old_position = block.position.clone();
+        block.position = position.clone();
+
+        manager.save_flow(&flow)?;
+        drop(manager);
+
+        push_history(&state, FlowOperation::MoveBlock {
+            flow_id: fid,
+            block_id: bid,
+            old_position,
+            new_position: position,
+        })?;
     } else {
         return Err(AppError::BlockNotFound(block_id));
     }
-
-    // Save the updated flow
-    manager.save_flow(&flow)?;
 
     Ok(true)
 }
@@ -292,6 +344,17 @@ pub fn delete_block(
     // Load the flow
     let mut flow = manager.load_flow(&fid)?;
 
+    let removed_block = flow
+        .get_block(&bid)
+        .cloned()
+        .ok_or_else(|| AppError::BlockNotFound(block_id.clone()))?;
+    let removed_connections: Vec<Connection> = flow
+        .connections
+        .iter()
+        .filter(|connection| connection.source == bid || connection.target == bid)
+        .cloned()
+        .collect();
+
     // Remove the block (also removes related connections)
     if flow.remove_block(&bid).is_none() {
         return Err(AppError::BlockNotFound(block_id));
@@ -299,6 +362,22 @@ pub fn delete_block(
 
     // Save the updated flow
     manager.save_flow(&flow)?;
+    drop(manager);
+
+    let mut operations = vec![FlowOperation::DeleteBlock {
+        flow_id: fid.clone(),
+        block: removed_block,
+        removed_connections: removed_connections.clone(),
+    }];
+    operations.extend(removed_connections.into_iter().map(|connection| FlowOperation::DeleteConnection {
+        flow_id: fid.clone(),
+        connection,
+    }));
+
+    let mut history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
+    })?;
+    history.push_batch(fid, operations);
 
     Ok(true)
 }
@@ -331,13 +410,21 @@ pub fn update_block_config(
 
     // Update the block config
     if let Some(block) = flow.get_block_mut(&bid) {
+        let old_config = block.config.clone();
         block.config = config;
+
+        manager.save_flow(&flow)?;
+        drop(manager);
+
+        push_history(&state, FlowOperation::UpdateBlockConfig {
+            flow_id: fid,
+            block_id: bid.clone(),
+            old_config,
+            new_config: flow.get_block(&bid).unwrap().config.clone(),
+        })?;
     } else {
         return Err(AppError::BlockNotFound(block_id));
     }
-
-    // Save the updated flow
-    manager.save_flow(&flow)?;
 
     Ok(true)
 }
@@ -368,11 +455,20 @@ pub fn set_entry_block(
     // Load the flow
     let mut flow = manager.load_flow(&fid)?;
 
+    let old_entry = flow.entry_block.clone();
+
     // Set the entry block
-    flow.set_entry_block(bid);
+    flow.set_entry_block(bid.clone());
 
     // Save the updated flow
     manager.save_flow(&flow)?;
+    drop(manager);
+
+    push_history(&state, FlowOperation::SetEntryBlock {
+        flow_id: fid,
+        old_entry,
+        new_entry: bid,
+    })?;
 
     Ok(true)
 }
@@ -425,12 +521,19 @@ pub fn create_connection(
         Some(handle) => Connection::with_handle(source_id, target_id, handle),
         None => Connection::new(source_id, target_id),
     };
+    let history_connection = connection.clone();
     let connection_id = connection.id.clone();
 
     flow.add_connection(connection);
 
     // Save the updated flow
     manager.save_flow(&flow)?;
+    drop(manager);
+
+    push_history(&state, FlowOperation::CreateConnection {
+        flow_id: fid,
+        connection: history_connection,
+    })?;
 
     // Return the connection
     Ok(flow
@@ -467,6 +570,16 @@ pub fn delete_connection(
     // Load the flow
     let mut flow = manager.load_flow(&fid)?;
 
+    let removed_connection = flow
+        .connections
+        .iter()
+        .find(|connection| connection.id == cid)
+        .cloned()
+        .ok_or_else(|| AppError::InvalidFlow(format!(
+            "Connection {} not found in flow",
+            connection_id
+        )))?;
+
     // Remove the connection
     if flow.remove_connection(&cid).is_none() {
         return Err(AppError::InvalidFlow(format!(
@@ -477,6 +590,12 @@ pub fn delete_connection(
 
     // Save the updated flow
     manager.save_flow(&flow)?;
+    drop(manager);
+
+    push_history(&state, FlowOperation::DeleteConnection {
+        flow_id: fid,
+        connection: removed_connection,
+    })?;
 
     Ok(true)
 }
@@ -525,15 +644,12 @@ pub fn can_undo(
     flow_id: String,
 ) -> Result<bool> {
     let fid = parse_flow_id(&flow_id)?;
-    
-    let manager = state.manager.lock().map_err(|e| {
-        AppError::InternalError(format!("Failed to lock flow manager: {}", e))
+
+    let history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
     })?;
-    
-    // Check if flow is cached and has history
-    // Note: History is per-flow, stored in the flow state
-    // For now, we return false as history management needs integration
-    Ok(false)
+
+    Ok(matches!(history.peek_undo(), Some(operation) if operation.flow_id() == &fid))
 }
 
 /// Check if redo is available for a flow.
@@ -549,12 +665,12 @@ pub fn can_redo(
     flow_id: String,
 ) -> Result<bool> {
     let fid = parse_flow_id(&flow_id)?;
-    
-    let manager = state.manager.lock().map_err(|e| {
-        AppError::InternalError(format!("Failed to lock flow manager: {}", e))
+
+    let history = state.history.lock().map_err(|e| {
+        AppError::InternalError(format!("Failed to lock history manager: {}", e))
     })?;
-    
-    Ok(false)
+
+    Ok(matches!(history.peek_redo(), Some(operation) if operation.flow_id() == &fid))
 }
 
 /// Undo the last operation for a flow.
@@ -570,10 +686,22 @@ pub fn undo(
     flow_id: String,
 ) -> Result<Option<Flow>> {
     let fid = parse_flow_id(&flow_id)?;
-    
-    // Note: Full undo/redo integration requires storing history per flow
-    // This is a placeholder that returns None
-    Ok(None)
+
+    let operation = {
+        let mut history = state.history.lock().map_err(|e| {
+            AppError::InternalError(format!("Failed to lock history manager: {}", e))
+        })?;
+
+        match history.peek_undo() {
+            Some(next) if next.flow_id() == &fid => history.pop_undo(),
+            _ => None,
+        }
+    };
+
+    match operation {
+        Some(operation) => Ok(Some(apply_history_operation(&state, &fid, operation)?)),
+        None => Ok(None),
+    }
 }
 
 /// Redo the last undone operation for a flow.
@@ -589,8 +717,22 @@ pub fn redo(
     flow_id: String,
 ) -> Result<Option<Flow>> {
     let fid = parse_flow_id(&flow_id)?;
-    
-    Ok(None)
+
+    let operation = {
+        let mut history = state.history.lock().map_err(|e| {
+            AppError::InternalError(format!("Failed to lock history manager: {}", e))
+        })?;
+
+        match history.peek_redo() {
+            Some(next) if next.flow_id() == &fid => history.pop_redo(),
+            _ => None,
+        }
+    };
+
+    match operation {
+        Some(operation) => Ok(Some(apply_history_operation(&state, &fid, operation)?)),
+        None => Ok(None),
+    }
 }
 
 /// Validation error response for frontend

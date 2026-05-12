@@ -12,14 +12,16 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
-use crate::core::execution::{Executor, ExecutionStatus};
+use crate::core::execution::{ExecutionController, Executor, ExecutionStatus};
 use crate::error::{AppError, Result};
 use crate::models::{FlowId, ImageId, ImageMetadata};
 
 /// Application state containing the execution state
 pub struct ExecutionState {
-    /// Active executor (if any)
+    /// Interactive executor used for step-by-step execution.
     executor: Arc<Mutex<Option<Executor>>>,
+    /// Active background execution controller.
+    active_controller: Arc<Mutex<Option<ExecutionController>>>,
     /// Current execution status
     status: Arc<Mutex<ExecutionStatus>>,
     /// App handle for creating executors
@@ -31,6 +33,7 @@ impl ExecutionState {
     pub fn new(app_handle: &AppHandle) -> Self {
         Self {
             executor: Arc::new(Mutex::new(None)),
+            active_controller: Arc::new(Mutex::new(None)),
             status: Arc::new(Mutex::new(ExecutionStatus::Idle)),
             app_handle: app_handle.clone(),
         }
@@ -103,32 +106,48 @@ pub async fn execute_flow(
     let mut executor = Executor::new(flow, execution_state.app_handle.clone(), images_dir);
     executor.set_image_library(image_library);
     
-    // Store executor and update status
+    // Clear any interactive executor before starting a background run.
     {
         let mut exec_guard = execution_state.executor.lock().await;
-        *exec_guard = Some(executor);
+        *exec_guard = None;
     }
-    
-    // Start execution
-    let result = {
-        let mut exec_guard = execution_state.executor.lock().await;
-        if let Some(ref mut executor) = *exec_guard {
-            executor.start().await?;
-        }
-        Ok::<_, AppError>(())
-    };
-    
-    match result {
-        Ok(()) => Ok(true),
-        Err(e) => {
-            // Reset state on error
-            let mut exec_guard = execution_state.executor.lock().await;
-            *exec_guard = None;
-            let mut status = execution_state.status.lock().await;
-            *status = ExecutionStatus::Error;
-            Err(e)
-        }
+
+    let controller = executor.controller();
+    {
+        let mut controller_guard = execution_state.active_controller.lock().await;
+        *controller_guard = Some(controller.clone());
     }
+    {
+        let mut status = execution_state.status.lock().await;
+        *status = ExecutionStatus::Running;
+    }
+
+    let active_controller = Arc::clone(&execution_state.active_controller);
+    let tracked_status = Arc::clone(&execution_state.status);
+
+    tauri::async_runtime::spawn(async move {
+        let result = executor.start().await;
+        let final_status = executor.status().await;
+
+        if let Err(error) = result {
+            crate::logging::log_error(
+                "Flow execution task failed",
+                Some(&error.to_string()),
+                None,
+            );
+        }
+
+        {
+            let mut controller_guard = active_controller.lock().await;
+            *controller_guard = None;
+        }
+        {
+            let mut status = tracked_status.lock().await;
+            *status = final_status;
+        }
+    });
+
+    Ok(true)
 }
 
 /// Execute a single step of a flow.
@@ -159,7 +178,7 @@ pub async fn step_execution(
         }
     }
     
-    // Check if we have an executor already
+    // Check if we have an interactive executor already
     let has_executor = {
         let exec_guard = execution_state.executor.lock().await;
         exec_guard.is_some()
@@ -228,15 +247,16 @@ pub async fn stop_execution(
 ) -> Result<bool> {
     // Check if running
     {
-        let status = execution_state.status.lock().await;
-        if !status.is_active() {
-            return Err(AppError::ExecutionFailed(
-                "No flow is currently running.".to_string()
-            ));
+        let controller = execution_state.active_controller.lock().await;
+        if let Some(controller) = controller.as_ref() {
+            controller.stop().await?;
+            let mut tracked_status = execution_state.status.lock().await;
+            *tracked_status = ExecutionStatus::Stopped;
+            return Ok(true);
         }
     }
-    
-    // Stop the executor
+
+    // Stop the interactive executor
     {
         let mut exec_guard = execution_state.executor.lock().await;
         if let Some(ref mut executor) = *exec_guard {
@@ -269,17 +289,17 @@ pub async fn stop_execution(
 pub async fn pause_execution(
     execution_state: State<'_, ExecutionState>,
 ) -> Result<bool> {
-    // Check if running
     {
-        let status = execution_state.status.lock().await;
-        if *status != ExecutionStatus::Running {
-            return Err(AppError::ExecutionFailed(
-                "Can only pause a running flow.".to_string()
-            ));
+        let controller = execution_state.active_controller.lock().await;
+        if let Some(controller) = controller.as_ref() {
+            controller.pause().await?;
+            let mut tracked_status = execution_state.status.lock().await;
+            *tracked_status = ExecutionStatus::Paused;
+            return Ok(true);
         }
     }
-    
-    // Pause the executor
+
+    // Pause interactive executor if present.
     {
         let mut exec_guard = execution_state.executor.lock().await;
         if let Some(ref mut executor) = *exec_guard {
@@ -306,17 +326,17 @@ pub async fn pause_execution(
 pub async fn resume_execution(
     execution_state: State<'_, ExecutionState>,
 ) -> Result<bool> {
-    // Check if paused
     {
-        let status = execution_state.status.lock().await;
-        if *status != ExecutionStatus::Paused {
-            return Err(AppError::ExecutionFailed(
-                "Can only resume a paused flow.".to_string()
-            ));
+        let controller = execution_state.active_controller.lock().await;
+        if let Some(controller) = controller.as_ref() {
+            controller.resume().await?;
+            let mut tracked_status = execution_state.status.lock().await;
+            *tracked_status = ExecutionStatus::Running;
+            return Ok(true);
         }
     }
-    
-    // Resume the executor
+
+    // Resume interactive executor if present.
     {
         let mut exec_guard = execution_state.executor.lock().await;
         if let Some(ref mut executor) = *exec_guard {
@@ -347,11 +367,17 @@ pub async fn get_execution_status(
     
     // Get status from executor if available
     let executor_status = {
-        let exec_guard = execution_state.executor.lock().await;
-        if let Some(ref executor) = *exec_guard {
-            Some(executor.status().await)
+        let controller_guard = execution_state.active_controller.lock().await;
+        if let Some(controller) = controller_guard.as_ref() {
+            Some(controller.status().await)
         } else {
-            None
+            drop(controller_guard);
+            let exec_guard = execution_state.executor.lock().await;
+            if let Some(ref executor) = *exec_guard {
+                Some(executor.status().await)
+            } else {
+                None
+            }
         }
     };
     

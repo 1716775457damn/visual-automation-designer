@@ -95,9 +95,11 @@ function ContextMenuComponent({
 
   // Clear submenu timeout on unmount
   useEffect(() => {
+    const timeoutRef = submenuTimeoutRef;
+
     return () => {
-      if (submenuTimeoutRef.current) {
-        clearTimeout(submenuTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
   }, []);

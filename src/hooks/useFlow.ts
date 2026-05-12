@@ -36,7 +36,7 @@ import {
 /**
  * Frontend Flow type (extends Tauri Flow)
  */
-export interface Flow extends TauriFlow {}
+export type Flow = TauriFlow;
 
 /**
  * Options for useFlow hook
@@ -57,6 +57,7 @@ export interface UseFlowReturn {
   flowList: FlowMetadata[];
   loading: boolean;
   error: Error | null;
+  isDirty: boolean;
   createFlow: (name: string) => Promise<void>;
   saveFlow: () => Promise<void>;
   loadFlow: (id: string) => Promise<void>;
@@ -216,11 +217,22 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   const [flowList, setFlowList] = useState<FlowMetadata[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
 
   // Track if we've initialized
   const initializedRef = useRef(false);
+
+  // Load flow list
+  const loadFlowList = useCallback(async () => {
+    try {
+      const list = await tauriListFlows();
+      setFlowList(list);
+    } catch (err) {
+      console.warn('Failed to load flow list:', err);
+    }
+  }, []);
 
   // Update undo/redo state when flow changes
   const updateUndoRedoState = useCallback(async () => {
@@ -264,6 +276,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       setFlow(newFlow);
       setNodes([]);
       setEdges([]);
+      setIsDirty(false);
       // Refresh flow list
       await loadFlowList();
     } catch (err) {
@@ -273,7 +286,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadFlowList]);
 
   // Save the current flow
   const saveFlow = useCallback(async () => {
@@ -317,10 +330,16 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
           target: edge.target,
           sourceHandle: edge.sourceHandle ?? undefined,
         });
+
+        const sourceBlock = flowToSave.blocks[edge.source];
+        if (sourceBlock && !sourceBlock.children.includes(edge.target)) {
+          sourceBlock.children.push(edge.target);
+        }
       }
 
       await tauriSaveFlow(flowToSave);
       console.log('Flow saved successfully');
+      setIsDirty(false);
       
       // Refresh flow list
       await loadFlowList();
@@ -331,7 +350,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     } finally {
       setLoading(false);
     }
-  }, [flow, nodes, edges]);
+  }, [edges, flow, loadFlowList, nodes]);
 
   // Load a flow by ID
   const loadFlow = useCallback(async (id: string) => {
@@ -352,6 +371,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         connectionToEdge(conn)
       );
       setEdges(loadedEdges);
+      setIsDirty(false);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -359,17 +379,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // Load flow list
-  const loadFlowList = useCallback(async () => {
-    try {
-      const list = await tauriListFlows();
-      setFlowList(list);
-    } catch (err) {
-      console.warn('Failed to load flow list:', err);
-    }
-  }, []);
+  }, [loadFlowList]);
 
   // Delete a flow
   const deleteFlow = useCallback(async (id: string) => {
@@ -383,6 +393,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         setFlow(null);
         setNodes([]);
         setEdges([]);
+        setIsDirty(false);
       }
       
       // Refresh flow list
@@ -404,27 +415,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     config?: Record<string, unknown>
   ): Promise<string> => {
     if (!flow) {
-      console.warn('No flow to add node to');
-      // Create a local node without backend persistence
-      const nodeId = `node-${Date.now()}`;
-      const label = getNodeLabel(createBlockType(type, category));
-      const nodeConfig = (config as BlockConfig) || createDefaultConfig(type, category);
-      
-      const newNode: Node<BlockNodeData> = {
-        id: nodeId,
-        type: 'blockNode',
-        position,
-        data: {
-          label,
-          blockType: type as never,
-          blockCategory: category as never,
-          config: nodeConfig,
-          executing: false,
-        },
-      };
-      
-      setNodes((nds) => [...nds, newNode]);
-      return nodeId;
+      throw new Error('请先创建或加载流程');
     }
 
     try {
@@ -437,6 +428,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       // Add the new node to state
       const newNode = blockNodeToReactFlowNode(block);
       setNodes((nds) => [...nds, newNode]);
+      setIsDirty(true);
 
       return block.id;
     } catch (err) {
@@ -459,6 +451,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
           : node
       )
     );
+    setIsDirty(true);
 
     if (!flow) {
       console.warn('No flow to update node position in');
@@ -486,6 +479,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
           : node
       )
     );
+    setIsDirty(true);
 
     if (!flow) {
       console.warn('No flow to update node config in');
@@ -508,6 +502,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     setEdges((eds) =>
       eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
     );
+    setIsDirty(true);
 
     if (!flow) {
       console.warn('No flow to delete node from');
@@ -525,34 +520,23 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
   // Add a connection
   const addConnection = useCallback(async (connection: Connection): Promise<void> => {
-    const newEdge: Edge = {
-      id: `edge-${Date.now()}`,
-      source: connection.source!,
-      target: connection.target!,
-      sourceHandle: connection.sourceHandle,
-      targetHandle: connection.targetHandle,
-      type: 'smoothstep',
-      animated: false,
-    };
-    
-    // Optimistically update UI
-    setEdges((eds) => addEdge(newEdge, eds));
-
     if (!flow) {
-      console.warn('No flow to add connection to');
-      return;
+      throw new Error('请先创建或加载流程');
     }
 
     try {
-      await tauriCreateConnection(
+      const createdConnection = await tauriCreateConnection(
         flow.id,
         connection.source!,
         connection.target!,
         connection.sourceHandle || undefined
       );
+      setEdges((eds) => addEdge(connectionToEdge(createdConnection), eds));
+      setIsDirty(true);
     } catch (err) {
-      console.warn('Failed to create connection on backend:', err);
-      // Don't throw for connection creation - keep UI responsive
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
     }
   }, [flow]);
 
@@ -560,6 +544,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   const deleteConnection = useCallback(async (connectionId: string): Promise<void> => {
     // Optimistically update UI
     setEdges((eds) => eds.filter((edge) => edge.id !== connectionId));
+    setIsDirty(true);
 
     if (!flow) {
       console.warn('No flow to delete connection from');
@@ -588,6 +573,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         setFlow(result);
         setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
         setEdges(result.connections.map(connectionToEdge));
+        setIsDirty(true);
         await updateUndoRedoState();
       }
     } catch (err) {
@@ -608,6 +594,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         setFlow(result);
         setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
         setEdges(result.connections.map(connectionToEdge));
+        setIsDirty(true);
         await updateUndoRedoState();
       }
     } catch (err) {
@@ -635,10 +622,25 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   // Handle edges change from ReactFlow
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      const nextEdges = applyEdgeChanges(changes, edges);
+      const removalIds = new Set(
+        changes
+          .filter((change): change is EdgeChange & { type: 'remove'; id: string } => change.type === 'remove')
+          .map((change) => change.id)
+      );
+
+      const nonRemovalChanges = changes.filter((change) => change.type !== 'remove');
+      const baseEdges = edges.filter((edge) => !removalIds.has(edge.id));
+      const nextEdges = applyEdgeChanges(nonRemovalChanges, baseEdges);
       setEdges(nextEdges);
+      if (changes.length > 0) {
+        setIsDirty(true);
+      }
+
+      removalIds.forEach((id) => {
+        void deleteConnection(id);
+      });
     },
-    [edges]
+    [deleteConnection, edges]
   );
 
   return {
@@ -648,6 +650,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     flowList,
     loading,
     error,
+    isDirty,
     createFlow,
     saveFlow,
     loadFlow,

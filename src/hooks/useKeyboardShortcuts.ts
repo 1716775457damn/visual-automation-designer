@@ -61,6 +61,7 @@ function isMetaOrCtrlPressed(event: KeyboardEvent): boolean {
 }
 
 export interface KeyboardShortcutHandlers {
+  onNew?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
   onDelete?: () => void;
@@ -108,6 +109,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
 
     const { key, shiftKey } = event;
     const isMetaPressed = isMetaOrCtrlPressed(event);
+
+    // Undo: Ctrl+Z / Cmd+Z
+    if (key === 'n' && isMetaPressed && !shiftKey) {
+      event.preventDefault();
+      handlers.onNew?.();
+      return;
+    }
 
     // Undo: Ctrl+Z / Cmd+Z
     if (key === 'z' && isMetaPressed && !shiftKey) {

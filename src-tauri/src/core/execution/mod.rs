@@ -11,6 +11,6 @@ mod executor;
 mod context;
 mod events;
 
-pub use executor::Executor;
+pub use executor::{ExecutionController, Executor};
 pub use context::ExecutionContext;
 pub use events::{ExecutionEvent, ExecutionStatus};

@@ -106,8 +106,8 @@ export interface FlowCanvasProps {
   nodes?: Node[];
   edges?: Edge[];
   onNodeSelect?: (nodeId: string | null) => void;
-  onNodesChange?: (nodes: Node[]) => void;
-  onEdgesChange?: (edges: Edge[]) => void;
+  onNodesChange?: (changes: NodeChange[]) => void;
+  onEdgesChange?: (changes: EdgeChange[]) => void;
   onConnect?: (connection: Connection) => void;
   onNodeDelete?: (nodeId: string) => void;
   onEdgeDelete?: (edgeId: string) => void;
@@ -146,12 +146,6 @@ export const FlowCanvas = memo(function FlowCanvas({
   // Clipboard state for copy/paste
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
 
-  // Disabled nodes state (stored as Set of node IDs)
-  const [disabledNodes, setDisabledNodes] = useState<Set<string>>(new Set());
-
-  // Entry point node ID
-  const [entryPointId, setEntryPointId] = useState<string | null>(null);
-
   // Use external state if provided, otherwise use internal state
   const nodes = externalNodes !== undefined ? externalNodes : internalNodes;
   const edges = externalEdges !== undefined ? externalEdges : internalEdges;
@@ -163,11 +157,9 @@ export const FlowCanvas = memo(function FlowCanvas({
       data: {
         ...node.data,
         executing: executingBlockId === node.id,
-        disabled: disabledNodes.has(node.id),
-        isEntryPoint: entryPointId === node.id,
       },
     }));
-  }, [nodes, executingBlockId, disabledNodes, entryPointId]);
+  }, [nodes, executingBlockId]);
 
   // Handle node changes - memoized
   const handleNodesChange = useCallback(
@@ -176,7 +168,7 @@ export const FlowCanvas = memo(function FlowCanvas({
       if (externalNodes === undefined) {
         setInternalNodes(nextNodes);
       }
-      onNodesChange?.(nextNodes);
+      onNodesChange?.(changes);
     },
     [nodes, externalNodes, onNodesChange]
   );
@@ -188,7 +180,7 @@ export const FlowCanvas = memo(function FlowCanvas({
       if (externalEdges === undefined) {
         setInternalEdges(nextEdges);
       }
-      onEdgesChange?.(nextEdges);
+      onEdgesChange?.(changes);
     },
     [edges, externalEdges, onEdgesChange]
   );
@@ -293,12 +285,10 @@ export const FlowCanvas = memo(function FlowCanvas({
 
         if (externalNodes === undefined) {
           setInternalNodes((nds) => [...nds, newNode]);
-        } else {
-          onNodesChange?.([...nodes, newNode]);
         }
       }
     },
-    [reactFlowInstance, externalNodes, nodes, onNodesChange, onAddNode]
+    [reactFlowInstance, externalNodes, onAddNode]
   );
 
   // Handle right-click on node - memoized
@@ -382,43 +372,14 @@ export const FlowCanvas = memo(function FlowCanvas({
 
     if (externalNodes === undefined) {
       setInternalNodes((nds) => [...nds, newNode]);
-    } else {
-      onNodesChange?.([...nodes, newNode]);
     }
-  }, [clipboard, contextMenu, externalNodes, nodes, onNodesChange]);
-
-  // Handle select all nodes
-  const handleSelectAll = useCallback(() => {
-    // This would typically be handled by the parent component
-    // For now, we just log it
-    console.log('Select all nodes:', nodes.map(n => n.id));
-  }, [nodes]);
-
-  // Toggle node disabled state
-  const handleToggleDisabled = useCallback((nodeId: string) => {
-    setDisabledNodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(nodeId)) {
-        next.delete(nodeId);
-      } else {
-        next.add(nodeId);
-      }
-      return next;
-    });
-  }, []);
-
-  // Set entry point
-  const handleSetEntryPoint = useCallback((nodeId: string) => {
-    setEntryPointId((prev) => (prev === nodeId ? null : nodeId));
-  }, []);
+  }, [clipboard, contextMenu, externalNodes]);
 
   // Build node context menu items
   const nodeMenuItems = useMemo((): ContextMenuItem[] => {
     if (!contextMenu?.targetId) return [];
 
     const nodeId = contextMenu.targetId;
-    const isDisabled = disabledNodes.has(nodeId);
-    const isEntryPoint = entryPointId === nodeId;
 
     return [
       {
@@ -437,18 +398,8 @@ export const FlowCanvas = memo(function FlowCanvas({
         action: () => onNodeDelete?.(nodeId),
         danger: true,
       },
-      {
-        label: '禁用',
-        icon: isDisabled ? '✅' : '🚫',
-        action: () => handleToggleDisabled(nodeId),
-      },
-      {
-        label: '设为起点',
-        icon: isEntryPoint ? '🏁' : '📍',
-        action: () => handleSetEntryPoint(nodeId),
-      },
     ];
-  }, [contextMenu, disabledNodes, entryPointId, onNodeConfig, onNodeDelete, handleCopyNode, handleToggleDisabled, handleSetEntryPoint]);
+  }, [contextMenu, onNodeConfig, onNodeDelete, handleCopyNode]);
 
   // Build edge context menu items
   const edgeMenuItems = useMemo((): ContextMenuItem[] => {
@@ -516,13 +467,8 @@ export const FlowCanvas = memo(function FlowCanvas({
         action: handlePasteNode,
         disabled: !hasClipboard,
       },
-      {
-        label: '全选',
-        icon: '🔲',
-        action: handleSelectAll,
-      },
     ];
-  }, [clipboard, contextMenu, onAddNode, handlePasteNode, handleSelectAll]);
+  }, [clipboard, contextMenu, onAddNode, handlePasteNode]);
 
   // Get current menu items based on context
   const currentMenuItems = useMemo((): ContextMenuItem[] => {

@@ -2,13 +2,29 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Connection } from 'reactflow';
 import './App.css';
 import './styles/index.css';
+import { FlowListModal, NewFlowDialog, ShortcutCheatsheet, StatusBar } from './components/App';
 import { FlowCanvas, FlowToolbar } from './components/FlowEditor';
-import { ExecutionBar, ExecutionLog, executionEventToLogEntry } from './components/ExecutionStatus';
+import { ExecutionLog, executionEventToLogEntry } from './components/ExecutionStatus';
 import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
-import { ToastProvider, useToast } from './components/common';
+import { ConfirmDialog, ToastProvider, useToast } from './components/common';
 import { useFlow, useExecution, useKeyboardShortcuts, useTheme } from './hooks';
 import type { BlockConfig as BlockConfigType } from './tauri/flow';
+
+type PendingUnsavedAction =
+  | { type: 'load_flow'; flowId: string }
+  | { type: 'create_flow_dialog' };
+
+function isInputLikeElement(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+
+  if (!element) {
+    return false;
+  }
+
+  const tagName = element.tagName;
+  return tagName === 'INPUT' || tagName === 'TEXTAREA' || element.isContentEditable;
+}
 
 function AppContent() {
   // UX优化103: 主题管理
@@ -27,13 +43,12 @@ function AppContent() {
     flowList,
     loading,
     error,
+    isDirty,
     createFlow,
     saveFlow,
     loadFlow,
     loadFlowList,
     deleteFlow,
-    setNodes,
-    setEdges,
     addNode,
     addConnection,
     undo,
@@ -41,6 +56,9 @@ function AppContent() {
     canUndo,
     canRedo,
     deleteNode,
+    deleteConnection,
+    handleNodesChange,
+    handleEdgesChange,
     updateNodeConfig,
   } = useFlow();
 
@@ -58,10 +76,16 @@ function AppContent() {
     stopExecution,
     stepExecution,
     clearLog,
+    completedBlocks,
+    resetProgress,
   } = useExecution();
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showFlowList, setShowFlowList] = useState(false);
+  const [flowPendingDelete, setFlowPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
+  const [newFlowName, setNewFlowName] = useState('');
+  const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
 
   // Determine execution states
   const isExecuting = executionStatus === 'running' || executionStatus === 'paused';
@@ -77,6 +101,21 @@ function AppContent() {
   // Handle node selection
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
+  }, []);
+
+  const openNewFlowDialog = useCallback(() => {
+    if (isDirty) {
+      setPendingUnsavedAction({ type: 'create_flow_dialog' });
+      return;
+    }
+
+    setNewFlowName(`新流程_${new Date().toLocaleDateString()}`);
+    setShowNewFlowDialog(true);
+  }, [isDirty]);
+
+  const proceedWithNewFlowDialog = useCallback(() => {
+    setNewFlowName(`新流程_${new Date().toLocaleDateString()}`);
+    setShowNewFlowDialog(true);
   }, []);
 
   // Get selected node data for config panel
@@ -111,8 +150,37 @@ function AppContent() {
       await addConnection(connection);
     } catch (err) {
       console.error('Failed to add connection:', err);
+      showToast('error', err instanceof Error ? err.message : '连接创建失败');
     }
-  }, [addConnection]);
+  }, [addConnection, showToast]);
+
+  const handleAddNode = useCallback(async (type: string, category: string, position: { x: number; y: number }) => {
+    try {
+      await addNode(type, category, position);
+    } catch (err) {
+      console.error('Failed to add node:', err);
+      showToast('warning', err instanceof Error ? err.message : '添加节点失败');
+    }
+  }, [addNode, showToast]);
+
+  const handleDeleteNode = useCallback(async (nodeId: string) => {
+    try {
+      await deleteNode(nodeId);
+      setSelectedNodeId((current) => (current === nodeId ? null : current));
+    } catch (err) {
+      console.error('Failed to delete node:', err);
+      showToast('error', '删除节点失败');
+    }
+  }, [deleteNode, showToast]);
+
+  const handleDeleteEdge = useCallback(async (edgeId: string) => {
+    try {
+      await deleteConnection(edgeId);
+    } catch (err) {
+      console.error('Failed to delete connection:', err);
+      showToast('error', '删除连接失败');
+    }
+  }, [deleteConnection, showToast]);
 
   // Handle execution controls
   const handleExecute = useCallback(async () => {
@@ -121,13 +189,14 @@ function AppContent() {
       return;
     }
     try {
+      resetProgress(nodes.length);
       await tauriExecuteFlow(flow.id);
       showToast('info', '开始执行流程');
     } catch (err) {
       console.error('Failed to execute flow:', err);
       showToast('error', '执行失败');
     }
-  }, [flow, tauriExecuteFlow, showToast]);
+  }, [flow, nodes.length, resetProgress, tauriExecuteFlow, showToast]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'paused') {
@@ -148,11 +217,12 @@ function AppContent() {
       return;
     }
     try {
+      resetProgress(nodes.length);
       await stepExecution(flow.id);
     } catch (err) {
       console.error('Failed to step execution:', err);
     }
-  }, [flow, stepExecution]);
+  }, [flow, nodes.length, resetProgress, stepExecution]);
 
   const handleSave = useCallback(async () => {
     if (!flow) {
@@ -181,6 +251,11 @@ function AppContent() {
   }, [loadFlowList]);
 
   const handleLoadFlowById = useCallback(async (id: string) => {
+    if (isDirty && flow?.id !== id) {
+      setPendingUnsavedAction({ type: 'load_flow', flowId: id });
+      return;
+    }
+
     try {
       await loadFlow(id);
       setShowFlowList(false);
@@ -189,33 +264,83 @@ function AppContent() {
       console.error('Failed to load flow:', err);
       showToast('error', '加载失败');
     }
-  }, [loadFlow, showToast]);
+  }, [flow?.id, isDirty, loadFlow, showToast]);
 
   const handleDeleteFlowById = useCallback(async (id: string) => {
-    if (!confirm('确定要删除此流程吗？')) {
+    const flowMeta = flowList.find((meta) => meta.id === id);
+    setFlowPendingDelete({ id, name: flowMeta?.name ?? '此流程' });
+  }, [flowList]);
+
+  const confirmDeleteFlow = useCallback(async () => {
+    if (!flowPendingDelete) {
       return;
     }
+
     try {
-      await deleteFlow(id);
+      await deleteFlow(flowPendingDelete.id);
+      setFlowPendingDelete(null);
       showToast('success', '流程已删除');
     } catch (err) {
       console.error('Failed to delete flow:', err);
       showToast('error', '删除失败');
     }
-  }, [deleteFlow, showToast]);
+  }, [deleteFlow, flowPendingDelete, showToast]);
 
-  const handleNewFlow = useCallback(async () => {
-    const name = prompt('请输入流程名称：', `新流程_${new Date().toLocaleDateString()}`);
-    if (name) {
-      try {
-        await createFlow(name);
-        showToast('success', '流程已创建');
-      } catch (err) {
-        console.error('Failed to create flow:', err);
-        showToast('error', '创建失败');
-      }
+  const cancelDeleteFlow = useCallback(() => {
+    setFlowPendingDelete(null);
+  }, []);
+
+  const handleCreateFlow = useCallback(async () => {
+    const trimmedName = newFlowName.trim();
+    if (!trimmedName) {
+      showToast('warning', '请输入流程名称');
+      return;
     }
-  }, [createFlow, showToast]);
+
+    try {
+      await createFlow(trimmedName);
+      setShowNewFlowDialog(false);
+      setNewFlowName('');
+      showToast('success', '流程已创建');
+    } catch (err) {
+      console.error('Failed to create flow:', err);
+      showToast('error', '创建失败');
+    }
+  }, [createFlow, newFlowName, showToast]);
+
+  const cancelCreateFlow = useCallback(() => {
+    setShowNewFlowDialog(false);
+    setNewFlowName('');
+  }, []);
+
+  const cancelUnsavedAction = useCallback(() => {
+    setPendingUnsavedAction(null);
+  }, []);
+
+  const confirmUnsavedAction = useCallback(async () => {
+    if (!pendingUnsavedAction) {
+      return;
+    }
+
+    const action = pendingUnsavedAction;
+    setPendingUnsavedAction(null);
+
+    if (action.type === 'load_flow') {
+      try {
+        await loadFlow(action.flowId);
+        setShowFlowList(false);
+        showToast('success', '流程已加载');
+      } catch (err) {
+        console.error('Failed to load flow:', err);
+        showToast('error', '加载失败');
+      }
+      return;
+    }
+
+    if (action.type === 'create_flow_dialog') {
+      proceedWithNewFlowDialog();
+    }
+  }, [loadFlow, pendingUnsavedAction, proceedWithNewFlowDialog, showToast]);
 
   const handleUndo = useCallback(async () => {
     try {
@@ -251,6 +376,7 @@ function AppContent() {
     handlers: {
       onUndo: undo,
       onRedo: redo,
+      onNew: openNewFlowDialog,
       onDelete: handleKeyboardDelete,
       onExecute: handleExecute,
       onStep: handleStep,
@@ -271,7 +397,7 @@ function AppContent() {
       if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         // Only trigger if not in an input field
         const target = e.target as HTMLElement;
-        if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        if (!isInputLikeElement(target)) {
           setShowShortcutHelp(prev => !prev);
         }
       }
@@ -285,6 +411,20 @@ function AppContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   return (
     <div className="app">
@@ -305,7 +445,7 @@ function AppContent() {
         onPause={handlePause}
         onStop={handleStop}
         onStep={handleStep}
-        onNew={handleNewFlow}
+        onNew={openNewFlowDialog}
         onToggleTheme={toggleTheme}
       />
 
@@ -322,12 +462,13 @@ function AppContent() {
             nodes={nodes}
             edges={edges}
             onNodeSelect={handleNodeSelect}
-            onNodesChange={setNodes}
-            onEdgesChange={setEdges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
             executingBlockId={currentBlockId}
-            onAddNode={addNode}
-            onNodeDelete={deleteNode}
+            onAddNode={handleAddNode}
+            onNodeDelete={handleDeleteNode}
+            onEdgeDelete={handleDeleteEdge}
           />
         </main>
 
@@ -377,53 +518,18 @@ function AppContent() {
         </aside>
       </div>
 
-      {/* Bottom Status Bar */}
-      <div className="app__status">
-        {/* Execution Status Bar */}
-        <ExecutionBar
-          status={executionStatus}
-          currentBlock={currentBlockId || undefined}
-          totalBlocks={nodes.length}
-          completedBlocks={0}
-          errorMessage={errorMessage || undefined}
-        />
-
-        {/* UX优化42: 增强的积木块/连接统计 */}
-        <span className="app__status-item app__status-item--stats">
-          🧩 {nodes.length} 积木块
-        </span>
-        <span className="app__status-item app__status-item--stats">
-          🔗 {edges.length} 连接
-        </span>
-
-        {/* Flow name */}
-        {flow && (
-          <span className="app__status-item app__status-item--flow">
-            📋 {flow.name}
-          </span>
-        )}
-
-        {/* UX优化43: 自动保存指示器 */}
-        {flow && !loading && (
-          <span className="app__status-item app__status-item--autosave">
-            已保存
-          </span>
-        )}
-
-        {/* Loading indicator */}
-        {loading && (
-          <span className="app__status-item app__status-item--loading">
-            ⏳ 加载中...
-          </span>
-        )}
-
-        {/* Error display */}
-        {error && (
-          <span className="app__status-item app__status-item--error">
-            ⚠️ {error.message}
-          </span>
-        )}
-      </div>
+      <StatusBar
+        executionStatus={executionStatus}
+        currentBlockId={currentBlockId}
+        nodesCount={nodes.length}
+        edgesCount={edges.length}
+        completedBlocks={completedBlocks}
+        errorMessage={errorMessage}
+        flowName={flow?.name}
+        loading={loading}
+        isDirty={isDirty}
+        flowError={error}
+      />
 
       {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}
       <div className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}>
@@ -438,172 +544,47 @@ function AppContent() {
         </button>
       </div>
 
-      {/* Flow List Modal */}
-      {showFlowList && (
-        <div className="flow-list-modal" onClick={() => setShowFlowList(false)}>
-          <div className="flow-list-modal__content" onClick={(e) => e.stopPropagation()}>
-            <div className="flow-list-modal__header">
-              <h3>📋 流程列表</h3>
-              <button
-                className="flow-list-modal__close"
-                onClick={() => setShowFlowList(false)}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            <div className="flow-list-modal__actions">
-              <button
-                className="flow-list-modal__btn flow-list-modal__btn--primary"
-                onClick={handleNewFlow}
-                type="button"
-              >
-                ➕ 新建流程
-              </button>
-            </div>
-            <div className="flow-list-modal__list">
-              {flowList.length === 0 ? (
-                <div className="flow-list-modal__empty">
-                  <p>📭 暂无保存的流程</p>
-                  <p className="flow-list-modal__empty-hint">点击"新建流程"开始创建</p>
-                </div>
-              ) : (
-                flowList.map((meta) => (
-                  <div key={meta.id} className={`flow-list-modal__item ${flow?.id === meta.id ? 'flow-list-modal__item--active' : ''}`}>
-                    <div className="flow-list-modal__item-info">
-                      <span className="flow-list-modal__item-name">{meta.name}</span>
-                      <span className="flow-list-modal__item-meta">
-                        {meta.blockCount} 个积木块 · 更新于 {new Date(meta.updatedAt).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flow-list-modal__item-actions">
-                      <button
-                        className="flow-list-modal__item-btn"
-                        onClick={() => handleLoadFlowById(meta.id)}
-                        disabled={flow?.id === meta.id}
-                        type="button"
-                      >
-                        {flow?.id === meta.id ? '✓ 当前' : '打开'}
-                      </button>
-                      <button
-                        className="flow-list-modal__item-btn flow-list-modal__item-btn--danger"
-                        onClick={() => handleDeleteFlowById(meta.id)}
-                        type="button"
-                      >
-                        🗑️ 删除
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <FlowListModal
+        isOpen={showFlowList}
+        flowList={flowList}
+        currentFlowId={flow?.id}
+        onClose={() => setShowFlowList(false)}
+        onNew={openNewFlowDialog}
+        onLoad={(id) => void handleLoadFlowById(id)}
+        onDelete={(id) => void handleDeleteFlowById(id)}
+      />
 
-      {/* UX优化124: 快捷键帮助面板 */}
-      {showShortcutHelp && (
-        <div className="shortcut-cheatsheet" onClick={() => setShowShortcutHelp(false)}>
-          <div className="shortcut-cheatsheet__content" onClick={(e) => e.stopPropagation()}>
-            <div className="shortcut-cheatsheet__header">
-              <h3 className="shortcut-cheatsheet__title">⌨️ 快捷键速查</h3>
-              <button
-                className="shortcut-cheatsheet__close"
-                onClick={() => setShowShortcutHelp(false)}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-            <div className="shortcut-cheatsheet__content">
-              <div className="shortcut-cheatsheet__category">
-                <div className="shortcut-cheatsheet__category-title">📁 文件操作</div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>新建流程</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Ctrl</span>
-                    <span className="shortcut-cheatsheet__key">N</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>保存流程</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Ctrl</span>
-                    <span className="shortcut-cheatsheet__key">S</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>打开流程</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Ctrl</span>
-                    <span className="shortcut-cheatsheet__key">O</span>
-                  </div>
-                </div>
-              </div>
-              <div className="shortcut-cheatsheet__category">
-                <div className="shortcut-cheatsheet__category-title">✏️ 编辑操作</div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>撤销</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Ctrl</span>
-                    <span className="shortcut-cheatsheet__key">Z</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>重做</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Ctrl</span>
-                    <span className="shortcut-cheatsheet__key">Y</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>删除选中</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Delete</span>
-                  </div>
-                </div>
-              </div>
-              <div className="shortcut-cheatsheet__category">
-                <div className="shortcut-cheatsheet__category-title">▶️ 执行控制</div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>执行/继续</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">F5</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>停止执行</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Shift</span>
-                    <span className="shortcut-cheatsheet__key">F5</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>单步执行</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">F10</span>
-                  </div>
-                </div>
-              </div>
-              <div className="shortcut-cheatsheet__category">
-                <div className="shortcut-cheatsheet__category-title">🔧 其他</div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>显示快捷键帮助</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">?</span>
-                  </div>
-                </div>
-                <div className="shortcut-cheatsheet__item">
-                  <span>关闭弹窗</span>
-                  <div className="shortcut-cheatsheet__keys">
-                    <span className="shortcut-cheatsheet__key">Esc</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ShortcutCheatsheet isOpen={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />
+
+      <ConfirmDialog
+        isOpen={flowPendingDelete !== null}
+        title="删除流程"
+        message={flowPendingDelete ? `确定要删除“${flowPendingDelete.name}”吗？此操作不可撤销。` : ''}
+        confirmText="删除"
+        cancelText="取消"
+        variant="danger"
+        onConfirm={() => void confirmDeleteFlow()}
+        onCancel={cancelDeleteFlow}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingUnsavedAction !== null}
+        title="未保存的更改"
+        message="当前流程有未保存的更改。继续操作将丢失这些修改，是否继续？"
+        confirmText="继续"
+        cancelText="取消"
+        variant="warning"
+        onConfirm={() => void confirmUnsavedAction()}
+        onCancel={cancelUnsavedAction}
+      />
+
+      <NewFlowDialog
+        isOpen={showNewFlowDialog}
+        value={newFlowName}
+        onChange={setNewFlowName}
+        onCancel={cancelCreateFlow}
+        onConfirm={() => void handleCreateFlow()}
+      />
     </div>
   );
 }
