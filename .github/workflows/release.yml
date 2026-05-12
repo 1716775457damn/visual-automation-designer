@@ -37,7 +37,14 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install Rust stable (macOS universal)
+        if: matrix.platform == 'macos-latest'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
       - name: Install Rust stable
+        if: matrix.platform != 'macos-latest'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust cache
