@@ -35,6 +35,11 @@ export interface ActionBlocksProps {
 export function ActionBlocks({ onSelect, searchQuery = '' }: ActionBlocksProps) {
   const [draggingType, setDraggingType] = useState<string | null>(null);
 
+  const createDragPayload = (type: ActionType) => JSON.stringify({
+    blockType: type,
+    blockCategory: 'action',
+  });
+
   const filteredBlocks = ACTION_BLOCKS.filter((block) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -60,10 +65,10 @@ export function ActionBlocks({ onSelect, searchQuery = '' }: ActionBlocksProps) 
           className={`action-blocks__item ${draggingType === block.type ? 'action-blocks__item--dragging' : ''}`}
           draggable
           onDragStart={(e) => {
-            console.log('Drag start:', block.type, 'action');
             setDraggingType(block.type);
             e.dataTransfer.setData('blockType', block.type);
             e.dataTransfer.setData('blockCategory', 'action');
+            e.dataTransfer.setData('text/plain', createDragPayload(block.type));
             e.dataTransfer.effectAllowed = 'move';
           }}
           onDragEnd={() => {

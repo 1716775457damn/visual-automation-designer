@@ -5,7 +5,6 @@
  * Validates: Requirements 2.6, 5.1, 5.5, 5.6, 7.1, 7.2
  */
 
-import { useState } from 'react';
 import type { ThemeMode } from '../../hooks';
 
 export interface FlowToolbarProps {
@@ -26,6 +25,7 @@ export interface FlowToolbarProps {
   onStep?: () => void;
   onNew?: () => void;
   onToggleTheme?: () => void;
+  onHelp?: () => void;
 }
 
 /**
@@ -50,10 +50,8 @@ export function FlowToolbar({
   onStep,
   onNew,
   onToggleTheme,
+  onHelp,
 }: FlowToolbarProps) {
-  // UX优化41: 添加快捷键帮助弹窗
-  const [showShortcuts, setShowShortcuts] = useState(false);
-
   // UX优化103: 主题图标
   const getThemeIcon = () => {
     switch (themeMode) {
@@ -215,7 +213,7 @@ export function FlowToolbar({
         </button>
         <button
           className="flow-toolbar__btn flow-toolbar__btn--help"
-          onClick={() => setShowShortcuts(!showShortcuts)}
+          onClick={onHelp}
           title="查看快捷键"
           data-testid="btn-help"
           type="button"
@@ -223,68 +221,6 @@ export function FlowToolbar({
         >
           ❓
         </button>
-        
-        {/* UX优化41: 快捷键帮助面板 */}
-        {showShortcuts && (
-          <div className="shortcuts-panel" data-testid="shortcuts-panel">
-            <div className="shortcuts-panel__header">
-              <h4>⌨️ 快捷键</h4>
-              <button 
-                className="shortcuts-panel__close"
-                onClick={() => setShowShortcuts(false)}
-              >
-                ×
-              </button>
-            </div>
-            <div className="shortcuts-panel__content">
-              <div className="shortcuts-panel__section">
-                <h5>文件操作</h5>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Ctrl</kbd>+<kbd>N</kbd></span>
-                  <span>新建流程</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Ctrl</kbd>+<kbd>S</kbd></span>
-                  <span>保存流程</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Ctrl</kbd>+<kbd>O</kbd></span>
-                  <span>打开流程</span>
-                </div>
-              </div>
-              <div className="shortcuts-panel__section">
-                <h5>编辑操作</h5>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Ctrl</kbd>+<kbd>Z</kbd></span>
-                  <span>撤销</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Ctrl</kbd>+<kbd>Y</kbd></span>
-                  <span>重做</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Delete</kbd></span>
-                  <span>删除选中</span>
-                </div>
-              </div>
-              <div className="shortcuts-panel__section">
-                <h5>执行控制</h5>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>F5</kbd></span>
-                  <span>执行/继续</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>Shift</kbd>+<kbd>F5</kbd></span>
-                  <span>停止执行</span>
-                </div>
-                <div className="shortcuts-panel__item">
-                  <span className="shortcuts-panel__keys"><kbd>F10</kbd></span>
-                  <span>单步执行</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

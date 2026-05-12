@@ -34,6 +34,11 @@ export interface ControlBlocksProps {
 export function ControlBlocks({ onSelect, searchQuery = '' }: ControlBlocksProps) {
   const [draggingType, setDraggingType] = useState<string | null>(null);
 
+  const createDragPayload = (type: ControlType) => JSON.stringify({
+    blockType: type,
+    blockCategory: 'control',
+  });
+
   const filteredBlocks = CONTROL_BLOCKS.filter((block) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
@@ -59,10 +64,10 @@ export function ControlBlocks({ onSelect, searchQuery = '' }: ControlBlocksProps
           className={`control-blocks__item ${draggingType === block.type ? 'control-blocks__item--dragging' : ''}`}
           draggable
           onDragStart={(e) => {
-            console.log('Drag start:', block.type, 'control');
             setDraggingType(block.type);
             e.dataTransfer.setData('blockType', block.type);
             e.dataTransfer.setData('blockCategory', 'control');
+            e.dataTransfer.setData('text/plain', createDragPayload(block.type));
             e.dataTransfer.effectAllowed = 'move';
           }}
           onDragEnd={() => {

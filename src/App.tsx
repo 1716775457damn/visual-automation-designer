@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Connection } from 'reactflow';
 import './App.css';
 import './styles/index.css';
@@ -86,6 +86,7 @@ function AppContent() {
   const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
   const [newFlowName, setNewFlowName] = useState('');
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
+  const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
   // Determine execution states
   const isExecuting = executionStatus === 'running' || executionStatus === 'paused';
@@ -102,6 +103,22 @@ function AppContent() {
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
   }, []);
+
+  const getQuickAddPosition = useCallback(() => {
+    const viewportCenter = viewportCenterRef.current?.();
+    if (viewportCenter) {
+      return {
+        x: Math.round(viewportCenter.x / 20) * 20,
+        y: Math.round(viewportCenter.y / 20) * 20,
+      };
+    }
+
+    const nodeIndex = nodes.length;
+    return {
+      x: 160 + (nodeIndex % 4) * 180,
+      y: 80 + Math.floor(nodeIndex / 4) * 110,
+    };
+  }, [nodes.length]);
 
   const openNewFlowDialog = useCallback(() => {
     if (isDirty) {
@@ -162,6 +179,10 @@ function AppContent() {
       showToast('warning', err instanceof Error ? err.message : '添加节点失败');
     }
   }, [addNode, showToast]);
+
+  const handleToolboxSelect = useCallback((type: string, category: string) => {
+    void handleAddNode(type, category, getQuickAddPosition());
+  }, [getQuickAddPosition, handleAddNode]);
 
   const handleDeleteNode = useCallback(async (nodeId: string) => {
     try {
@@ -447,13 +468,14 @@ function AppContent() {
         onStep={handleStep}
         onNew={openNewFlowDialog}
         onToggleTheme={toggleTheme}
+        onHelp={() => setShowShortcutHelp(true)}
       />
 
       {/* Main Content */}
       <div className="app__content">
         {/* Left Sidebar - Toolbox */}
         <aside className="app__sidebar app__sidebar--left">
-          <Toolbox />
+          <Toolbox onBlockSelect={handleToolboxSelect} />
         </aside>
 
         {/* Center - Flow Canvas */}
@@ -467,6 +489,9 @@ function AppContent() {
             onConnect={handleConnect}
             executingBlockId={currentBlockId}
             onAddNode={handleAddNode}
+            onViewportCenterReady={(getCenter) => {
+              viewportCenterRef.current = getCenter;
+            }}
             onNodeDelete={handleDeleteNode}
             onEdgeDelete={handleDeleteEdge}
           />

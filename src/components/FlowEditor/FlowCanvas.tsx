@@ -10,7 +10,7 @@
  * Validates: Requirements 2.1, 8.2, 2.2, 2.4, 2.5
  */
 
-import { useCallback, useRef, useState, useMemo, memo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo, memo } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -113,6 +113,7 @@ export interface FlowCanvasProps {
   onEdgeDelete?: (edgeId: string) => void;
   onNodeConfig?: (nodeId: string) => void;
   onAddNode?: (type: string, category: string, position: { x: number; y: number }) => void;
+  onViewportCenterReady?: (getCenter: () => { x: number; y: number } | null) => void;
   executingBlockId?: string | null;
 }
 
@@ -131,6 +132,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   onEdgeDelete,
   onNodeConfig,
   onAddNode,
+  onViewportCenterReady,
   executingBlockId,
 }: FlowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -142,6 +144,7 @@ export const FlowCanvas = memo(function FlowCanvas({
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuContext | null>(null);
+  const [isDropActive, setIsDropActive] = useState(false);
 
   // Clipboard state for copy/paste
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
@@ -149,6 +152,28 @@ export const FlowCanvas = memo(function FlowCanvas({
   // Use external state if provided, otherwise use internal state
   const nodes = externalNodes !== undefined ? externalNodes : internalNodes;
   const edges = externalEdges !== undefined ? externalEdges : internalEdges;
+
+  useEffect(() => {
+    if (!onViewportCenterReady) {
+      return;
+    }
+
+    const getCenter = () => {
+      if (!reactFlowInstance || !reactFlowWrapper.current) {
+        return null;
+      }
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      return reactFlowInstance.project({
+        x: bounds.width / 2,
+        y: bounds.height / 2,
+      });
+    };
+
+    onViewportCenterReady(getCenter);
+
+    return () => onViewportCenterReady(() => null);
+  }, [onViewportCenterReady, reactFlowInstance]);
 
   // Memoized nodes with executing state - prevents unnecessary re-renders
   const nodesWithExecutingState = useMemo(() => {
@@ -223,20 +248,56 @@ export const FlowCanvas = memo(function FlowCanvas({
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+    if (!isDropActive) {
+      setIsDropActive(true);
+    }
+  }, [isDropActive]);
+
+  const onDragLeave = useCallback((event: React.DragEvent) => {
+    if (event.currentTarget === event.target) {
+      setIsDropActive(false);
+    }
+  }, []);
+
+  const parseDropPayload = useCallback((event: React.DragEvent) => {
+    const blockType = event.dataTransfer.getData('blockType');
+    const blockCategory = event.dataTransfer.getData('blockCategory');
+
+    if (blockType) {
+      return { blockType, blockCategory };
+    }
+
+    const fallback = event.dataTransfer.getData('text/plain');
+    if (!fallback) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(fallback) as { blockType?: string; blockCategory?: string };
+      if (!parsed.blockType) {
+        return null;
+      }
+
+      return {
+        blockType: parsed.blockType,
+        blockCategory: parsed.blockCategory ?? '',
+      };
+    } catch {
+      return null;
+    }
   }, []);
 
   // Handle drop from toolbox - memoized
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      setIsDropActive(false);
 
-      const blockType = event.dataTransfer.getData('blockType');
-      const blockCategory = event.dataTransfer.getData('blockCategory');
-
-      console.log('Drop event:', { blockType, blockCategory });
+      const payload = parseDropPayload(event);
+      const blockType = payload?.blockType ?? '';
+      const blockCategory = payload?.blockCategory ?? '';
 
       if (!blockType) {
-        console.warn('No blockType in drop event');
         return;
       }
 
@@ -263,8 +324,6 @@ export const FlowCanvas = memo(function FlowCanvas({
         y: Math.round(position.y / 20) * 20,
       };
 
-      console.log('Drop position:', snappedPosition);
-
       // If onAddNode callback is provided, use it (this will call the backend)
       if (onAddNode) {
         onAddNode(blockType, blockCategory, snappedPosition);
@@ -288,7 +347,7 @@ export const FlowCanvas = memo(function FlowCanvas({
         }
       }
     },
-    [reactFlowInstance, externalNodes, onAddNode]
+    [reactFlowInstance, externalNodes, onAddNode, parseDropPayload]
   );
 
   // Handle right-click on node - memoized
@@ -488,10 +547,11 @@ export const FlowCanvas = memo(function FlowCanvas({
 
   return (
     <div 
-      className="flow-canvas" 
+      className={`flow-canvas ${isDropActive ? 'flow-canvas--drop-active' : ''}`}
       ref={reactFlowWrapper} 
       data-testid="flow-canvas"
       onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
       <ReactFlowProvider>
@@ -523,12 +583,12 @@ export const FlowCanvas = memo(function FlowCanvas({
             pannable
             position="bottom-right"
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.9)',
-              border: '1px solid #e2e8f0',
+              backgroundColor: 'var(--color-bg-elevated, var(--color-bg-primary))',
+              border: '1px solid var(--color-border)',
               borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              boxShadow: 'var(--shadow-md)',
             }}
-            maskColor="rgba(0, 0, 0, 0.1)"
+            maskColor="rgba(0, 0, 0, 0.16)"
           />
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Panel position="top-left">
