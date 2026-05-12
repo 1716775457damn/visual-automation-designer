@@ -9,6 +9,87 @@
 
 import { invoke } from '@tauri-apps/api/core';
 
+const DEV_FLOW_STORAGE_KEY = 'vad-dev-flow-store';
+
+interface DevFlowStore {
+  flows: Record<string, Flow>;
+  undoStacks: Record<string, Flow[]>;
+  redoStacks: Record<string, Flow[]>;
+}
+
+function isBrowserFlowMockEnabled(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  if (import.meta.env.MODE === 'test') {
+    return false;
+  }
+
+  const tauriWindow = window as Window & { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown };
+  return !tauriWindow.__TAURI__ && !tauriWindow.__TAURI_INTERNALS__;
+}
+
+function createEmptyDevStore(): DevFlowStore {
+  return {
+    flows: {},
+    undoStacks: {},
+    redoStacks: {},
+  };
+}
+
+function readDevStore(): DevFlowStore {
+  if (!isBrowserFlowMockEnabled()) {
+    return createEmptyDevStore();
+  }
+
+  const raw = window.localStorage.getItem(DEV_FLOW_STORAGE_KEY);
+  if (!raw) {
+    return createEmptyDevStore();
+  }
+
+  try {
+    return JSON.parse(raw) as DevFlowStore;
+  } catch {
+    return createEmptyDevStore();
+  }
+}
+
+function writeDevStore(store: DevFlowStore): void {
+  if (!isBrowserFlowMockEnabled()) {
+    return;
+  }
+
+  window.localStorage.setItem(DEV_FLOW_STORAGE_KEY, JSON.stringify(store));
+}
+
+function createId(): string {
+  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function cloneFlow(flow: Flow): Flow {
+  return JSON.parse(JSON.stringify(flow)) as Flow;
+}
+
+function pushFlowHistory(store: DevFlowStore, flowId: string, flow: Flow): void {
+  store.undoStacks[flowId] ??= [];
+  store.redoStacks[flowId] ??= [];
+  store.undoStacks[flowId].push(cloneFlow(flow));
+  store.redoStacks[flowId] = [];
+}
+
+function saveDevFlow(store: DevFlowStore, flow: Flow): Flow {
+  const savedFlow = {
+    ...cloneFlow(flow),
+    updatedAt: new Date().toISOString(),
+  };
+  store.flows[savedFlow.id] = savedFlow;
+  writeDevStore(store);
+  return savedFlow;
+}
+
 // ============================================================================
 // Flow Types (matching Rust backend)
 // ============================================================================
@@ -176,6 +257,24 @@ export interface ValidationResponse {
  * @returns The created flow
  */
 export async function createFlow(name: string): Promise<Flow> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const now = new Date().toISOString();
+    const flow: Flow = {
+      id: createId(),
+      name,
+      blocks: {},
+      connections: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.flows[flow.id] = flow;
+    store.undoStacks[flow.id] = [];
+    store.redoStacks[flow.id] = [];
+    writeDevStore(store);
+    return flow;
+  }
+
   return invoke<Flow>('create_flow', { name });
 }
 
@@ -185,6 +284,12 @@ export async function createFlow(name: string): Promise<Flow> {
  * @returns true if saved successfully
  */
 export async function saveFlow(flow: Flow): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    saveDevFlow(store, flow);
+    return true;
+  }
+
   return invoke<boolean>('save_flow', { flow });
 }
 
@@ -194,6 +299,15 @@ export async function saveFlow(flow: Flow): Promise<boolean> {
  * @returns The loaded flow
  */
 export async function loadFlow(id: string): Promise<Flow> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[id];
+    if (!flow) {
+      throw new Error('流程不存在');
+    }
+    return cloneFlow(flow);
+  }
+
   return invoke<Flow>('load_flow', { id });
 }
 
@@ -202,6 +316,20 @@ export async function loadFlow(id: string): Promise<Flow> {
  * @returns A list of flow metadata
  */
 export async function listFlows(): Promise<FlowMetadata[]> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    return Object.values(store.flows)
+      .map((flow) => ({
+        id: flow.id,
+        name: flow.name,
+        description: flow.description,
+        blockCount: Object.keys(flow.blocks).length,
+        createdAt: flow.createdAt,
+        updatedAt: flow.updatedAt,
+      }))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
   return invoke<FlowMetadata[]>('list_flows');
 }
 
@@ -211,6 +339,15 @@ export async function listFlows(): Promise<FlowMetadata[]> {
  * @returns true if deleted successfully
  */
 export async function deleteFlow(id: string): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    delete store.flows[id];
+    delete store.undoStacks[id];
+    delete store.redoStacks[id];
+    writeDevStore(store);
+    return true;
+  }
+
   return invoke<boolean>('delete_flow', { id });
 }
 
@@ -220,6 +357,14 @@ export async function deleteFlow(id: string): Promise<boolean> {
  * @returns Validation response with errors and warnings
  */
 export async function validateFlow(flow: Flow): Promise<ValidationResponse> {
+  if (isBrowserFlowMockEnabled()) {
+    return {
+      isValid: true,
+      errors: [],
+      warnings: flow.entryBlock ? [] : [{ code: 'NO_ENTRY', message: '未设置入口节点' }],
+    };
+  }
+
   return invoke<ValidationResponse>('validate_flow', { flow });
 }
 
@@ -241,6 +386,33 @@ export async function createBlock(
   config: BlockConfig,
   position: BlockPosition
 ): Promise<BlockNode> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow) {
+      throw new Error('流程不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+
+    const block: BlockNode = {
+      id: createId(),
+      blockType,
+      position,
+      config,
+      children: [],
+    };
+
+    const nextFlow = cloneFlow(flow);
+    nextFlow.blocks[block.id] = block;
+    if (!nextFlow.entryBlock) {
+      nextFlow.entryBlock = block.id;
+    }
+
+    saveDevFlow(store, nextFlow);
+    return block;
+  }
+
   return invoke<BlockNode>('create_block', { flowId, blockType, config, position });
 }
 
@@ -256,6 +428,20 @@ export async function updateBlockPosition(
   blockId: string,
   position: BlockPosition
 ): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow || !flow.blocks[blockId]) {
+      throw new Error('节点不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+    const nextFlow = cloneFlow(flow);
+    nextFlow.blocks[blockId].position = position;
+    saveDevFlow(store, nextFlow);
+    return true;
+  }
+
   return invoke<boolean>('update_block_position', { flowId, blockId, position });
 }
 
@@ -271,6 +457,20 @@ export async function updateBlockConfig(
   blockId: string,
   config: BlockConfig
 ): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow || !flow.blocks[blockId]) {
+      throw new Error('节点不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+    const nextFlow = cloneFlow(flow);
+    nextFlow.blocks[blockId].config = config;
+    saveDevFlow(store, nextFlow);
+    return true;
+  }
+
   return invoke<boolean>('update_block_config', { flowId, blockId, config });
 }
 
@@ -284,6 +484,24 @@ export async function deleteBlock(
   flowId: string,
   blockId: string
 ): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow || !flow.blocks[blockId]) {
+      throw new Error('节点不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+    const nextFlow = cloneFlow(flow);
+    delete nextFlow.blocks[blockId];
+    nextFlow.connections = nextFlow.connections.filter((connection) => connection.source !== blockId && connection.target !== blockId);
+    if (nextFlow.entryBlock === blockId) {
+      nextFlow.entryBlock = Object.keys(nextFlow.blocks)[0];
+    }
+    saveDevFlow(store, nextFlow);
+    return true;
+  }
+
   return invoke<boolean>('delete_block', { flowId, blockId });
 }
 
@@ -297,6 +515,20 @@ export async function setEntryBlock(
   flowId: string,
   blockId: string | null
 ): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow) {
+      throw new Error('流程不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+    const nextFlow = cloneFlow(flow);
+    nextFlow.entryBlock = blockId ?? undefined;
+    saveDevFlow(store, nextFlow);
+    return true;
+  }
+
   return invoke<boolean>('set_entry_block', { flowId, blockId });
 }
 
@@ -318,6 +550,31 @@ export async function createConnection(
   target: string,
   sourceHandle?: string
 ): Promise<Connection> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow) {
+      throw new Error('流程不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+
+    const connection: Connection = {
+      id: createId(),
+      source,
+      target,
+      sourceHandle,
+    };
+
+    const nextFlow = cloneFlow(flow);
+    nextFlow.connections.push(connection);
+    if (nextFlow.blocks[source] && !nextFlow.blocks[source].children.includes(target)) {
+      nextFlow.blocks[source].children.push(target);
+    }
+    saveDevFlow(store, nextFlow);
+    return connection;
+  }
+
   return invoke<Connection>('create_connection', { flowId, source, target, sourceHandle });
 }
 
@@ -331,6 +588,24 @@ export async function deleteConnection(
   flowId: string,
   connectionId: string
 ): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const flow = store.flows[flowId];
+    if (!flow) {
+      throw new Error('流程不存在');
+    }
+
+    pushFlowHistory(store, flowId, flow);
+    const nextFlow = cloneFlow(flow);
+    const removed = nextFlow.connections.find((connection) => connection.id === connectionId);
+    nextFlow.connections = nextFlow.connections.filter((connection) => connection.id !== connectionId);
+    if (removed && nextFlow.blocks[removed.source]) {
+      nextFlow.blocks[removed.source].children = nextFlow.blocks[removed.source].children.filter((childId) => childId !== removed.target);
+    }
+    saveDevFlow(store, nextFlow);
+    return true;
+  }
+
   return invoke<boolean>('delete_connection', { flowId, connectionId });
 }
 
@@ -344,6 +619,11 @@ export async function deleteConnection(
  * @returns true if undo is available
  */
 export async function canUndoFlow(flowId: string): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    return (store.undoStacks[flowId]?.length ?? 0) > 0;
+  }
+
   return invoke<boolean>('can_undo', { flowId });
 }
 
@@ -353,6 +633,11 @@ export async function canUndoFlow(flowId: string): Promise<boolean> {
  * @returns true if redo is available
  */
 export async function canRedoFlow(flowId: string): Promise<boolean> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    return (store.redoStacks[flowId]?.length ?? 0) > 0;
+  }
+
   return invoke<boolean>('can_redo', { flowId });
 }
 
@@ -362,6 +647,26 @@ export async function canRedoFlow(flowId: string): Promise<boolean> {
  * @returns The flow after undo, or null if no undo available
  */
 export async function undoFlow(flowId: string): Promise<Flow | null> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const undoStack = store.undoStacks[flowId] ?? [];
+    const current = store.flows[flowId];
+    if (undoStack.length === 0 || !current) {
+      return null;
+    }
+
+    const previous = undoStack.pop();
+    store.redoStacks[flowId] ??= [];
+    store.redoStacks[flowId].push(cloneFlow(current));
+    if (!previous) {
+      return null;
+    }
+
+    store.flows[flowId] = previous;
+    writeDevStore(store);
+    return cloneFlow(previous);
+  }
+
   return invoke<Flow | null>('undo', { flowId });
 }
 
@@ -371,5 +676,25 @@ export async function undoFlow(flowId: string): Promise<Flow | null> {
  * @returns The flow after redo, or null if no redo available
  */
 export async function redoFlow(flowId: string): Promise<Flow | null> {
+  if (isBrowserFlowMockEnabled()) {
+    const store = readDevStore();
+    const redoStack = store.redoStacks[flowId] ?? [];
+    const current = store.flows[flowId];
+    if (redoStack.length === 0 || !current) {
+      return null;
+    }
+
+    const next = redoStack.pop();
+    store.undoStacks[flowId] ??= [];
+    store.undoStacks[flowId].push(cloneFlow(current));
+    if (!next) {
+      return null;
+    }
+
+    store.flows[flowId] = next;
+    writeDevStore(store);
+    return cloneFlow(next);
+  }
+
   return invoke<Flow | null>('redo', { flowId });
 }

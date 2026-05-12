@@ -92,6 +92,18 @@ function AppContent() {
   const [recentNodeId, setRecentNodeId] = useState<string | null>(null);
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
+  const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
+
+  const ensureFlowForEditing = useCallback(async () => {
+    if (flow) {
+      return flow.id;
+    }
+
+    const createdFlow = await createFlow(buildQuickFlowName());
+    showToast('info', '已自动创建流程，可直接开始搭建');
+    return createdFlow.id;
+  }, [buildQuickFlowName, createFlow, flow, showToast]);
+
   // Determine execution states
   const isExecuting = executionStatus === 'running' || executionStatus === 'paused';
   const isPaused = executionStatus === 'paused';
@@ -177,14 +189,15 @@ function AppContent() {
 
   const handleAddNode = useCallback(async (type: string, category: string, position: { x: number; y: number }) => {
     try {
-      const nodeId = await addNode(type, category, position);
+      const flowId = await ensureFlowForEditing();
+      const nodeId = await addNode(type, category, position, undefined, flowId);
       setSelectedNodeId(nodeId);
       setRecentNodeId(nodeId);
     } catch (err) {
       console.error('Failed to add node:', err);
       showToast('warning', err instanceof Error ? err.message : '添加节点失败');
     }
-  }, [addNode, showToast]);
+  }, [addNode, ensureFlowForEditing, showToast]);
 
   const handleToolboxSelect = useCallback((type: string, category: string) => {
     setPendingPlacement(null);
@@ -193,9 +206,19 @@ function AppContent() {
   }, [getQuickAddPosition, handleAddNode, showToast]);
 
   const handleArmPlacement = useCallback((type: string, category: string) => {
-    setPendingPlacement({ type, category });
-    showToast('info', `精确放置已开启：点击白板放置 ${type}`);
-  }, [showToast]);
+    const activatePlacement = async () => {
+      try {
+        await ensureFlowForEditing();
+        setPendingPlacement({ type, category });
+        showToast('info', `精确放置已开启：点击白板放置 ${type}`);
+      } catch (err) {
+        console.error('Failed to arm placement mode:', err);
+        showToast('error', '无法开启精确放置模式');
+      }
+    };
+
+    void activatePlacement();
+  }, [ensureFlowForEditing, showToast]);
 
   const handleCancelPlacement = useCallback(() => {
     setPendingPlacement(null);
@@ -595,6 +618,14 @@ function AppContent() {
                   <p className="config-placeholder__hint">2. 从左侧拖动积木块到画布</p>
                   <p className="config-placeholder__hint">3. 点击积木块配置参数</p>
                   <p className="config-placeholder__hint">4. 点击"执行"运行流程</p>
+                  <div className="config-placeholder__actions">
+                    <button className="config-placeholder__action-btn" type="button" onClick={() => void handleCreateFlow()}>
+                      ➕ 立即创建流程
+                    </button>
+                    <button className="config-placeholder__action-btn config-placeholder__action-btn--secondary" type="button" onClick={() => handleToolboxSelect('click', 'action')}>
+                      ⚡ 直接放一个点击积木块
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

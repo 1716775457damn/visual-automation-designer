@@ -58,14 +58,14 @@ export interface UseFlowReturn {
   loading: boolean;
   error: Error | null;
   isDirty: boolean;
-  createFlow: (name: string) => Promise<void>;
+  createFlow: (name: string) => Promise<Flow>;
   saveFlow: () => Promise<void>;
   loadFlow: (id: string) => Promise<void>;
   loadFlowList: () => Promise<void>;
   deleteFlow: (id: string) => Promise<void>;
   setNodes: React.Dispatch<React.SetStateAction<Node<BlockNodeData>[]>>;
   setEdges: React.Dispatch<React.SetStateAction<Edge[]>>;
-  addNode: (type: string, category: string, position: { x: number; y: number }, config?: Record<string, unknown>) => Promise<string>;
+  addNode: (type: string, category: string, position: { x: number; y: number }, config?: Record<string, unknown>, flowIdOverride?: string) => Promise<string>;
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => Promise<void>;
   updateNodeConfig: (nodeId: string, config: BlockConfig) => Promise<void>;
   deleteNode: (nodeId: string) => Promise<void>;
@@ -279,6 +279,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       setIsDirty(false);
       // Refresh flow list
       await loadFlowList();
+      return newFlow;
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -411,9 +412,12 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     type: string,
     category: string,
     position: { x: number; y: number },
-    config?: Record<string, unknown>
+    config?: Record<string, unknown>,
+    flowIdOverride?: string
   ): Promise<string> => {
-    if (!flow) {
+    const activeFlowId = flowIdOverride ?? flow?.id;
+
+    if (!activeFlowId) {
       throw new Error('请先创建或加载流程');
     }
 
@@ -422,7 +426,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const blockConfig = (config as BlockConfig) || createDefaultConfig(type, category);
       const blockPosition: BlockPosition = { x: position.x, y: position.y };
 
-      const block = await tauriCreateBlock(flow.id, blockType, blockConfig, blockPosition);
+      const block = await tauriCreateBlock(activeFlowId, blockType, blockConfig, blockPosition);
 
       // Add the new node to state
       const newNode = blockNodeToReactFlowNode(block);

@@ -8,6 +8,32 @@
  */
 
 import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { loadFlow, type Flow } from './flow';
+
+type ExecutionCallback = (event: ExecutionEvent) => void;
+
+const browserExecutionListeners = new Set<ExecutionCallback>();
+let browserExecutionStatus: ExecutionStatusResponse = {
+  status: 'idle',
+  isActive: false,
+};
+
+function isBrowserExecutionMockEnabled(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  if (import.meta.env.MODE === 'test') {
+    return false;
+  }
+
+  const tauriWindow = window as Window & { __TAURI__?: unknown; __TAURI_INTERNALS__?: unknown };
+  return !tauriWindow.__TAURI__ && !tauriWindow.__TAURI_INTERNALS__;
+}
+
+function emitBrowserExecutionEvent(event: ExecutionEvent): void {
+  browserExecutionListeners.forEach((listener) => listener(event));
+}
 
 // ============================================================================
 // Execution Event Types
@@ -174,6 +200,13 @@ export interface ExecutionStatusResponse {
 export async function onExecutionEvent(
   callback: (event: ExecutionEvent) => void
 ): Promise<UnlistenFn> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionListeners.add(callback);
+    return async () => {
+      browserExecutionListeners.delete(callback);
+    };
+  }
+
   return listen<ExecutionEvent>('execution-event', (event) => {
     callback(event.payload);
   });
@@ -226,6 +259,33 @@ import { invoke } from '@tauri-apps/api/core';
  * @returns true if execution started successfully
  */
 export async function executeFlow(flowId: string): Promise<boolean> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionStatus = { status: 'running', isActive: true };
+    emitBrowserExecutionEvent({ type: 'started', timestamp: new Date().toISOString() });
+
+    const flow: Flow = await loadFlow(flowId);
+    const blockIds = Object.keys(flow.blocks);
+    let delay = 80;
+
+    blockIds.forEach((blockId) => {
+      window.setTimeout(() => {
+        emitBrowserExecutionEvent({ type: 'blockStarted', blockId, timestamp: new Date().toISOString() });
+      }, delay);
+      delay += 90;
+      window.setTimeout(() => {
+        emitBrowserExecutionEvent({ type: 'blockCompleted', blockId, success: true, timestamp: new Date().toISOString() });
+      }, delay);
+      delay += 60;
+    });
+
+    window.setTimeout(() => {
+      browserExecutionStatus = { status: 'completed', isActive: false };
+      emitBrowserExecutionEvent({ type: 'flowCompleted', timestamp: new Date().toISOString() });
+    }, delay + 60);
+
+    return true;
+  }
+
   return invoke<boolean>('execute_flow', { flowId });
 }
 
@@ -235,6 +295,17 @@ export async function executeFlow(flowId: string): Promise<boolean> {
  * @returns true if step executed successfully
  */
 export async function stepExecution(flowId: string): Promise<boolean> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionStatus = { status: 'paused', isActive: true };
+    const flow: Flow = await loadFlow(flowId);
+    const firstBlockId = Object.keys(flow.blocks)[0];
+    if (firstBlockId) {
+      emitBrowserExecutionEvent({ type: 'blockStarted', blockId: firstBlockId, timestamp: new Date().toISOString() });
+      emitBrowserExecutionEvent({ type: 'blockCompleted', blockId: firstBlockId, success: true, timestamp: new Date().toISOString() });
+    }
+    return true;
+  }
+
   return invoke<boolean>('step_execution', { flowId });
 }
 
@@ -243,6 +314,12 @@ export async function stepExecution(flowId: string): Promise<boolean> {
  * @returns true if execution stopped successfully
  */
 export async function stopExecution(): Promise<boolean> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionStatus = { status: 'stopped', isActive: false };
+    emitBrowserExecutionEvent({ type: 'stopped', reason: 'Browser mock stop', timestamp: new Date().toISOString() });
+    return true;
+  }
+
   return invoke<boolean>('stop_execution');
 }
 
@@ -251,6 +328,12 @@ export async function stopExecution(): Promise<boolean> {
  * @returns true if execution paused successfully
  */
 export async function pauseExecution(): Promise<boolean> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionStatus = { status: 'paused', isActive: true };
+    emitBrowserExecutionEvent({ type: 'paused', blockId: 'browser-mock', timestamp: new Date().toISOString() });
+    return true;
+  }
+
   return invoke<boolean>('pause_execution');
 }
 
@@ -259,6 +342,12 @@ export async function pauseExecution(): Promise<boolean> {
  * @returns true if execution resumed successfully
  */
 export async function resumeExecution(): Promise<boolean> {
+  if (isBrowserExecutionMockEnabled()) {
+    browserExecutionStatus = { status: 'running', isActive: true };
+    emitBrowserExecutionEvent({ type: 'resumed', blockId: 'browser-mock', timestamp: new Date().toISOString() });
+    return true;
+  }
+
   return invoke<boolean>('resume_execution');
 }
 
@@ -267,5 +356,9 @@ export async function resumeExecution(): Promise<boolean> {
  * @returns The execution status response
  */
 export async function getExecutionStatus(): Promise<ExecutionStatusResponse> {
+  if (isBrowserExecutionMockEnabled()) {
+    return browserExecutionStatus;
+  }
+
   return invoke<ExecutionStatusResponse>('get_execution_status');
 }
