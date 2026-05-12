@@ -95,7 +95,8 @@ pub fn compute_hash_from_file<P: AsRef<Path>>(path: P) -> Result<String> {
 ///
 /// # Returns
 /// The Hamming distance, or None if hashes are invalid
-pub fn hamming_distance(hash1: &str, hash2: &str) -> Option<u32> {
+#[cfg(test)]
+fn hamming_distance(hash1: &str, hash2: &str) -> Option<u32> {
     let h1 = u64::from_str_radix(hash1, 16).ok()?;
     let h2 = u64::from_str_radix(hash2, 16).ok()?;
     
@@ -111,7 +112,8 @@ pub fn hamming_distance(hash1: &str, hash2: &str) -> Option<u32> {
 ///
 /// # Returns
 /// true if the images are likely duplicates
-pub fn are_likely_duplicates(hash1: &str, hash2: &str, threshold: u32) -> bool {
+#[cfg(test)]
+fn are_likely_duplicates(hash1: &str, hash2: &str, threshold: u32) -> bool {
     hamming_distance(hash1, hash2)
         .map(|d| d <= threshold)
         .unwrap_or(false)
