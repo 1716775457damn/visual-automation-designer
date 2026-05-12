@@ -643,7 +643,7 @@ function AppContent() {
                   <p className="config-placeholder__hint">3. 点击积木块配置参数</p>
                   <p className="config-placeholder__hint">4. 点击"执行"运行流程</p>
                   <div className="config-placeholder__actions">
-                    <button className="config-placeholder__action-btn" type="button" onClick={() => void handleCreateFlow()}>
+                    <button className="config-placeholder__action-btn" type="button" onClick={() => void createQuickFlow()}>
                       ➕ 立即创建流程
                     </button>
                     <button className="config-placeholder__action-btn config-placeholder__action-btn--secondary" type="button" onClick={() => handleToolboxSelect('click', 'action')}>

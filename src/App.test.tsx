@@ -90,7 +90,7 @@ vi.mock('./components/common', async () => {
   };
 });
 
-describe('App onboarding', () => {
+describe('App quick-create entry points', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
@@ -101,6 +101,20 @@ describe('App onboarding', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('button', { name: '立即创建流程' }));
+
+    await waitFor(() => {
+      expect(createFlowMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(createFlowMock.mock.calls[0][0]).toMatch(/^快速流程_/);
+  });
+
+  it('creates a quick flow from the empty-state CTA', async () => {
+    window.localStorage.setItem('vad-onboarding-dismissed', 'true');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '➕ 立即创建流程' }));
 
     await waitFor(() => {
       expect(createFlowMock).toHaveBeenCalledTimes(1);
