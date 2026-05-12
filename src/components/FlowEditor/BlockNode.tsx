@@ -32,6 +32,9 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   const { label, blockType, blockCategory, executing, disabled, isEntryPoint, config } = data;
   const [showTooltip, setShowTooltip] = useState(false);
 
+  // UX优化141: 连接提示状态
+  const [showConnectionHint, setShowConnectionHint] = useState<'input' | 'output' | null>(null);
+
   // Get block color based on type
   const getBlockColor = (): string => {
     if (blockCategory === 'action') {
@@ -161,7 +164,16 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
         type="target"
         position={Position.Top}
         className="block-node__handle block-node__handle--input"
+        onMouseEnter={() => setShowConnectionHint('input')}
+        onMouseLeave={() => setShowConnectionHint(null)}
       />
+
+      {/* UX优化141: 连接提示 */}
+      {showConnectionHint === 'input' && (
+        <div className="block-node__connection-hint block-node__connection-hint--input">
+          连接到上一节点
+        </div>
+      )}
 
       {/* UX优化62: 入口点标记 */}
       {isEntryPoint && (
@@ -202,7 +214,16 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
         type="source"
         position={Position.Bottom}
         className="block-node__handle block-node__handle--output"
+        onMouseEnter={() => setShowConnectionHint('output')}
+        onMouseLeave={() => setShowConnectionHint(null)}
       />
+
+      {/* UX优化141: 连接提示 */}
+      {showConnectionHint === 'output' && (
+        <div className="block-node__connection-hint block-node__connection-hint--output">
+          连接到下一节点
+        </div>
+      )}
 
       {/* Additional output handles for condition blocks */}
       {blockType === 'condition' && (
@@ -228,6 +249,14 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       {executing && (
         <div className="block-node__executing-indicator">
           <span className="block-node__pulse" />
+        </div>
+      )}
+
+      {/* UX优化155: 执行预览覆盖层 */}
+      {executing && (
+        <div className="block-execution-preview">
+          <div className="block-execution-preview__spinner" />
+          <span>执行中...</span>
         </div>
       )}
     </div>

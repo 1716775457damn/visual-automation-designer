@@ -54,6 +54,11 @@ export function ExecutionBar({
   // Determine if we should show progress bar
   const showProgress = status === 'running' || status === 'paused';
 
+  // UX优化147: 计算进度环参数
+  const radius = 20;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
   return (
     <div
       className={`execution-bar execution-bar--${status}`}
@@ -94,6 +99,29 @@ export function ExecutionBar({
           <span className="execution-bar__progress-text">
             {completedBlocks}/{totalBlocks} ({progress}%)
           </span>
+        </div>
+      )}
+
+      {/* UX优化147: 进度环显示 (当有进度时) */}
+      {showProgress && totalBlocks > 0 && (
+        <div className="execution-progress-ring" aria-hidden="true">
+          <svg className="execution-progress-ring__svg" width={48} height={48}>
+            <circle
+              className="execution-progress-ring__background"
+              cx={24}
+              cy={24}
+              r={radius}
+            />
+            <circle
+              className="execution-progress-ring__progress"
+              cx={24}
+              cy={24}
+              r={radius}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+            />
+          </svg>
+          <span className="execution-progress-ring__text">{progress}%</span>
         </div>
       )}
 
