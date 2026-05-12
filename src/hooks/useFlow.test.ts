@@ -162,5 +162,56 @@ describe('useFlow undo/redo state', () => {
       falseBranch: ['false-1'],
     });
     expect(savedFlow.blocks['loop-1'].children).toEqual(['loop-child-1']);
+    expect(savedFlow.entryBlock).toBe('condition-1');
+    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.isEntryPoint).toBe(true);
+  });
+
+  it('keeps an existing valid entry block when saving', async () => {
+    const { result } = renderHook(() => useFlow({
+      initialFlow: {
+        id: 'flow-1',
+        name: 'Test Flow',
+        entryBlock: 'loop-1',
+        blocks: {},
+        connections: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      initialNodes: [
+        {
+          id: 'condition-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '条件判断',
+            blockType: 'condition',
+            blockCategory: 'control',
+            config: { type: 'condition', imageId: 'image-1', condition: 'image_exists', trueBranch: [], falseBranch: [] },
+            executing: false,
+          },
+        },
+        {
+          id: 'loop-1',
+          type: 'blockNode',
+          position: { x: 10, y: 10 },
+          data: {
+            label: '循环',
+            blockType: 'loop',
+            blockCategory: 'control',
+            config: { type: 'loop', count: 2 },
+            executing: false,
+          },
+        },
+      ] as never,
+      initialEdges: [] as never,
+    }));
+
+    await act(async () => {
+      await result.current.saveFlow();
+    });
+
+    const savedFlow = mocks.saveFlow.mock.calls[mocks.saveFlow.mock.calls.length - 1]?.[0];
+    expect(savedFlow.entryBlock).toBe('loop-1');
+    expect(result.current.nodes.find((node) => node.id === 'loop-1')?.data.isEntryPoint).toBe(true);
   });
 });

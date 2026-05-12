@@ -82,7 +82,7 @@ export interface UseFlowReturn {
 /**
  * Convert Tauri BlockNode to ReactFlow Node
  */
-function blockNodeToReactFlowNode(block: TauriBlockNode): Node<BlockNodeData> {
+function blockNodeToReactFlowNode(block: TauriBlockNode, isEntryPoint = false): Node<BlockNodeData> {
   const label = getNodeLabel(block.blockType);
   const blockTypeStr = getBlockTypeString(block.blockType);
   const blockCategory = getBlockCategory(block.blockType);
@@ -96,6 +96,7 @@ function blockNodeToReactFlowNode(block: TauriBlockNode): Node<BlockNodeData> {
       blockType: blockTypeStr as never, // Cast to satisfy TypeScript
       blockCategory,
       config: blockConfigToRecord(block.config),
+      isEntryPoint,
       executing: false,
     },
   };
@@ -224,6 +225,26 @@ function normalizeConfigFromEdges(
   return config;
 }
 
+function resolveEntryBlock(flow: Flow, nodes: Node<BlockNodeData>[], edges: Edge[]): string | undefined {
+  if (flow.entryBlock && nodes.some((node) => node.id === flow.entryBlock)) {
+    return flow.entryBlock;
+  }
+
+  const incomingTargets = new Set(edges.map((edge) => edge.target));
+  const rootNode = nodes.find((node) => !incomingTargets.has(node.id));
+  return rootNode?.id ?? nodes[0]?.id;
+}
+
+function applyEntryPointFlag(nodes: Node<BlockNodeData>[], entryBlock?: string): Node<BlockNodeData>[] {
+  return nodes.map((node) => ({
+    ...node,
+    data: {
+      ...node.data,
+      isEntryPoint: node.id === entryBlock,
+    },
+  }));
+}
+
 /**
  * useFlow Hook - 流程管理
  * Manages flow state and communicates with Tauri backend
@@ -338,6 +359,8 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         blocks: {},
         connections: [],
       };
+      const resolvedEntryBlock = resolveEntryBlock(flowToSave, nodes, edges);
+      flowToSave.entryBlock = resolvedEntryBlock;
 
       // Convert nodes to blocks
       for (const node of nodes) {
@@ -374,6 +397,8 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       }
 
       await tauriSaveFlow(flowToSave);
+      setFlow(flowToSave);
+      setNodes((currentNodes) => applyEntryPointFlag(currentNodes, flowToSave.entryBlock));
       setIsDirty(false);
       
       // Refresh flow list
@@ -396,8 +421,8 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       setFlow(loadedFlow);
 
       // Convert blocks to nodes
-      const loadedNodes: Node<BlockNodeData>[] = Object.values(loadedFlow.blocks).map(
-        (block) => blockNodeToReactFlowNode(block)
+      const loadedNodes: Node<BlockNodeData>[] = Object.values(loadedFlow.blocks).map((block) =>
+        blockNodeToReactFlowNode(block, loadedFlow.entryBlock === block.id)
       );
       setNodes(loadedNodes);
 
@@ -464,8 +489,8 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const block = await tauriCreateBlock(activeFlowId, blockType, blockConfig, blockPosition);
 
       // Add the new node to state
-      const newNode = blockNodeToReactFlowNode(block);
-      setNodes((nds) => [...nds, newNode]);
+      const newNode = blockNodeToReactFlowNode(block, !flow?.entryBlock);
+      setNodes((nds) => applyEntryPointFlag([...nds, newNode], flow?.entryBlock ?? block.id));
       setIsDirty(true);
       await refreshUndoRedoForFlow(activeFlowId);
 
@@ -539,7 +564,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   // Delete a node
   const deleteNode = useCallback(async (nodeId: string): Promise<void> => {
     // Optimistically update UI
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setNodes((nds) => {
+      const nextNodes = nds.filter((node) => node.id !== nodeId);
+      const nextEntryBlock = flow?.entryBlock === nodeId ? nextNodes[0]?.id : flow?.entryBlock;
+      return applyEntryPointFlag(nextNodes, nextEntryBlock);
+    });
     setEdges((eds) =>
       eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId)
     );
@@ -615,7 +644,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const result = await tauriUndo(flow.id);
       if (result) {
         setFlow(result);
-        setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
+        setNodes(Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)));
         setEdges(result.connections.map(connectionToEdge));
         setIsDirty(true);
         await updateUndoRedoState();
@@ -636,7 +665,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const result = await tauriRedo(flow.id);
       if (result) {
         setFlow(result);
-        setNodes(Object.values(result.blocks).map(blockNodeToReactFlowNode));
+        setNodes(Object.values(result.blocks).map((block) => blockNodeToReactFlowNode(block, result.entryBlock === block.id)));
         setEdges(result.connections.map(connectionToEdge));
         setIsDirty(true);
         await updateUndoRedoState();
