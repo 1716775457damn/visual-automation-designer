@@ -557,7 +557,10 @@ export function BlockConfig({
   return (
     <div className="block-config" data-testid={`block-config-${blockId}`}>
       <div className="block-config__header">
-        <h3>⚙️ 配置积木块</h3>
+        <div className="block-config__header-main">
+          <h3>⚙️ 配置积木块</h3>
+          <span className="block-config__meta">ID: {blockId.slice(0, 8)}</span>
+        </div>
         <span className="block-config__type">{getBlockTypeName(blockType)}</span>
       </div>
       
@@ -569,6 +572,20 @@ export function BlockConfig({
       )}
       
       <div className="block-config__content">
+        <div className="block-config__summary">
+          <span className="block-config__summary-label">当前类型</span>
+          <span className="block-config__summary-value">{getBlockTypeName(blockType)}积木块</span>
+        </div>
+        <div className="block-config__summary-grid">
+          <div className="block-config__summary-card">
+            <span className="block-config__summary-card-label">状态</span>
+            <span className="block-config__summary-card-value">{hasChanges ? '待保存' : '已同步'}</span>
+          </div>
+          <div className="block-config__summary-card">
+            <span className="block-config__summary-card-label">校验</span>
+            <span className="block-config__summary-card-value">{isValid ? '通过' : '待完善'}</span>
+          </div>
+        </div>
         <BlockSpecificConfig 
           blockType={blockType} 
           config={localConfig} 

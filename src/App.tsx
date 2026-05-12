@@ -89,6 +89,7 @@ function AppContent() {
   const [newFlowName, setNewFlowName] = useState('');
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
+  const [recentNodeId, setRecentNodeId] = useState<string | null>(null);
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
 
   // Determine execution states
@@ -176,7 +177,9 @@ function AppContent() {
 
   const handleAddNode = useCallback(async (type: string, category: string, position: { x: number; y: number }) => {
     try {
-      await addNode(type, category, position);
+      const nodeId = await addNode(type, category, position);
+      setSelectedNodeId(nodeId);
+      setRecentNodeId(nodeId);
     } catch (err) {
       console.error('Failed to add node:', err);
       showToast('warning', err instanceof Error ? err.message : '添加节点失败');
@@ -186,16 +189,18 @@ function AppContent() {
   const handleToolboxSelect = useCallback((type: string, category: string) => {
     setPendingPlacement(null);
     void handleAddNode(type, category, getQuickAddPosition());
-  }, [getQuickAddPosition, handleAddNode]);
+    showToast('info', `${type} 已添加到当前视口`);
+  }, [getQuickAddPosition, handleAddNode, showToast]);
 
   const handleArmPlacement = useCallback((type: string, category: string) => {
     setPendingPlacement({ type, category });
-    showToast('info', `已进入精确放置模式：请在白板上点击放置 ${type}`);
+    showToast('info', `精确放置已开启：点击白板放置 ${type}`);
   }, [showToast]);
 
   const handleCancelPlacement = useCallback(() => {
     setPendingPlacement(null);
-  }, []);
+    showToast('info', '已取消精确放置模式');
+  }, [showToast]);
 
   const handlePlacePendingNode = useCallback((position: { x: number; y: number }) => {
     if (!pendingPlacement) {
@@ -210,7 +215,8 @@ function AppContent() {
     const { type, category } = pendingPlacement;
     setPendingPlacement(null);
     void handleAddNode(type, category, snappedPosition);
-  }, [handleAddNode, pendingPlacement]);
+    showToast('success', `${type} 已放置到白板`);
+  }, [handleAddNode, pendingPlacement, showToast]);
 
   const handleDeleteNode = useCallback(async (nodeId: string) => {
     try {
@@ -262,7 +268,7 @@ function AppContent() {
 
   const handleStep = useCallback(async () => {
     if (!flow) {
-      console.warn('No flow to step');
+      showToast('warning', '没有可执行的流程');
       return;
     }
     try {
@@ -270,8 +276,9 @@ function AppContent() {
       await stepExecution(flow.id);
     } catch (err) {
       console.error('Failed to step execution:', err);
+      showToast('error', '单步执行失败');
     }
-  }, [flow, nodes.length, resetProgress, stepExecution]);
+  }, [flow, nodes.length, resetProgress, showToast, stepExecution]);
 
   const handleSave = useCallback(async () => {
     if (!flow) {
@@ -396,16 +403,18 @@ function AppContent() {
       await undo();
     } catch (err) {
       console.error('Failed to undo:', err);
+      showToast('error', '撤销失败');
     }
-  }, [undo]);
+  }, [showToast, undo]);
 
   const handleRedo = useCallback(async () => {
     try {
       await redo();
     } catch (err) {
       console.error('Failed to redo:', err);
+      showToast('error', '重做失败');
     }
-  }, [redo]);
+  }, [redo, showToast]);
 
   // Keyboard shortcut handler for delete
   const handleKeyboardDelete = useCallback(async () => {
@@ -415,9 +424,10 @@ function AppContent() {
         setSelectedNodeId(null);
       } catch (err) {
         console.error('Failed to delete node:', err);
+        showToast('error', '删除节点失败');
       }
     }
-  }, [selectedNodeId, deleteNode]);
+  }, [selectedNodeId, deleteNode, showToast]);
 
   // Set up keyboard shortcuts
   useKeyboardShortcuts({
@@ -476,6 +486,18 @@ function AppContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
+  useEffect(() => {
+    if (!recentNodeId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setRecentNodeId(null);
+    }, 1800);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [recentNodeId]);
+
   return (
     <div className="app">
       {/* Top Toolbar */}
@@ -528,6 +550,7 @@ function AppContent() {
             onViewportCenterReady={(getCenter) => {
               viewportCenterRef.current = getCenter;
             }}
+            recentNodeId={recentNodeId}
             onNodeDelete={handleDeleteNode}
             onEdgeDelete={handleDeleteEdge}
           />
@@ -590,6 +613,7 @@ function AppContent() {
         loading={loading}
         isDirty={isDirty}
         flowError={error}
+        placementLabel={pendingPlacement?.type ?? null}
       />
 
       {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}

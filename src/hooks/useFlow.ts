@@ -230,7 +230,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       const list = await tauriListFlows();
       setFlowList(list);
     } catch (err) {
-      console.warn('Failed to load flow list:', err);
+      console.error('Failed to load flow list:', err);
     }
   }, []);
 
@@ -249,7 +249,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       setCanUndo(undo);
       setCanRedo(redo);
     } catch (err) {
-      console.warn('Failed to get undo/redo state:', err);
+      console.error('Failed to get undo/redo state:', err);
       // Keep current state on error
     }
   }, [flow]);
@@ -338,7 +338,6 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       }
 
       await tauriSaveFlow(flowToSave);
-      console.log('Flow saved successfully');
       setIsDirty(false);
       
       // Refresh flow list
@@ -577,7 +576,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         await updateUndoRedoState();
       }
     } catch (err) {
-      console.warn('Undo failed:', err);
+      console.error('Undo failed:', err);
     }
   }, [flow, updateUndoRedoState]);
 
@@ -598,7 +597,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         await updateUndoRedoState();
       }
     } catch (err) {
-      console.warn('Redo failed:', err);
+      console.error('Redo failed:', err);
     }
   }, [flow, updateUndoRedoState]);
 

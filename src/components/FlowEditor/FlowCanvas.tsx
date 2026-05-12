@@ -102,6 +102,11 @@ interface ClipboardState {
   data: Node;
 }
 
+interface CanvasPoint {
+  x: number;
+  y: number;
+}
+
 export interface FlowCanvasProps {
   nodes?: Node[];
   edges?: Edge[];
@@ -116,6 +121,7 @@ export interface FlowCanvasProps {
   pendingPlacement?: { type: string; category: string } | null;
   onPlacePendingNode?: (position: { x: number; y: number }) => void;
   onViewportCenterReady?: (getCenter: () => { x: number; y: number } | null) => void;
+  recentNodeId?: string | null;
   executingBlockId?: string | null;
 }
 
@@ -137,6 +143,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   pendingPlacement,
   onPlacePendingNode,
   onViewportCenterReady,
+  recentNodeId,
   executingBlockId,
 }: FlowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -149,6 +156,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuContext | null>(null);
   const [isDropActive, setIsDropActive] = useState(false);
+  const [placementPreview, setPlacementPreview] = useState<CanvasPoint | null>(null);
 
   // Clipboard state for copy/paste
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
@@ -186,9 +194,10 @@ export const FlowCanvas = memo(function FlowCanvas({
       data: {
         ...node.data,
         executing: executingBlockId === node.id,
+        recent: recentNodeId === node.id,
       },
     }));
-  }, [nodes, executingBlockId]);
+  }, [nodes, executingBlockId, recentNodeId]);
 
   // Handle node changes - memoized
   const handleNodesChange = useCallback(
@@ -243,14 +252,15 @@ export const FlowCanvas = memo(function FlowCanvas({
   );
 
   // Handle pane click to deselect - memoized
-  const onPaneClick = useCallback(() => {
+  const onPaneClick = useCallback((event: React.MouseEvent) => {
     if (pendingPlacement && onPlacePendingNode && reactFlowInstance && reactFlowWrapper.current) {
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const centeredPosition = reactFlowInstance.project({
-        x: bounds.width / 2,
-        y: bounds.height / 2,
+      const clickedPosition = reactFlowInstance.project({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
       });
-      onPlacePendingNode(centeredPosition);
+      setPlacementPreview(null);
+      onPlacePendingNode(clickedPosition);
       return;
     }
 
@@ -418,11 +428,8 @@ export const FlowCanvas = memo(function FlowCanvas({
 
   const onPaneMouseMove = useCallback(
     (event: React.MouseEvent) => {
-      if (!pendingPlacement || !onPlacePendingNode || !reactFlowInstance || !reactFlowWrapper.current) {
-        return;
-      }
-
-      if ((event.buttons & 1) !== 1) {
+      if (!pendingPlacement || !reactFlowInstance || !reactFlowWrapper.current) {
+        setPlacementPreview(null);
         return;
       }
 
@@ -431,10 +438,20 @@ export const FlowCanvas = memo(function FlowCanvas({
         x: event.clientX - bounds.left,
         y: event.clientY - bounds.top,
       });
-      onPlacePendingNode(position);
+
+      setPlacementPreview({
+        x: Math.round(position.x / 20) * 20,
+        y: Math.round(position.y / 20) * 20,
+      });
     },
-    [onPlacePendingNode, pendingPlacement, reactFlowInstance]
+    [pendingPlacement, reactFlowInstance]
   );
+
+  useEffect(() => {
+    if (!pendingPlacement) {
+      setPlacementPreview(null);
+    }
+  }, [pendingPlacement]);
 
   // Close context menu
   const closeContextMenu = useCallback(() => {
@@ -642,6 +659,21 @@ export const FlowCanvas = memo(function FlowCanvas({
           onClose={closeContextMenu}
           testId={`context-menu-${contextMenu.type}`}
         />
+      )}
+
+      {pendingPlacement && placementPreview && (
+        <div
+          className="flow-canvas__placement-preview"
+          style={{
+            left: `${placementPreview.x}px`,
+            top: `${placementPreview.y}px`,
+          }}
+          aria-hidden="true"
+        >
+          <div className="flow-canvas__placement-core" />
+          <div className="flow-canvas__placement-ring" />
+          <div className="flow-canvas__placement-label">放置</div>
+        </div>
       )}
     </div>
   );

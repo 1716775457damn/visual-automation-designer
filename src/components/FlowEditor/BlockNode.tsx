@@ -21,6 +21,7 @@ export interface BlockNodeData {
   executing?: boolean;
   disabled?: boolean;
   isEntryPoint?: boolean;
+  recent?: boolean;
   config?: Record<string, unknown>;
 }
 
@@ -29,7 +30,7 @@ export interface BlockNodeData {
  * 作为 react-flow 的自定义节点使用
  */
 function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
-  const { label, blockType, blockCategory, executing, disabled, isEntryPoint, config } = data;
+  const { label, blockType, blockCategory, executing, disabled, isEntryPoint, recent, config } = data;
   const [showTooltip, setShowTooltip] = useState(false);
 
   // UX优化141: 连接提示状态
@@ -151,7 +152,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
   return (
     <div
-      className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''}`}
+      className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''}`}
       data-testid={`block-node-${blockType}`}
       data-block-type={blockType}
       data-block-category={blockCategory}
@@ -250,6 +251,12 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       {executing && (
         <div className="block-node__executing-indicator">
           <span className="block-node__pulse" />
+        </div>
+      )}
+
+      {recent && (
+        <div className="block-node__recent-indicator" aria-hidden="true">
+          ✨
         </div>
       )}
 

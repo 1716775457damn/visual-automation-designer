@@ -201,7 +201,7 @@ export function useExecution(): UseExecutionReturn {
       
       const result = await tauriExecuteFlow(flowId);
       if (!result) {
-        console.warn('execute_flow returned false');
+        setErrorMessage('执行未成功启动');
       }
     } catch (error) {
       setStatus('error');
@@ -219,7 +219,7 @@ export function useExecution(): UseExecutionReturn {
     try {
       const result = await tauriStepExecution(flowId);
       if (!result) {
-        console.warn('step_execution returned false');
+        setErrorMessage('单步执行未成功启动');
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Step execution failed');

@@ -11,6 +11,7 @@ export interface StatusBarProps {
   loading: boolean;
   isDirty: boolean;
   flowError?: Error | null;
+  placementLabel?: string | null;
 }
 
 export function StatusBar({
@@ -24,7 +25,10 @@ export function StatusBar({
   loading,
   isDirty,
   flowError,
+  placementLabel,
 }: StatusBarProps) {
+  const saveStatusLabel = loading ? '同步中' : isDirty ? '未保存' : '已同步';
+
   return (
     <div className="app__status">
       <div className="app__status-cluster app__status-cluster--primary">
@@ -41,9 +45,10 @@ export function StatusBar({
         <span className="app__status-item app__status-item--stats">🧩 {nodesCount} 积木块</span>
         <span className="app__status-item app__status-item--stats">🔗 {edgesCount} 连接</span>
         {flowName && <span className="app__status-item app__status-item--flow">📋 {flowName}</span>}
+        {placementLabel && <span className="app__status-item app__status-item--placement">📍 放置中: {placementLabel}</span>}
         {flowName && !loading && (
           <span className={`app__status-item app__status-item--autosave ${isDirty ? 'app__status-item--dirty' : 'app__status-item--clean'}`}>
-            {isDirty ? '未保存更改' : '已保存'}
+            {saveStatusLabel}
           </span>
         )}
         {loading && <span className="app__status-item app__status-item--loading">⏳ 加载中...</span>}
