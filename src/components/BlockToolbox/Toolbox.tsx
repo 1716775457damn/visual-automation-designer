@@ -25,7 +25,7 @@ export function Toolbox({ onBlockSelect }: ToolboxProps) {
     <div className="toolbox" data-testid="toolbox">
       <div className="toolbox__header">
         <h3>🧩 积木块</h3>
-        <span className="toolbox__subtitle">拖拽到画布使用</span>
+        <span className="toolbox__subtitle">拖拽或点击添加到白板</span>
       </div>
       
       {/* UX优化21: 添加搜索框 */}
@@ -90,6 +90,7 @@ export function Toolbox({ onBlockSelect }: ToolboxProps) {
       {/* UX优化22: 添加提示信息 */}
       <div className="toolbox__footer">
         <p className="toolbox__tip">💡 提示：右键画布可快速添加</p>
+        <p className="toolbox__tip toolbox__tip--accent">单击会优先添加到当前视口中心</p>
       </div>
     </div>
   );

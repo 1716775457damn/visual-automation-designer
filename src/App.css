@@ -45,19 +45,56 @@
 .app__status {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   padding: var(--spacing-xs) var(--spacing-md);
   background: var(--color-bg-elevated, var(--color-bg-primary));
   border-top: 1px solid var(--color-border);
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+  flex-wrap: wrap;
 }
 
 .app__status-item {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+}
+
+.app__status-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app__status-cluster--primary {
+  flex: 1 1 360px;
+}
+
+.app__status-cluster--meta {
+  flex: 999 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.app__status-item--clean,
+.app__status-item--dirty,
+.app__status-item--stats,
+.app__status-item--flow,
+.app__status-item--loading,
+.app__status-item--error {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 86%, transparent);
+}
+
+.app__status-item--clean {
+  color: var(--color-status-running);
+}
+
+.app__status-item--dirty {
+  color: var(--color-warning);
 }
 
 .app__dialog-body {

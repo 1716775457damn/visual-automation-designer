@@ -192,6 +192,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       <div className="block-node__header" style={{ backgroundColor: `${blockColor}20` }}>
         <span className="block-node__icon">{getBlockIcon()}</span>
         <span className="block-node__label">{label}</span>
+        <span className="block-node__type-badge">{blockCategory === 'action' ? '动作' : '控制'}</span>
       </div>
 
       {configSummary && (

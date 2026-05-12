@@ -311,6 +311,11 @@
   text-align: center;
 }
 
+.toolbox__tip--accent {
+  margin-top: 6px;
+  color: var(--color-primary);
+}
+
 .action-blocks__item,
 .control-blocks__item {
   display: flex;
@@ -1450,6 +1455,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text-primary);
+}
+
+.block-node__type-badge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.04em;
 }
 
 .block-node__content {

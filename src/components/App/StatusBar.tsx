@@ -27,26 +27,28 @@ export function StatusBar({
 }: StatusBarProps) {
   return (
     <div className="app__status">
-      <ExecutionBar
-        status={executionStatus}
-        currentBlock={currentBlockId || undefined}
-        totalBlocks={nodesCount}
-        completedBlocks={completedBlocks}
-        errorMessage={errorMessage || undefined}
-      />
+      <div className="app__status-cluster app__status-cluster--primary">
+        <ExecutionBar
+          status={executionStatus}
+          currentBlock={currentBlockId || undefined}
+          totalBlocks={nodesCount}
+          completedBlocks={completedBlocks}
+          errorMessage={errorMessage || undefined}
+        />
+      </div>
 
-      <span className="app__status-item app__status-item--stats">🧩 {nodesCount} 积木块</span>
-      <span className="app__status-item app__status-item--stats">🔗 {edgesCount} 连接</span>
-
-      {flowName && <span className="app__status-item app__status-item--flow">📋 {flowName}</span>}
-
-      {flowName && !loading && (
-        <span className="app__status-item app__status-item--autosave">{isDirty ? '未保存更改' : '已保存'}</span>
-      )}
-
-      {loading && <span className="app__status-item app__status-item--loading">⏳ 加载中...</span>}
-
-      {flowError && <span className="app__status-item app__status-item--error">⚠️ {flowError.message}</span>}
+      <div className="app__status-cluster app__status-cluster--meta">
+        <span className="app__status-item app__status-item--stats">🧩 {nodesCount} 积木块</span>
+        <span className="app__status-item app__status-item--stats">🔗 {edgesCount} 连接</span>
+        {flowName && <span className="app__status-item app__status-item--flow">📋 {flowName}</span>}
+        {flowName && !loading && (
+          <span className={`app__status-item app__status-item--autosave ${isDirty ? 'app__status-item--dirty' : 'app__status-item--clean'}`}>
+            {isDirty ? '未保存更改' : '已保存'}
+          </span>
+        )}
+        {loading && <span className="app__status-item app__status-item--loading">⏳ 加载中...</span>}
+        {flowError && <span className="app__status-item app__status-item--error">⚠️ {flowError.message}</span>}
+      </div>
     </div>
   );
 }
