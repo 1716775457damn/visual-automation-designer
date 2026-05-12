@@ -664,10 +664,12 @@ impl Executor {
         };
         
         // Perform clicks with panic handling
-        let mut input = InputController::new();
         for i in 0..count {
             let click_result = safe_execute(
-                || input.click_at(x, y, crate::platform::MouseButton::Left),
+                || {
+                    let mut input = InputController::new();
+                    input.click_at(x, y, crate::platform::MouseButton::Left)
+                },
                 "Click operation"
             );
             
@@ -759,16 +761,20 @@ impl Executor {
         text: &str,
         interval_ms: Option<u64>,
     ) -> Result<BlockResult> {
-        let mut input = InputController::new();
-        
         let result = if let Some(interval) = interval_ms {
             safe_execute(
-                || input.type_text_with_interval(text, interval),
+                || {
+                    let mut input = InputController::new();
+                    input.type_text_with_interval(text, interval)
+                },
                 "Text input with interval"
             )
         } else {
             safe_execute(
-                || input.type_text(text),
+                || {
+                    let mut input = InputController::new();
+                    input.type_text(text)
+                },
                 "Text input"
             )
         };

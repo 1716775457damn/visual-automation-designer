@@ -311,7 +311,7 @@ impl InputController {
             "escape" | "esc" => Ok(Key::Escape),
             "backspace" => Ok(Key::Backspace),
             "delete" | "del" => Ok(Key::Delete),
-            "insert" => Ok(Key::Insert),
+            "insert" => Ok(Key::Unicode('\u{2380}')),
             "home" => Ok(Key::Home),
             "end" => Ok(Key::End),
             "pageup" | "page_up" => Ok(Key::PageUp),
