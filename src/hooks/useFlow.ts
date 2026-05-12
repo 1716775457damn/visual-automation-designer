@@ -71,6 +71,7 @@ export interface UseFlowReturn {
   deleteNode: (nodeId: string) => Promise<void>;
   addConnection: (connection: Connection) => Promise<void>;
   deleteConnection: (connectionId: string) => Promise<void>;
+  setEntryBlock: (nodeId: string | null) => Promise<void>;
   undo: () => Promise<void>;
   redo: () => Promise<void>;
   canUndo: boolean;
@@ -633,6 +634,18 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     }
   }, [flow, refreshUndoRedoForFlow]);
 
+  const setEntryBlock = useCallback(async (nodeId: string | null): Promise<void> => {
+    if (!flow) {
+      console.warn('No flow to set entry block in');
+      return;
+    }
+
+    const nextEntryBlock = nodeId ?? undefined;
+    setFlow((currentFlow) => currentFlow ? { ...currentFlow, entryBlock: nextEntryBlock } : currentFlow);
+    setNodes((currentNodes) => applyEntryPointFlag(currentNodes, nextEntryBlock));
+    setIsDirty(true);
+  }, [flow]);
+
   // Undo
   const undo = useCallback(async (): Promise<void> => {
     if (!flow) {
@@ -737,6 +750,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     deleteNode,
     addConnection,
     deleteConnection,
+    setEntryBlock,
     undo,
     redo,
     canUndo,

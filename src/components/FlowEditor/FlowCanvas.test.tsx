@@ -6,13 +6,24 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { FlowCanvas } from './FlowCanvas';
 
 // Mock react-flow to avoid rendering issues in tests
 vi.mock('reactflow', () => ({
-  default: vi.fn(({ children }) => (
-    <div data-testid="react-flow-mock">{children}</div>
+  default: vi.fn(({ children, nodes = [], onNodeContextMenu, onPaneContextMenu }) => (
+    <div data-testid="react-flow-mock" onContextMenu={(event) => onPaneContextMenu?.(event)}>
+      {nodes.map((node: { id: string; data?: { label?: string } }) => (
+        <div
+          key={node.id}
+          data-testid={`react-flow-node-${node.id}`}
+          onContextMenu={(event) => onNodeContextMenu?.(event, node)}
+        >
+          {node.data?.label ?? node.id}
+        </div>
+      ))}
+      {children}
+    </div>
   )),
   ReactFlowProvider: vi.fn(({ children }) => (
     <div data-testid="react-flow-provider-mock">{children}</div>
@@ -21,6 +32,7 @@ vi.mock('reactflow', () => ({
   MiniMap: vi.fn(() => <div data-testid="minimap-mock" />),
   Background: vi.fn(() => <div data-testid="background-mock" />),
   Panel: vi.fn(({ children }) => <div data-testid="panel-mock">{children}</div>),
+  Handle: vi.fn(() => <div data-testid="handle-mock" />),
   MarkerType: { ArrowClosed: 'arrowClosed' },
   BackgroundVariant: { Dots: 'dots' },
   ConnectionMode: { Loose: 'loose' },
@@ -62,5 +74,51 @@ describe('FlowCanvas Context Menu', () => {
     render(<FlowCanvas />);
     
     expect(screen.getByText('从工具箱拖拽积木块到画布')).toBeInTheDocument();
+  });
+
+  it('should offer set entry action for non-entry nodes', () => {
+    render(
+      <FlowCanvas
+        nodes={[
+          {
+            id: 'node-1',
+            type: 'blockNode',
+            position: { x: 0, y: 0 },
+            data: {
+              label: '点击',
+              blockType: 'click',
+              blockCategory: 'action',
+              isEntryPoint: false,
+            },
+          },
+        ] as never}
+      />
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('react-flow-node-node-1'));
+    expect(screen.getByText('设为入口')).toBeInTheDocument();
+  });
+
+  it('should disable set entry action for current entry node', () => {
+    render(
+      <FlowCanvas
+        nodes={[
+          {
+            id: 'node-1',
+            type: 'blockNode',
+            position: { x: 0, y: 0 },
+            data: {
+              label: '点击',
+              blockType: 'click',
+              blockCategory: 'action',
+              isEntryPoint: true,
+            },
+          },
+        ] as never}
+      />
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('react-flow-node-node-1'));
+    expect(screen.getByText('设为入口').closest('button')).toBeDisabled();
   });
 });

@@ -61,6 +61,7 @@ function AppContent() {
     canRedo,
     deleteNode,
     deleteConnection,
+    setEntryBlock,
     handleNodesChange,
     handleEdgesChange,
     updateNodeConfig,
@@ -305,6 +306,16 @@ function AppContent() {
       showToast('error', '删除连接失败');
     }
   }, [deleteConnection, showToast]);
+
+  const handleSetEntryNode = useCallback(async (nodeId: string) => {
+    try {
+      await setEntryBlock(nodeId);
+      showToast('success', '已设为入口节点');
+    } catch (err) {
+      console.error('Failed to set entry block:', err);
+      showToast('error', '设置入口节点失败');
+    }
+  }, [setEntryBlock, showToast]);
 
   // Handle execution controls
   const handleExecute = useCallback(async () => {
@@ -624,6 +635,7 @@ function AppContent() {
             recentNodeId={recentNodeId}
             onNodeDelete={handleDeleteNode}
             onEdgeDelete={handleDeleteEdge}
+            onSetEntryNode={handleSetEntryNode}
           />
         </main>
 

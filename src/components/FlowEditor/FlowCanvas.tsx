@@ -116,6 +116,7 @@ export interface FlowCanvasProps {
   onConnect?: (connection: Connection) => void;
   onNodeDelete?: (nodeId: string) => void;
   onEdgeDelete?: (edgeId: string) => void;
+  onSetEntryNode?: (nodeId: string) => void;
   onNodeConfig?: (nodeId: string) => void;
   onAddNode?: (type: string, category: string, position: { x: number; y: number }) => void;
   pendingPlacement?: { type: string; category: string } | null;
@@ -138,6 +139,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   onConnect: onConnectExternal,
   onNodeDelete,
   onEdgeDelete,
+  onSetEntryNode,
   onNodeConfig,
   onAddNode,
   pendingPlacement,
@@ -490,12 +492,20 @@ export const FlowCanvas = memo(function FlowCanvas({
     if (!contextMenu?.targetId) return [];
 
     const nodeId = contextMenu.targetId;
+    const node = nodes.find((item) => item.id === nodeId);
+    const isEntryNode = node?.data?.isEntryPoint === true;
 
     return [
       {
         label: '编辑配置',
         icon: '⚙️',
         action: () => onNodeConfig?.(nodeId),
+      },
+      {
+        label: '设为入口',
+        icon: '🚀',
+        action: () => onSetEntryNode?.(nodeId),
+        disabled: isEntryNode,
       },
       {
         label: '复制',
@@ -509,7 +519,7 @@ export const FlowCanvas = memo(function FlowCanvas({
         danger: true,
       },
     ];
-  }, [contextMenu, onNodeConfig, onNodeDelete, handleCopyNode]);
+  }, [contextMenu, handleCopyNode, nodes, onNodeConfig, onNodeDelete, onSetEntryNode]);
 
   // Build edge context menu items
   const edgeMenuItems = useMemo((): ContextMenuItem[] => {
