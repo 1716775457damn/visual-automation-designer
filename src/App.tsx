@@ -212,16 +212,24 @@ function AppContent() {
       const nodeId = await addNode(type, category, position, undefined, flowId);
       setSelectedNodeId(nodeId);
       setRecentNodeId(nodeId);
+      return nodeId;
     } catch (err) {
       console.error('Failed to add node:', err);
       showToast('warning', err instanceof Error ? err.message : '添加节点失败');
+      return null;
     }
   }, [addNode, ensureFlowForEditing, showToast]);
 
   const handleToolboxSelect = useCallback((type: string, category: string) => {
-    setPendingPlacement(null);
-    void handleAddNode(type, category, getQuickAddPosition());
-    showToast('info', `${type} 已添加到当前视口`);
+    const addNodeFromToolbox = async () => {
+      setPendingPlacement(null);
+      const nodeId = await handleAddNode(type, category, getQuickAddPosition());
+      if (nodeId) {
+        showToast('info', `${type} 已添加到当前视口`);
+      }
+    };
+
+    void addNodeFromToolbox();
   }, [getQuickAddPosition, handleAddNode, showToast]);
 
   const handleArmPlacement = useCallback((type: string, category: string) => {
@@ -261,8 +269,15 @@ function AppContent() {
 
     const { type, category } = pendingPlacement;
     setPendingPlacement(null);
-    void handleAddNode(type, category, snappedPosition);
-    showToast('success', `${type} 已放置到白板`);
+
+    const placeNode = async () => {
+      const nodeId = await handleAddNode(type, category, snappedPosition);
+      if (nodeId) {
+        showToast('success', `${type} 已放置到白板`);
+      }
+    };
+
+    void placeNode();
   }, [handleAddNode, pendingPlacement, showToast]);
 
   const handleDeleteNode = useCallback(async (nodeId: string) => {

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
 const createFlowMock = vi.fn();
+const addNodeMock = vi.fn();
 
 vi.mock('./hooks', async () => {
   const actual = await vi.importActual<typeof import('./hooks')>('./hooks');
@@ -22,7 +23,7 @@ vi.mock('./hooks', async () => {
       loadFlow: vi.fn(),
       loadFlowList: vi.fn(),
       deleteFlow: vi.fn(),
-      addNode: vi.fn(),
+      addNode: addNodeMock,
       addConnection: vi.fn(),
       undo: vi.fn(),
       redo: vi.fn(),
@@ -95,6 +96,7 @@ describe('App quick-create entry points', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
+    addNodeMock.mockResolvedValue('node-1');
   });
 
   it('creates a quick flow from onboarding CTA', async () => {
@@ -121,5 +123,27 @@ describe('App quick-create entry points', () => {
     });
 
     expect(createFlowMock.mock.calls[0][0]).toMatch(/^快速流程_/);
+  });
+});
+
+describe('App node placement feedback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.setItem('vad-onboarding-dismissed', 'true');
+    createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
+  });
+
+  it('does not show a success toast when quick-add fails', async () => {
+    addNodeMock.mockRejectedValueOnce(new Error('添加节点失败'));
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '⚡ 直接放一个点击积木块' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('添加节点失败')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('click 已添加到当前视口')).not.toBeInTheDocument();
   });
 });
