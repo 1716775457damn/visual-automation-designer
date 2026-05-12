@@ -160,6 +160,16 @@ function AppContent() {
     setShowNewFlowDialog(true);
   }, []);
 
+  const createQuickFlow = useCallback(async () => {
+    try {
+      await createFlow(buildQuickFlowName());
+      showToast('success', '流程已创建');
+    } catch (err) {
+      console.error('Failed to create quick flow:', err);
+      showToast('error', '创建失败');
+    }
+  }, [buildQuickFlowName, createFlow, showToast]);
+
   // Get selected node data for config panel
   const selectedNode = useMemo(() => {
     if (!selectedNodeId) return null;
@@ -747,16 +757,16 @@ function AppContent() {
               <button className="app__onboarding-btn app__onboarding-btn--secondary" type="button" onClick={handleDismissOnboarding}>
                 稍后再看
               </button>
-              <button
-                className="app__onboarding-btn"
-                type="button"
-                onClick={() => {
-                  handleDismissOnboarding();
-                  void handleCreateFlow();
-                }}
-              >
-                立即创建流程
-              </button>
+      <button
+        className="app__onboarding-btn"
+        type="button"
+        onClick={() => {
+          handleDismissOnboarding();
+          void createQuickFlow();
+        }}
+      >
+        立即创建流程
+      </button>
             </div>
           </div>
         </div>
