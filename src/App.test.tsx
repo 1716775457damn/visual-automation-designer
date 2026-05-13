@@ -2,12 +2,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+const hookMocks = vi.hoisted(() => ({
+  canonicalFlowBuilder: vi.fn(),
+}));
+
 const tauriFlowMocks = vi.hoisted(() => ({
   validateFlow: vi.fn(),
 }));
 
+const flowEditorMocks = vi.hoisted(() => ({
+  lastFlowCanvasProps: null as null | { onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void; nodeValidation?: Record<string, { message: string }> },
+}));
+
 const createFlowMock = vi.fn();
 const addNodeMock = vi.fn();
+const addConnectionMock = vi.fn();
 const saveFlowMock = vi.fn();
 const executeFlowMock = vi.fn();
 const stopExecutionMock = vi.fn();
@@ -15,6 +24,8 @@ const setExecutionStateMock = vi.fn();
 const runtimeSelfCheckMock = vi.fn();
 let flowState = {
   flow: null as null | { id: string; name: string; blocks: Record<string, unknown>; connections: unknown[] },
+  nodes: [] as Array<Record<string, unknown>>,
+  edges: [] as Array<Record<string, unknown>>,
   isDirty: false,
 };
 
@@ -25,8 +36,8 @@ vi.mock('./hooks', async () => {
     ...actual,
     useFlow: () => ({
       flow: flowState.flow,
-      nodes: [],
-      edges: [],
+      nodes: flowState.nodes,
+      edges: flowState.edges,
       flowList: [],
       loading: false,
       error: null,
@@ -37,7 +48,7 @@ vi.mock('./hooks', async () => {
       loadFlowList: vi.fn(),
       deleteFlow: vi.fn(),
       addNode: addNodeMock,
-      addConnection: vi.fn(),
+      addConnection: addConnectionMock,
       undo: vi.fn(),
       redo: vi.fn(),
       canUndo: false,
@@ -47,7 +58,9 @@ vi.mock('./hooks', async () => {
       handleNodesChange: vi.fn(),
       handleEdgesChange: vi.fn(),
       updateNodeConfig: vi.fn(),
+      setEntryBlock: vi.fn(),
     }),
+    buildCanonicalFlow: hookMocks.canonicalFlowBuilder,
     useExecution: () => ({
       status: 'idle',
       currentBlockId: null,
@@ -89,7 +102,18 @@ vi.mock('./components/App', () => ({
 }));
 
 vi.mock('./components/FlowEditor', () => ({
-  FlowCanvas: () => <div data-testid="flow-canvas" />,
+  FlowCanvas: (props: { onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void; nodeValidation?: Record<string, { message: string }> }) => {
+    flowEditorMocks.lastFlowCanvasProps = props;
+    const { nodeValidation } = props;
+
+    return (
+      <div data-testid="flow-canvas">
+        {nodeValidation && Object.entries(nodeValidation).map(([nodeId, validation]) => (
+          <span key={nodeId} data-testid={`node-validation-${nodeId}`}>{validation.message}</span>
+        ))}
+      </div>
+    );
+  },
   FlowToolbar: ({ onExecute, onSave, onStop }: { onExecute?: () => void; onSave?: () => void; onStop?: () => void }) => (
     <div data-testid="flow-toolbar">
       <button type="button" onClick={onExecute}>执行流程</button>
@@ -125,14 +149,17 @@ describe('App quick-create entry points', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
-    flowState = { flow: null, isDirty: false };
+    flowState = { flow: null, nodes: [], edges: [], isDirty: false };
     createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
     addNodeMock.mockResolvedValue('node-1');
+    addConnectionMock.mockResolvedValue(undefined);
     saveFlowMock.mockResolvedValue(undefined);
     executeFlowMock.mockResolvedValue(undefined);
     stopExecutionMock.mockResolvedValue(undefined);
     runtimeSelfCheckMock.mockResolvedValue({ ok: true, code: 'OK', message: 'Runtime environment is ready' });
     tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
+    hookMocks.canonicalFlowBuilder.mockImplementation((flow) => flow);
+    flowEditorMocks.lastFlowCanvasProps = null;
   });
 
   it('creates a quick flow from onboarding CTA', async () => {
@@ -196,10 +223,16 @@ describe('App execution uses saved flow state', () => {
     vi.clearAllMocks();
     flowState = {
       flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [],
+      edges: [],
       isDirty: true,
     };
     saveFlowMock.mockResolvedValue(undefined);
     executeFlowMock.mockResolvedValue(undefined);
+    stopExecutionMock.mockResolvedValue(undefined);
+    runtimeSelfCheckMock.mockResolvedValue({ ok: true, code: 'OK', message: 'Runtime environment is ready' });
+    tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
+    hookMocks.canonicalFlowBuilder.mockImplementation((flow) => flow);
   });
 
   it('saves dirty changes before execution', async () => {
@@ -209,6 +242,70 @@ describe('App execution uses saved flow state', () => {
 
     await waitFor(() => {
       expect(saveFlowMock).toHaveBeenCalledTimes(1);
+      expect(executeFlowMock).toHaveBeenCalledWith('flow-1');
+    });
+  });
+
+  it('builds canonical flow before validation and execution', async () => {
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [
+        {
+          id: 'condition-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '条件判断',
+            blockType: 'condition',
+            blockCategory: 'control',
+          },
+        },
+        {
+          id: 'next-1',
+          type: 'blockNode',
+          position: { x: 100, y: 0 },
+          data: {
+            label: '点击',
+            blockType: 'click',
+            blockCategory: 'action',
+          },
+        },
+      ],
+      edges: [],
+      isDirty: false,
+    };
+
+    const canonicalFlow = {
+      id: 'flow-1',
+      name: '测试流程',
+      entryBlock: 'entry-1',
+      blocks: {
+        'condition-1': {
+          id: 'condition-1',
+          blockType: { type: 'control', control: 'condition' },
+          position: { x: 0, y: 0 },
+          config: {
+            type: 'condition',
+            imageId: 'image-1',
+            condition: 'image_exists',
+            trueBranch: ['true-1'],
+            falseBranch: ['false-1'],
+          },
+          children: ['true-1', 'false-1'],
+        },
+      },
+      connections: [],
+    };
+
+    hookMocks.canonicalFlowBuilder.mockReturnValueOnce(canonicalFlow);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+
+    await waitFor(() => {
+      expect(hookMocks.canonicalFlowBuilder).toHaveBeenCalledTimes(1);
+      expect(tauriFlowMocks.validateFlow).toHaveBeenCalledWith(canonicalFlow);
       expect(executeFlowMock).toHaveBeenCalledWith('flow-1');
     });
   });
@@ -259,7 +356,7 @@ describe('App execution uses saved flow state', () => {
   });
 
   it('shows validation warnings automatically', async () => {
-    tauriFlowMocks.validateFlow.mockResolvedValueOnce({
+    tauriFlowMocks.validateFlow.mockResolvedValue({
       isValid: true,
       errors: [],
       warnings: [{ code: 'ZERO_WAIT_TIME', message: 'Wait time is zero' }],
@@ -267,6 +364,8 @@ describe('App execution uses saved flow state', () => {
 
     flowState = {
       flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [],
+      edges: [],
       isDirty: false,
     };
 
@@ -275,5 +374,90 @@ describe('App execution uses saved flow state', () => {
     await waitFor(() => {
       expect(screen.getByText('Wait time is zero')).toBeInTheDocument();
     });
+  });
+
+  it('blocks unsupported condition default outgoing connections before saving to backend', async () => {
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [
+        {
+          id: 'condition-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '条件判断',
+            blockType: 'condition',
+            blockCategory: 'control',
+          },
+        },
+        {
+          id: 'next-1',
+          type: 'blockNode',
+          position: { x: 100, y: 0 },
+          data: {
+            label: '点击',
+            blockType: 'click',
+            blockCategory: 'action',
+          },
+        },
+      ],
+      edges: [],
+      isDirty: false,
+    };
+
+    render(<App />);
+
+    const flowCanvasProps = flowEditorMocks.lastFlowCanvasProps;
+
+    flowCanvasProps?.onConnect?.({ source: 'condition-1', target: 'next-1' });
+
+    await waitFor(() => {
+      expect(addConnectionMock).not.toHaveBeenCalled();
+      expect(screen.getByText('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks unsupported condition and loop structure validation text', async () => {
+    tauriFlowMocks.validateFlow.mockResolvedValue({
+      isValid: false,
+      errors: [
+        {
+          code: 'CONDITION_DEFAULT_OUTGOING_UNSUPPORTED',
+          message: 'Condition default outgoing edges are unsupported',
+          blockId: 'condition-1',
+        },
+      ],
+      warnings: [
+        {
+          code: 'LOOP_SUBCHAIN_UNSUPPORTED',
+          message: 'Loop subchains are unsupported',
+          blockId: 'loop-1',
+        },
+      ],
+    });
+
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [],
+      edges: [],
+      isDirty: false,
+    };
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。').length).toBeGreaterThan(0);
+      expect(screen.getByTestId('node-validation-condition-1')).toHaveTextContent('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。');
+      expect(screen.getByTestId('node-validation-loop-1')).toHaveTextContent('循环暂不支持把多个子节点串成循环体。请先保留一个直接子节点作为循环内容，或把复杂步骤拆到循环块之后执行。');
+      expect(setExecutionStateMock).toHaveBeenCalledWith(
+        'validation_blocked',
+        '条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。'
+      );
+    });
+
+    expect(screen.queryByText('Condition default outgoing edges are unsupported')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loop subchains are unsupported')).not.toBeInTheDocument();
   });
 });

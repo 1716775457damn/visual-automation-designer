@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Connection } from 'reactflow';
+import type { Connection } from 'reactflow';
 import './App.css';
 import './styles/index.css';
 import { FlowListModal, NewFlowDialog, ShortcutCheatsheet, StatusBar } from './components/App';
@@ -8,9 +8,11 @@ import { ExecutionLog, executionEventToLogEntry } from './components/ExecutionSt
 import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
 import { ConfirmDialog, ToastProvider, useToast } from './components/common';
-import { useFlow, useExecution, useKeyboardShortcuts, useTheme } from './hooks';
-import type { BlockConfig as BlockConfigType, Flow as TauriFlow, ValidationErrorResponse } from './tauri/flow';
+import { useFlow, useExecution, useKeyboardShortcuts, useTheme, buildCanonicalFlow } from './hooks';
+import type { Flow as TauriFlow, ValidationErrorResponse } from './tauri/flow';
 import { validateFlow } from './tauri/flow';
+import { formatValidationResponse } from './validation/formatValidationMessage';
+import { getConnectionGuardValidation } from './validation/connectionGuards';
 
 type PendingUnsavedAction =
   | { type: 'load_flow'; flowId: string }
@@ -131,25 +133,34 @@ function AppContent() {
     executionEventToLogEntry(event, index)
   );
 
+  const formattedFlowValidationError = useMemo(
+    () => flowValidationError ? formatValidationResponse(flowValidationError) : null,
+    [flowValidationError]
+  );
+  const formattedFlowValidationWarning = useMemo(
+    () => flowValidationWarning ? formatValidationResponse(flowValidationWarning) : null,
+    [flowValidationWarning]
+  );
+
   const validationByNodeId = useMemo(() => {
     const entries: Record<string, { severity: 'error' | 'warning'; message: string }> = {};
 
-    if (flowValidationError?.blockId) {
-      entries[flowValidationError.blockId] = {
+    if (formattedFlowValidationError?.blockId) {
+      entries[formattedFlowValidationError.blockId] = {
         severity: 'error',
-        message: flowValidationError.message,
+        message: formattedFlowValidationError.message,
       };
     }
 
-    if (flowValidationWarning?.blockId && !entries[flowValidationWarning.blockId]) {
-      entries[flowValidationWarning.blockId] = {
+    if (formattedFlowValidationWarning?.blockId && !entries[formattedFlowValidationWarning.blockId]) {
+      entries[formattedFlowValidationWarning.blockId] = {
         severity: 'warning',
-        message: flowValidationWarning.message,
+        message: formattedFlowValidationWarning.message,
       };
     }
 
     return entries;
-  }, [flowValidationError, flowValidationWarning]);
+  }, [formattedFlowValidationError, formattedFlowValidationWarning]);
 
   // Handle node selection
   const handleNodeSelect = useCallback((nodeId: string | null) => {
@@ -215,7 +226,7 @@ function AppContent() {
 
     try {
       // The config from BlockConfig already includes the 'type' field
-      await updateNodeConfig(selectedNodeId, config as BlockConfigType);
+      await updateNodeConfig(selectedNodeId, config as never);
       showToast('success', '配置已保存');
     } catch (err) {
       console.error('Failed to save config:', err);
@@ -231,13 +242,27 @@ function AppContent() {
 
   // Handle connection from FlowCanvas
   const handleConnect = useCallback(async (connection: Connection) => {
+    const guardValidation = getConnectionGuardValidation(connection, nodes, edges);
+    if (guardValidation) {
+      setFlowValidationError(guardValidation);
+      showToast('warning', guardValidation.message);
+      return;
+    }
+
     try {
       await addConnection(connection);
+      setFlowValidationError((current) => (
+        current?.code === 'CONDITION_DEFAULT_OUTGOING_UNSUPPORTED'
+          || current?.code === 'CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED'
+          || current?.code === 'LOOP_SUBCHAIN_UNSUPPORTED'
+          ? null
+          : current
+      ));
     } catch (err) {
       console.error('Failed to add connection:', err);
       showToast('error', err instanceof Error ? err.message : '连接创建失败');
     }
-  }, [addConnection, showToast]);
+  }, [addConnection, edges, nodes, showToast]);
 
   const handleAddNode = useCallback(async (type: string, category: string, position: { x: number; y: number }) => {
     try {
@@ -337,34 +362,7 @@ function AppContent() {
       return null;
     }
 
-    const flowToValidate: TauriFlow = {
-      ...flow,
-      blocks: {},
-      connections: [],
-    };
-
-    for (const node of nodes) {
-      flowToValidate.blocks[node.id] = {
-        id: node.id,
-        blockType: node.data.blockCategory === 'action'
-          ? { type: 'action', action: node.data.blockType as never }
-          : { type: 'control', control: node.data.blockType as never },
-        position: { x: node.position.x, y: node.position.y },
-        config: node.data.config as BlockConfigType,
-        children: edges.filter((edge) => edge.source === node.id).map((edge) => edge.target),
-      };
-    }
-
-    for (const edge of edges) {
-      flowToValidate.connections.push({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        sourceHandle: edge.sourceHandle ?? undefined,
-      });
-    }
-
-    return flowToValidate;
+    return buildCanonicalFlow(flow, nodes, edges);
   }, [edges, flow, nodes]);
 
   const validateBeforeExecution = useCallback(async () => {
@@ -383,8 +381,9 @@ function AppContent() {
     setFlowValidationError(validation.errors[0] ?? null);
     setFlowValidationWarning(validation.warnings[0] ?? null);
     if (!validation.isValid && validation.errors.length > 0) {
-      setExecutionState('validation_blocked', validation.errors[0].message);
-      throw new Error(validation.errors[0].message);
+      const formattedError = formatValidationResponse(validation.errors[0]);
+      setExecutionState('validation_blocked', formattedError.message);
+      throw new Error(formattedError.message);
     }
 
     return true;
@@ -819,8 +818,8 @@ function AppContent() {
         loading={loading}
         isDirty={isDirty}
         flowError={error}
-        flowValidationError={flowValidationError}
-        flowValidationWarning={flowValidationWarning}
+        flowValidationError={formattedFlowValidationError}
+        flowValidationWarning={formattedFlowValidationWarning}
         placementLabel={pendingPlacement?.type ?? null}
       />
 
