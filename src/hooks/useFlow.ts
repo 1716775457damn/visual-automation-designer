@@ -276,6 +276,54 @@ function synchronizeNodeSemantics(
   return applyEntryPointFlag(normalizedNodes, entryBlock);
 }
 
+export function buildCanonicalFlow(
+  flow: Flow,
+  nodes: Node<BlockNodeData>[],
+  edges: Edge[]
+): Flow {
+  const canonicalFlow: Flow = {
+    ...flow,
+    blocks: {},
+    connections: [],
+  };
+
+  canonicalFlow.entryBlock = resolveEntryBlock(canonicalFlow, nodes, edges);
+
+  for (const node of nodes) {
+    const blockType = createBlockType(
+      node.data.blockType,
+      node.data.blockCategory
+    );
+    const baseConfig = (node.data.config as BlockConfig) || createDefaultConfig(node.data.blockType, node.data.blockCategory);
+    const outgoingEdges = edges.filter((edge) => edge.source === node.id);
+    const config = normalizeConfigFromEdges(baseConfig, node.data.blockType, outgoingEdges);
+
+    canonicalFlow.blocks[node.id] = {
+      id: node.id,
+      blockType,
+      position: { x: node.position.x, y: node.position.y },
+      config,
+      children: [],
+    };
+  }
+
+  for (const edge of edges) {
+    canonicalFlow.connections.push({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle ?? undefined,
+    });
+
+    const sourceBlock = canonicalFlow.blocks[edge.source];
+    if (sourceBlock && !sourceBlock.children.includes(edge.target)) {
+      sourceBlock.children.push(edge.target);
+    }
+  }
+
+  return canonicalFlow;
+}
+
 /**
  * useFlow Hook - 流程管理
  * Manages flow state and communicates with Tauri backend
@@ -384,48 +432,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     setLoading(true);
     setError(null);
     try {
-      // Build flow object from current state
-      const flowToSave: Flow = {
-        ...flow,
-        blocks: {},
-        connections: [],
-      };
-      const resolvedEntryBlock = resolveEntryBlock(flowToSave, nodes, edges);
-      flowToSave.entryBlock = resolvedEntryBlock;
-
-      // Convert nodes to blocks
-      for (const node of nodes) {
-        const blockType = createBlockType(
-          node.data.blockType,
-          node.data.blockCategory
-        );
-        const baseConfig = (node.data.config as BlockConfig) || createDefaultConfig(node.data.blockType, node.data.blockCategory);
-        const outgoingEdges = edges.filter((edge) => edge.source === node.id);
-        const config = normalizeConfigFromEdges(baseConfig, node.data.blockType, outgoingEdges);
-        
-        flowToSave.blocks[node.id] = {
-          id: node.id,
-          blockType,
-          position: { x: node.position.x, y: node.position.y },
-          config,
-          children: [],
-        };
-      }
-
-      // Convert edges to connections
-      for (const edge of edges) {
-        flowToSave.connections.push({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle ?? undefined,
-        });
-
-        const sourceBlock = flowToSave.blocks[edge.source];
-        if (sourceBlock && !sourceBlock.children.includes(edge.target)) {
-          sourceBlock.children.push(edge.target);
-        }
-      }
+      const flowToSave = buildCanonicalFlow(flow, nodes, edges);
 
       await tauriSaveFlow(flowToSave);
       setFlow(flowToSave);

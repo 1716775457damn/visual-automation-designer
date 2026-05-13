@@ -2,7 +2,7 @@
  * Hooks Unified Exports
  */
 
-export { useFlow } from './useFlow';
+export { useFlow, buildCanonicalFlow } from './useFlow';
 export type { Flow, UseFlowOptions, UseFlowReturn } from './useFlow';
 
 export { useImageLibrary } from './useImageLibrary';
