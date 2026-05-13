@@ -20,17 +20,12 @@ import {
 } from '../tauri/execution';
 
 // Re-export ExecutionStatusType for compatibility
-export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'error';
+export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
 
 /**
  * Map Tauri execution status to local status type
  */
 function mapStatus(status: TauriExecutionStatusType): ExecutionStatusType {
-  // Tauri status can be 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'error'
-  // Map 'stopped' to 'idle' for UI purposes
-  if (status === 'stopped') {
-    return 'idle';
-  }
   return status;
 }
 
@@ -54,6 +49,7 @@ export interface UseExecutionReturn {
   totalBlocks: number;
   completedBlocks: number;
   errorMessage: string | null;
+  setExecutionState: (status: ExecutionStatusType, errorMessage?: string | null) => void;
   executeFlow: (flowId: string) => Promise<void>;
   stepExecution: (flowId: string) => Promise<void>;
   pauseExecution: () => Promise<void>;
@@ -163,8 +159,9 @@ export function useExecution(): UseExecutionReturn {
               break;
 
             case 'stopped':
-              setStatus('idle');
+              setStatus('stopped');
               setCurrentBlockId(null);
+              setErrorMessage(event.reason || '执行已停止');
               addEventRef.current({
                 type: 'stopped',
                 timestamp: new Date(event.timestamp),
@@ -305,6 +302,14 @@ export function useExecution(): UseExecutionReturn {
     setErrorMessage(null);
   }, []);
 
+  const setExecutionState = useCallback((nextStatus: ExecutionStatusType, nextErrorMessage: string | null = null) => {
+    setStatus(nextStatus);
+    setErrorMessage(nextErrorMessage);
+    if (nextStatus !== 'running' && nextStatus !== 'paused') {
+      setCurrentBlockId(null);
+    }
+  }, []);
+
   return {
     status,
     currentBlockId,
@@ -312,6 +317,7 @@ export function useExecution(): UseExecutionReturn {
     totalBlocks,
     completedBlocks,
     errorMessage,
+    setExecutionState,
     executeFlow,
     stepExecution,
     pauseExecution,
