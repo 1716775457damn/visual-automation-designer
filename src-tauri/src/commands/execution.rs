@@ -437,7 +437,10 @@ pub fn runtime_self_check(
         return Ok(RuntimeCheckResponse {
             ok: false,
             code: "SCREEN_CAPTURE_UNAVAILABLE".to_string(),
-            message: format!("Screen capture is unavailable: {}", e),
+            message: format!(
+                "无法使用屏幕截图功能：{}。请确认系统允许屏幕捕获，并在需要时授予录屏权限后重试。",
+                e
+            ),
         });
     }
 
@@ -445,7 +448,10 @@ pub fn runtime_self_check(
         return Ok(RuntimeCheckResponse {
             ok: false,
             code: "INPUT_BACKEND_UNAVAILABLE".to_string(),
-            message: format!("Input backend is unavailable: {}", e),
+            message: format!(
+                "无法初始化输入控制能力：{}。请确认当前系统允许模拟鼠标键盘输入，并在需要时授予辅助功能或无障碍权限后重试。",
+                e
+            ),
         });
     }
 
@@ -453,7 +459,10 @@ pub fn runtime_self_check(
         return Ok(RuntimeCheckResponse {
             ok: false,
             code: "APP_DATA_DIR_UNAVAILABLE".to_string(),
-            message: format!("App data directory is unavailable: {}", e),
+            message: format!(
+                "应用数据目录不可用：{}。请确认当前账号对应用数据目录有读写权限后重试。",
+                e
+            ),
         });
     }
 
@@ -462,7 +471,10 @@ pub fn runtime_self_check(
         return Ok(RuntimeCheckResponse {
             ok: false,
             code: "IMAGE_DIR_UNAVAILABLE".to_string(),
-            message: format!("Image directory is unavailable: {}", e),
+            message: format!(
+                "图片目录不可用：{}。请确认应用图片目录存在且可写后重试。",
+                e
+            ),
         });
     }
 
