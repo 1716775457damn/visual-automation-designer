@@ -374,6 +374,20 @@ function AppContent() {
     setFlowValidationWarning(validation.warnings[0] ?? null);
   }, [buildCurrentFlowForValidation]);
 
+  useEffect(() => {
+    if (!flow) {
+      setFlowValidationError(null);
+      setFlowValidationWarning(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshValidationState();
+    }, isDirty ? 180 : 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [flow, edges, isDirty, nodes, refreshValidationState]);
+
   const handleSetEntryNode = useCallback(async (nodeId: string) => {
     try {
       await setEntryBlock(nodeId);

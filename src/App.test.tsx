@@ -223,7 +223,7 @@ describe('App execution uses saved flow state', () => {
     });
   });
 
-  it('shows validation warnings after save', async () => {
+  it('shows validation warnings automatically', async () => {
     tauriFlowMocks.validateFlow.mockResolvedValueOnce({
       isValid: true,
       errors: [],
@@ -236,8 +236,6 @@ describe('App execution uses saved flow state', () => {
     };
 
     render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: '保存流程' }));
 
     await waitFor(() => {
       expect(screen.getByText('Wait time is zero')).toBeInTheDocument();
