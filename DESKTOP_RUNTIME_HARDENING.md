@@ -20,8 +20,8 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 - [x] Add pause checks inside wait-image loop
 - [x] Add pause checks inside wait-time loop
-- [ ] Make text input cancellable between characters
-- [ ] Make repeated clicks cancellable between clicks
+- [x] Make text input cancellable between characters
+- [x] Make repeated clicks cancellable between clicks
 - [ ] Verify stop latency under active execution
 
 ## 4. Screen/DPI/multi-monitor correctness
