@@ -28,11 +28,20 @@ pub use error::{AppError, Result};
 
 use commands::{FlowState, ImageLibraryState, ExecutionState};
 use tauri::{Manager, Emitter};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 use std::panic;
 use std::io;
 
 fn startup_error(message: impl Into<String>) -> io::Error {
     io::Error::other(message.into())
+}
+
+fn show_startup_error(app: &tauri::AppHandle, message: &str) {
+    app.dialog()
+        .message(message)
+        .title("Startup Failed")
+        .kind(MessageDialogKind::Error)
+        .blocking_show();
 }
 
 /// Set up the panic handler to catch panics and log them
@@ -71,7 +80,7 @@ fn setup_panic_handler(app_handle: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
@@ -80,24 +89,45 @@ pub fn run() {
                 .init();
             
             // Get app data directory
-            let app_data_dir = app.path().app_data_dir()
-                .map_err(|e| startup_error(format!("Failed to get app data directory: {}", e)))?;
+            let app_data_dir = match app.path().app_data_dir() {
+                Ok(path) => path,
+                Err(e) => {
+                    let message = format!("Failed to get app data directory: {}", e);
+                    show_startup_error(&app.handle(), &message);
+                    return Err(startup_error(message).into());
+                }
+            };
             
             // Initialize error logger
-            logging::init_logger(app_data_dir.clone())
-                .map_err(|e| startup_error(format!("Failed to initialize error logger: {}", e)))?;
+            if let Err(e) = logging::init_logger(app_data_dir.clone()) {
+                let message = format!("Failed to initialize error logger: {}", e);
+                show_startup_error(&app.handle(), &message);
+                return Err(startup_error(message).into());
+            }
             
             // Set up panic handler
             setup_panic_handler(&app.handle());
             
             // Initialize image library state
-            let image_library_state = ImageLibraryState::new(&app.handle())
-                .map_err(|e| startup_error(format!("Failed to initialize image library state: {}", e)))?;
+            let image_library_state = match ImageLibraryState::new(&app.handle()) {
+                Ok(state) => state,
+                Err(e) => {
+                    let message = format!("Failed to initialize image library state: {}", e);
+                    show_startup_error(&app.handle(), &message);
+                    return Err(startup_error(message).into());
+                }
+            };
             app.manage(image_library_state);
             
             // Initialize flow state
-            let flow_state = FlowState::new(&app.handle())
-                .map_err(|e| startup_error(format!("Failed to initialize flow state: {}", e)))?;
+            let flow_state = match FlowState::new(&app.handle()) {
+                Ok(state) => state,
+                Err(e) => {
+                    let message = format!("Failed to initialize flow state: {}", e);
+                    show_startup_error(&app.handle(), &message);
+                    return Err(startup_error(message).into());
+                }
+            };
             app.manage(flow_state);
             
             // Initialize execution state
@@ -149,9 +179,10 @@ pub fn run() {
             commands::resume_execution,
             commands::get_execution_status,
         ])
-        .run(tauri::generate_context!())
-        .unwrap_or_else(|error| {
-            logging::log_error("Failed to run tauri application", Some(&error.to_string()), None);
-            panic!("error while running tauri application: {}", error);
-        });
+        .run(tauri::generate_context!());
+
+    if let Err(error) = app {
+        logging::log_error("Failed to run tauri application", Some(&error.to_string()), None);
+        panic!("error while running tauri application: {}", error);
+    }
 }

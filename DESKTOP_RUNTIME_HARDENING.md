@@ -6,7 +6,7 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 - [x] Remove panic/expect/unwrap from startup critical path
 - [x] Make input controller initialization return `Result`
-- [ ] Add user-visible startup failure state
+- [x] Add user-visible startup failure state
 - [ ] Verify release app behavior without console
 
 ## 2. Execution failure visibility
