@@ -2,7 +2,7 @@ import type { ValidationErrorResponse } from '../../tauri';
 import { ExecutionBar } from '../ExecutionStatus';
 
 export interface StatusBarProps {
-  executionStatus: 'idle' | 'running' | 'paused' | 'completed' | 'error';
+  executionStatus: 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
   currentBlockId: string | null;
   nodesCount: number;
   edgesCount: number;

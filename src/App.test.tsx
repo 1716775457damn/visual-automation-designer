@@ -10,6 +10,8 @@ const createFlowMock = vi.fn();
 const addNodeMock = vi.fn();
 const saveFlowMock = vi.fn();
 const executeFlowMock = vi.fn();
+const stopExecutionMock = vi.fn();
+const setExecutionStateMock = vi.fn();
 let flowState = {
   flow: null as null | { id: string; name: string; blocks: Record<string, unknown>; connections: unknown[] },
   isDirty: false,
@@ -50,10 +52,11 @@ vi.mock('./hooks', async () => {
       currentBlockId: null,
       executionLog: [],
       errorMessage: null,
+      setExecutionState: setExecutionStateMock,
       executeFlow: executeFlowMock,
       pauseExecution: vi.fn(),
       resumeExecution: vi.fn(),
-      stopExecution: vi.fn(),
+      stopExecution: stopExecutionMock,
       stepExecution: vi.fn(),
       clearLog: vi.fn(),
       completedBlocks: 0,
@@ -85,10 +88,11 @@ vi.mock('./components/App', () => ({
 
 vi.mock('./components/FlowEditor', () => ({
   FlowCanvas: () => <div data-testid="flow-canvas" />,
-  FlowToolbar: ({ onExecute, onSave }: { onExecute?: () => void; onSave?: () => void }) => (
+  FlowToolbar: ({ onExecute, onSave, onStop }: { onExecute?: () => void; onSave?: () => void; onStop?: () => void }) => (
     <div data-testid="flow-toolbar">
       <button type="button" onClick={onExecute}>执行流程</button>
       <button type="button" onClick={onSave}>保存流程</button>
+      <button type="button" onClick={onStop}>停止执行</button>
     </div>
   ),
 }));
@@ -124,6 +128,7 @@ describe('App quick-create entry points', () => {
     addNodeMock.mockResolvedValue('node-1');
     saveFlowMock.mockResolvedValue(undefined);
     executeFlowMock.mockResolvedValue(undefined);
+    stopExecutionMock.mockResolvedValue(undefined);
     tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
   });
 
@@ -218,9 +223,19 @@ describe('App execution uses saved flow state', () => {
 
     await waitFor(() => {
       expect(executeFlowMock).not.toHaveBeenCalled();
+      expect(setExecutionStateMock).toHaveBeenCalledWith('validation_blocked', 'Both condition branches are empty');
       expect(screen.getByText('执行失败')).toBeInTheDocument();
       expect(screen.getByText('Both condition branches are empty')).toBeInTheDocument();
     });
+  });
+
+  it('marks manual stop as stopped instead of error', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '停止执行' }));
+
+    expect(stopExecutionMock).toHaveBeenCalledTimes(1);
+    expect(setExecutionStateMock).toHaveBeenCalledWith('stopped', '执行已停止');
   });
 
   it('shows validation warnings automatically', async () => {

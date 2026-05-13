@@ -76,6 +76,7 @@ function AppContent() {
     currentBlockId,
     executionLog,
     errorMessage,
+    setExecutionState,
     executeFlow: tauriExecuteFlow,
     pauseExecution,
     resumeExecution,
@@ -375,6 +376,7 @@ function AppContent() {
     setFlowValidationError(validation.errors[0] ?? null);
     setFlowValidationWarning(validation.warnings[0] ?? null);
     if (!validation.isValid && validation.errors.length > 0) {
+      setExecutionState('validation_blocked', validation.errors[0].message);
       throw new Error(validation.errors[0].message);
     }
 
@@ -449,7 +451,8 @@ function AppContent() {
   const handleStop = useCallback(() => {
     stopExecution();
     clearLog();
-  }, [stopExecution, clearLog]);
+    setExecutionState('stopped', '执行已停止');
+  }, [clearLog, setExecutionState, stopExecution]);
 
   const handleStep = useCallback(async () => {
     if (!flow) {

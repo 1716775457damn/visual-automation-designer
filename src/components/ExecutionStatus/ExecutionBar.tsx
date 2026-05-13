@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 
-export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'error';
+export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
 
 export interface ExecutionBarProps {
   status?: ExecutionStatusType;
@@ -22,6 +22,8 @@ const STATUS_LABELS: Record<ExecutionStatusType, string> = {
   running: '运行中',
   paused: '已暂停',
   completed: '已完成',
+  stopped: '已停止',
+  validation_blocked: '校验阻断',
   error: '出错',
 };
 
@@ -31,6 +33,8 @@ const STATUS_EMOJIS: Record<ExecutionStatusType, string> = {
   running: '🔵',
   paused: '🟡',
   completed: '🟢',
+  stopped: '⏹️',
+  validation_blocked: '🚫',
   error: '🔴',
 };
 
@@ -133,13 +137,13 @@ export function ExecutionBar({
       )}
 
       {/* Error Message - UX优化: 更明显的错误提示 */}
-      {status === 'error' && errorMessage && (
+      {(status === 'error' || status === 'validation_blocked' || status === 'stopped') && errorMessage && (
         <div 
           className="execution-bar__error" 
           data-testid="execution-error"
           role="alert"
         >
-          ❌ {errorMessage}
+          {status === 'stopped' ? '⏹️' : status === 'validation_blocked' ? '🚫' : '❌'} {errorMessage}
         </div>
       )}
     </div>
