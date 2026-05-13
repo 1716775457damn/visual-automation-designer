@@ -667,7 +667,7 @@ impl Executor {
         for i in 0..count {
             let click_result = safe_execute(
                 || {
-                    let mut input = InputController::new();
+                    let mut input = InputController::new()?;
                     input.click_at(x, y, crate::platform::MouseButton::Left)
                 },
                 "Click operation"
@@ -764,7 +764,7 @@ impl Executor {
         let result = if let Some(interval) = interval_ms {
             safe_execute(
                 || {
-                    let mut input = InputController::new();
+                    let mut input = InputController::new()?;
                     input.type_text_with_interval(text, interval)
                 },
                 "Text input with interval"
@@ -772,7 +772,7 @@ impl Executor {
         } else {
             safe_execute(
                 || {
-                    let mut input = InputController::new();
+                    let mut input = InputController::new()?;
                     input.type_text(text)
                 },
                 "Text input"

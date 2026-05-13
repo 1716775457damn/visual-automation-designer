@@ -49,31 +49,29 @@ pub struct InputController {
 
 impl Default for InputController {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("InputController::default requires a valid input backend")
     }
 }
 
 impl InputController {
     /// Create a new input controller
-    pub fn new() -> Self {
-        let enigo = Enigo::new(&Settings::default()).unwrap_or_else(|_| {
-            // Fallback for environments where Enigo can't be initialized
-            panic!("Failed to initialize input controller")
-        });
+    pub fn new() -> Result<Self> {
+        let enigo = Enigo::new(&Settings::default())
+            .map_err(|e| AppError::ExecutionFailed(format!("Failed to initialize input controller: {:?}", e)))?;
 
-        Self {
+        Ok(Self {
             enigo,
             click_interval_ms: 50,
             key_interval_ms: 10,
-        }
+        })
     }
 
     /// Create an input controller with custom intervals
-    pub fn with_intervals(click_interval_ms: u64, key_interval_ms: u64) -> Self {
-        let mut controller = Self::new();
+    pub fn with_intervals(click_interval_ms: u64, key_interval_ms: u64) -> Result<Self> {
+        let mut controller = Self::new()?;
         controller.click_interval_ms = click_interval_ms;
         controller.key_interval_ms = key_interval_ms;
-        controller
+        Ok(controller)
     }
 
     // ========================================================================

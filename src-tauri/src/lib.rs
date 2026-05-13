@@ -29,6 +29,11 @@ pub use error::{AppError, Result};
 use commands::{FlowState, ImageLibraryState, ExecutionState};
 use tauri::{Manager, Emitter};
 use std::panic;
+use std::io;
+
+fn startup_error(message: impl Into<String>) -> io::Error {
+    io::Error::other(message.into())
+}
 
 /// Set up the panic handler to catch panics and log them
 fn setup_panic_handler(app_handle: &tauri::AppHandle) {
@@ -76,23 +81,23 @@ pub fn run() {
             
             // Get app data directory
             let app_data_dir = app.path().app_data_dir()
-                .expect("Failed to get app data directory");
+                .map_err(|e| startup_error(format!("Failed to get app data directory: {}", e)))?;
             
             // Initialize error logger
             logging::init_logger(app_data_dir.clone())
-                .expect("Failed to initialize error logger");
+                .map_err(|e| startup_error(format!("Failed to initialize error logger: {}", e)))?;
             
             // Set up panic handler
             setup_panic_handler(&app.handle());
             
             // Initialize image library state
             let image_library_state = ImageLibraryState::new(&app.handle())
-                .expect("Failed to initialize image library state");
+                .map_err(|e| startup_error(format!("Failed to initialize image library state: {}", e)))?;
             app.manage(image_library_state);
             
             // Initialize flow state
             let flow_state = FlowState::new(&app.handle())
-                .expect("Failed to initialize flow state");
+                .map_err(|e| startup_error(format!("Failed to initialize flow state: {}", e)))?;
             app.manage(flow_state);
             
             // Initialize execution state
@@ -101,8 +106,9 @@ pub fn run() {
             
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
             }
             Ok(())
         })
@@ -144,5 +150,8 @@ pub fn run() {
             commands::get_execution_status,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|error| {
+            logging::log_error("Failed to run tauri application", Some(&error.to_string()), None);
+            panic!("error while running tauri application: {}", error);
+        });
 }
