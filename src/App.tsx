@@ -129,6 +129,26 @@ function AppContent() {
     executionEventToLogEntry(event, index)
   );
 
+  const validationByNodeId = useMemo(() => {
+    const entries: Record<string, { severity: 'error' | 'warning'; message: string }> = {};
+
+    if (flowValidationError?.blockId) {
+      entries[flowValidationError.blockId] = {
+        severity: 'error',
+        message: flowValidationError.message,
+      };
+    }
+
+    if (flowValidationWarning?.blockId && !entries[flowValidationWarning.blockId]) {
+      entries[flowValidationWarning.blockId] = {
+        severity: 'warning',
+        message: flowValidationWarning.message,
+      };
+    }
+
+    return entries;
+  }, [flowValidationError, flowValidationWarning]);
+
   // Handle node selection
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
@@ -705,6 +725,7 @@ function AppContent() {
           <FlowCanvas
             nodes={nodes}
             edges={edges}
+            nodeValidation={validationByNodeId}
             onNodeSelect={handleNodeSelect}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}

@@ -22,6 +22,8 @@ export interface BlockNodeData {
   disabled?: boolean;
   isEntryPoint?: boolean;
   recent?: boolean;
+  validationSeverity?: 'error' | 'warning';
+  validationMessage?: string;
   config?: Record<string, unknown>;
 }
 
@@ -30,7 +32,7 @@ export interface BlockNodeData {
  * 作为 react-flow 的自定义节点使用
  */
 function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
-  const { label, blockType, blockCategory, executing, disabled, isEntryPoint, recent, config } = data;
+  const { label, blockType, blockCategory, executing, disabled, isEntryPoint, recent, validationSeverity, validationMessage, config } = data;
   const [showTooltip, setShowTooltip] = useState(false);
 
   // UX优化141: 连接提示状态
@@ -152,7 +154,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
   return (
     <div
-      className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''}`}
+      className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''} ${validationSeverity ? `block-node--validation-${validationSeverity}` : ''}`}
       data-testid={`block-node-${blockType}`}
       data-block-type={blockType}
       data-block-category={blockCategory}
@@ -183,6 +185,12 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
         </div>
       )}
 
+      {validationSeverity && (
+        <div className={`block-node__validation-badge block-node__validation-badge--${validationSeverity}`} title={validationMessage ?? ''}>
+          {validationSeverity === 'error' ? '⚠' : '!'}
+        </div>
+      )}
+
       {/* UX优化63: 禁用状态覆盖层 */}
       {disabled && (
         <div className="block-node__disabled-overlay" title="已禁用">
@@ -199,6 +207,12 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       {configSummary && (
         <div className="block-node__content">
           <span className="block-node__config">{configSummary}</span>
+        </div>
+      )}
+
+      {validationMessage && (
+        <div className={`block-node__validation-message block-node__validation-message--${validationSeverity ?? 'warning'}`}>
+          {validationMessage}
         </div>
       )}
 

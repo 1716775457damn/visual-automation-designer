@@ -110,6 +110,7 @@ interface CanvasPoint {
 export interface FlowCanvasProps {
   nodes?: Node[];
   edges?: Edge[];
+  nodeValidation?: Record<string, { severity: 'error' | 'warning'; message: string }>;
   onNodeSelect?: (nodeId: string | null) => void;
   onNodesChange?: (changes: NodeChange[]) => void;
   onEdgesChange?: (changes: EdgeChange[]) => void;
@@ -133,6 +134,7 @@ export interface FlowCanvasProps {
 export const FlowCanvas = memo(function FlowCanvas({
   nodes: externalNodes,
   edges: externalEdges,
+  nodeValidation,
   onNodeSelect,
   onNodesChange,
   onEdgesChange,
@@ -197,9 +199,11 @@ export const FlowCanvas = memo(function FlowCanvas({
         ...node.data,
         executing: executingBlockId === node.id,
         recent: recentNodeId === node.id,
+        validationSeverity: nodeValidation?.[node.id]?.severity,
+        validationMessage: nodeValidation?.[node.id]?.message,
       },
     }));
-  }, [nodes, executingBlockId, recentNodeId]);
+  }, [nodes, executingBlockId, nodeValidation, recentNodeId]);
 
   // Handle node changes - memoized
   const handleNodesChange = useCallback(
