@@ -9,10 +9,11 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::Mutex;
 
 use crate::core::execution::{ExecutionController, Executor, ExecutionStatus};
+use crate::core::execution::ExecutionEvent;
 use crate::error::{AppError, Result};
 use crate::models::{FlowId, ImageId, ImageMetadata};
 
@@ -124,6 +125,7 @@ pub async fn execute_flow(
 
     let active_controller = Arc::clone(&execution_state.active_controller);
     let tracked_status = Arc::clone(&execution_state.status);
+    let app_handle = execution_state.app_handle.clone();
 
     tauri::async_runtime::spawn(async move {
         let result = executor.start().await;
@@ -135,6 +137,7 @@ pub async fn execute_flow(
                 Some(&error.to_string()),
                 None,
             );
+            let _ = app_handle.emit("execution-event", ExecutionEvent::execution_failed(error.to_string(), None));
         }
 
         {

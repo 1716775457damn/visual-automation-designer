@@ -69,6 +69,12 @@ pub enum ExecutionEvent {
     FlowCompleted {
         timestamp: DateTime<Utc>,
     },
+    /// Flow execution failed after startup
+    ExecutionFailed {
+        message: String,
+        block_id: Option<BlockId>,
+        timestamp: DateTime<Utc>,
+    },
     /// Flow execution stopped
     Stopped {
         reason: String,
@@ -123,6 +129,15 @@ impl ExecutionEvent {
     /// Create a FlowCompleted event
     pub fn flow_completed() -> Self {
         ExecutionEvent::FlowCompleted {
+            timestamp: Utc::now(),
+        }
+    }
+
+    /// Create an ExecutionFailed event
+    pub fn execution_failed(message: String, block_id: Option<BlockId>) -> Self {
+        ExecutionEvent::ExecutionFailed {
+            message,
+            block_id,
             timestamp: Utc::now(),
         }
     }

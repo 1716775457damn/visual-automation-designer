@@ -11,8 +11,8 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 ## 2. Execution failure visibility
 
-- [ ] Add backend execution-failed event
-- [ ] Include error code, message, block id, remediation hint
+- [x] Add backend execution-failed event
+- [x] Include error code, message, block id, remediation hint
 - [ ] Surface async runtime failures in execution UI
 - [ ] Distinguish stopped vs failed vs validation-blocked
 

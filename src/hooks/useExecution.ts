@@ -38,7 +38,7 @@ function mapStatus(status: TauriExecutionStatusType): ExecutionStatusType {
  * Internal execution event for log tracking
  */
 export interface InternalExecutionEvent {
-  type: 'started' | 'block_started' | 'block_completed' | 'block_error' | 'flow_completed' | 'stopped' | 'paused' | 'resumed';
+  type: 'started' | 'block_started' | 'block_completed' | 'block_error' | 'execution_failed' | 'flow_completed' | 'stopped' | 'paused' | 'resumed';
   flowId?: string;
   blockId?: string;
   success?: boolean;
@@ -136,6 +136,18 @@ export function useExecution(): UseExecutionReturn {
               addEventRef.current({
                 type: 'block_error',
                 blockId: event.blockId,
+                error: event.message,
+                timestamp: new Date(event.timestamp),
+              });
+              break;
+
+            case 'executionFailed':
+              setStatus('error');
+              setCurrentBlockId(event.blockId ?? null);
+              setErrorMessage(event.message);
+              addEventRef.current({
+                type: 'execution_failed',
+                blockId: event.blockId ?? undefined,
                 error: event.message,
                 timestamp: new Date(event.timestamp),
               });

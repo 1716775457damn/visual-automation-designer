@@ -50,6 +50,7 @@ export type ExecutionEventType =
   | 'blockStarted'
   | 'blockCompleted'
   | 'blockError'
+  | 'executionFailed'
   | 'flowCompleted'
   | 'stopped'
   | 'paused'
@@ -96,6 +97,12 @@ export interface BlockErrorEvent extends ExecutionEventBase {
   message: string;
 }
 
+export interface ExecutionFailedEvent extends ExecutionEventBase {
+  type: 'executionFailed';
+  message: string;
+  blockId?: BlockId | null;
+}
+
 /**
  * Flow execution completed successfully
  */
@@ -135,6 +142,7 @@ export type ExecutionEvent =
   | BlockStartedEvent
   | BlockCompletedEvent
   | BlockErrorEvent
+  | ExecutionFailedEvent
   | FlowCompletedEvent
   | ExecutionStoppedEvent
   | ExecutionPausedEvent
