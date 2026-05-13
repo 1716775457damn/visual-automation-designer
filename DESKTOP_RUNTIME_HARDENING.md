@@ -13,7 +13,7 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 - [x] Add backend execution-failed event
 - [x] Include error code, message, block id, remediation hint
-- [ ] Surface async runtime failures in execution UI
+- [x] Surface async runtime failures in execution UI
 - [ ] Distinguish stopped vs failed vs validation-blocked
 
 ## 3. Pause/stop responsiveness
