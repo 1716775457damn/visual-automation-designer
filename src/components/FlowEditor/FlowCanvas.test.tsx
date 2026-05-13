@@ -70,10 +70,16 @@ describe('FlowCanvas Context Menu', () => {
     expect(screen.queryByTestId('context-menu-canvas')).not.toBeInTheDocument();
   });
 
-  it('should render canvas with hint text', () => {
-    render(<FlowCanvas />);
-    
-    expect(screen.getByText('从工具箱拖拽积木块到画布')).toBeInTheDocument();
+  it('shows placement guidance for condition blocks', () => {
+    render(<FlowCanvas pendingPlacement={{ type: 'condition', category: 'control' }} />);
+
+    expect(screen.getByText('点击白板放置: condition · 提示：请只使用“真/假”分支，每个分支先连接 1 个直接节点')).toBeInTheDocument();
+  });
+
+  it('shows placement guidance for loop blocks', () => {
+    render(<FlowCanvas pendingPlacement={{ type: 'loop', category: 'control' }} />);
+
+    expect(screen.getByText('点击白板放置: loop · 提示：循环体当前仅支持 1 个直接子节点')).toBeInTheDocument();
   });
 
   it('should offer set entry action for non-entry nodes', () => {

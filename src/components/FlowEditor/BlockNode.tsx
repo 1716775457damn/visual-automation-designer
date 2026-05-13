@@ -36,7 +36,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   // UX优化141: 连接提示状态
-  const [showConnectionHint, setShowConnectionHint] = useState<'input' | 'output' | null>(null);
+  const [showConnectionHint, setShowConnectionHint] = useState<'input' | 'output' | 'condition-true' | 'condition-false' | null>(null);
 
   // Get block color based on type
   const getBlockColor = (): string => {
@@ -152,6 +152,18 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   const blockColor = getBlockColor();
   const configSummary = getConfigSummary();
 
+  const outputHintMessage = (() => {
+    if (blockType === 'condition') {
+      return '不支持默认出口；请使用“真/假”分支';
+    }
+
+    if (blockType === 'loop' || blockType === 'loop_infinite') {
+      return '循环体暂仅支持 1 个直接子节点';
+    }
+
+    return '连接到下一节点';
+  })();
+
   return (
     <div
       className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''} ${validationSeverity ? `block-node--validation-${validationSeverity}` : ''}`}
@@ -237,7 +249,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       {/* UX优化141: 连接提示 */}
       {showConnectionHint === 'output' && (
         <div className="block-node__connection-hint block-node__connection-hint--output">
-          连接到下一节点
+          {outputHintMessage}
         </div>
       )}
 
@@ -250,6 +262,8 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
             id="true"
             style={{ left: '30%' }}
             className="block-node__handle block-node__handle--true"
+            onMouseEnter={() => setShowConnectionHint('condition-true')}
+            onMouseLeave={() => setShowConnectionHint(null)}
           />
           <Handle
             type="source"
@@ -257,8 +271,22 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
             id="false"
             style={{ left: '70%' }}
             className="block-node__handle block-node__handle--false"
+            onMouseEnter={() => setShowConnectionHint('condition-false')}
+            onMouseLeave={() => setShowConnectionHint(null)}
           />
         </>
+      )}
+
+      {showConnectionHint === 'condition-true' && (
+        <div className="block-node__connection-hint block-node__connection-hint--output">
+          真分支：仅连接 1 个直接节点
+        </div>
+      )}
+
+      {showConnectionHint === 'condition-false' && (
+        <div className="block-node__connection-hint block-node__connection-hint--output">
+          假分支：仅连接 1 个直接节点
+        </div>
       )}
 
       {/* Executing indicator */}

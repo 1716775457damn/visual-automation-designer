@@ -107,6 +107,22 @@ interface CanvasPoint {
   y: number;
 }
 
+function getPlacementHintMessage(pendingPlacement?: { type: string; category: string } | null): string {
+  if (!pendingPlacement) {
+    return '从工具箱拖拽积木块到画布';
+  }
+
+  if (pendingPlacement.type === 'condition') {
+    return '点击白板放置: condition · 提示：请只使用“真/假”分支，每个分支先连接 1 个直接节点';
+  }
+
+  if (pendingPlacement.type === 'loop' || pendingPlacement.type === 'loop_infinite') {
+    return `点击白板放置: ${pendingPlacement.type} · 提示：循环体当前仅支持 1 个直接子节点`;
+  }
+
+  return `点击白板放置: ${pendingPlacement.type}`;
+}
+
 export interface FlowCanvasProps {
   nodes?: Node[];
   edges?: Edge[];
@@ -659,7 +675,7 @@ export const FlowCanvas = memo(function FlowCanvas({
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Panel position="top-left">
             <div className="flow-canvas__hint">
-              {pendingPlacement ? `点击白板放置: ${pendingPlacement.type}` : '从工具箱拖拽积木块到画布'}
+              {getPlacementHintMessage(pendingPlacement)}
             </div>
           </Panel>
         </ReactFlow>
