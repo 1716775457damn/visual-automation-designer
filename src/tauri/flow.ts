@@ -326,6 +326,21 @@ function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
   }
 }
 
+function toTauriFlowPayload(flow: Flow): Flow {
+  return {
+    ...flow,
+    blocks: Object.fromEntries(
+      Object.entries(flow.blocks).map(([blockId, block]) => [
+        blockId,
+        {
+          ...block,
+          config: toTauriBlockConfig(block.config),
+        },
+      ])
+    ),
+  } as Flow;
+}
+
 // ============================================================================
 // Flow Management Commands
 // ============================================================================
@@ -370,7 +385,7 @@ export async function saveFlow(flow: Flow): Promise<boolean> {
     return true;
   }
 
-  return invoke<boolean>('save_flow', { flow });
+  return invoke<boolean>('save_flow', { flow: toTauriFlowPayload(flow) });
 }
 
 /**
@@ -445,7 +460,7 @@ export async function validateFlow(flow: Flow): Promise<ValidationResponse> {
     };
   }
 
-  return invoke<ValidationResponse>('validate_flow', { flow });
+  return invoke<ValidationResponse>('validate_flow', { flow: toTauriFlowPayload(flow) });
 }
 
 // ============================================================================

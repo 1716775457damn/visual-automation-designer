@@ -66,7 +66,15 @@ describe('Flow Tauri Commands', () => {
       const flow: Flow = {
         id: 'test-flow-id',
         name: 'Test Flow',
-        blocks: {},
+        blocks: {
+          'block-1': {
+            id: 'block-1',
+            blockType: { type: 'action', action: 'wait_image' },
+            position: { x: 100, y: 100 },
+            config: { type: 'wait_image', imageId: 'image-1', timeoutMs: 5000 },
+            children: [],
+          },
+        },
         connections: [],
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
@@ -76,7 +84,21 @@ describe('Flow Tauri Commands', () => {
 
       const result = await saveFlow(flow);
 
-      expect(mockInvoke).toHaveBeenCalledWith('save_flow', { flow });
+      expect(mockInvoke).toHaveBeenCalledWith('save_flow', {
+        flow: {
+          ...flow,
+          blocks: {
+            'block-1': {
+              ...flow.blocks['block-1'],
+              config: {
+                type: 'wait_image',
+                image_id: 'image-1',
+                timeout_ms: 5000,
+              },
+            },
+          },
+        },
+      });
       expect(result).toBe(true);
     });
 
@@ -147,7 +169,21 @@ describe('Flow Tauri Commands', () => {
       const flow: Flow = {
         id: 'test-flow-id',
         name: 'Test Flow',
-        blocks: {},
+        blocks: {
+          'block-1': {
+            id: 'block-1',
+            blockType: { type: 'control', control: 'condition' },
+            position: { x: 100, y: 100 },
+            config: {
+              type: 'condition',
+              imageId: 'image-1',
+              condition: 'image_exists',
+              trueBranch: ['block-2'],
+              falseBranch: ['block-3'],
+            },
+            children: [],
+          },
+        },
         connections: [],
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
@@ -155,7 +191,23 @@ describe('Flow Tauri Commands', () => {
 
       const result = await validateFlow(flow);
 
-      expect(mockInvoke).toHaveBeenCalledWith('validate_flow', { flow });
+      expect(mockInvoke).toHaveBeenCalledWith('validate_flow', {
+        flow: {
+          ...flow,
+          blocks: {
+            'block-1': {
+              ...flow.blocks['block-1'],
+              config: {
+                type: 'condition',
+                image_id: 'image-1',
+                condition: 'image_exists',
+                true_branch: ['block-2'],
+                false_branch: ['block-3'],
+              },
+            },
+          },
+        },
+      });
       expect(result.isValid).toBe(true);
     });
   });
