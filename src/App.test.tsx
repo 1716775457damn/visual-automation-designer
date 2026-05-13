@@ -12,6 +12,7 @@ const saveFlowMock = vi.fn();
 const executeFlowMock = vi.fn();
 const stopExecutionMock = vi.fn();
 const setExecutionStateMock = vi.fn();
+const runtimeSelfCheckMock = vi.fn();
 let flowState = {
   flow: null as null | { id: string; name: string; blocks: Record<string, unknown>; connections: unknown[] },
   isDirty: false,
@@ -53,6 +54,7 @@ vi.mock('./hooks', async () => {
       executionLog: [],
       errorMessage: null,
       setExecutionState: setExecutionStateMock,
+      runtimeSelfCheck: runtimeSelfCheckMock,
       executeFlow: executeFlowMock,
       pauseExecution: vi.fn(),
       resumeExecution: vi.fn(),
@@ -129,6 +131,7 @@ describe('App quick-create entry points', () => {
     saveFlowMock.mockResolvedValue(undefined);
     executeFlowMock.mockResolvedValue(undefined);
     stopExecutionMock.mockResolvedValue(undefined);
+    runtimeSelfCheckMock.mockResolvedValue({ ok: true, code: 'OK', message: 'Runtime environment is ready' });
     tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
   });
 
@@ -226,6 +229,23 @@ describe('App execution uses saved flow state', () => {
       expect(setExecutionStateMock).toHaveBeenCalledWith('validation_blocked', 'Both condition branches are empty');
       expect(screen.getByText('执行失败')).toBeInTheDocument();
       expect(screen.getByText('Both condition branches are empty')).toBeInTheDocument();
+    });
+  });
+
+  it('blocks execution when runtime self check fails', async () => {
+    runtimeSelfCheckMock.mockResolvedValueOnce({
+      ok: false,
+      code: 'INPUT_BACKEND_UNAVAILABLE',
+      message: 'Input backend is unavailable',
+    });
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+
+    await waitFor(() => {
+      expect(executeFlowMock).not.toHaveBeenCalled();
+      expect(setExecutionStateMock).toHaveBeenCalledWith('validation_blocked', 'Input backend is unavailable');
     });
   });
 

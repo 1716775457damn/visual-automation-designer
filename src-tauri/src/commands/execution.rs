@@ -16,6 +16,8 @@ use crate::core::execution::{ExecutionController, Executor, ExecutionStatus};
 use crate::core::execution::ExecutionEvent;
 use crate::error::{AppError, Result};
 use crate::models::{FlowId, ImageId, ImageMetadata};
+use crate::platform::{InputController, ScreenCapture};
+use std::fs;
 
 /// Application state containing the execution state
 pub struct ExecutionState {
@@ -412,6 +414,63 @@ pub struct ExecutionStatusResponse {
     pub status: ExecutionStatus,
     /// Whether execution is active (running or paused)
     pub is_active: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuntimeCheckResponse {
+    pub ok: bool,
+    pub code: String,
+    pub message: String,
+}
+
+#[tauri::command]
+pub fn runtime_self_check(
+    execution_state: State<'_, ExecutionState>,
+) -> Result<RuntimeCheckResponse> {
+    let app_data_dir = execution_state.app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::InternalError(format!("Failed to get app data dir: {}", e)))?;
+
+    if let Err(e) = ScreenCapture::screen_count() {
+        return Ok(RuntimeCheckResponse {
+            ok: false,
+            code: "SCREEN_CAPTURE_UNAVAILABLE".to_string(),
+            message: format!("Screen capture is unavailable: {}", e),
+        });
+    }
+
+    if let Err(e) = InputController::new() {
+        return Ok(RuntimeCheckResponse {
+            ok: false,
+            code: "INPUT_BACKEND_UNAVAILABLE".to_string(),
+            message: format!("Input backend is unavailable: {}", e),
+        });
+    }
+
+    if let Err(e) = fs::create_dir_all(&app_data_dir) {
+        return Ok(RuntimeCheckResponse {
+            ok: false,
+            code: "APP_DATA_DIR_UNAVAILABLE".to_string(),
+            message: format!("App data directory is unavailable: {}", e),
+        });
+    }
+
+    let images_dir = app_data_dir.join("images");
+    if let Err(e) = fs::create_dir_all(&images_dir) {
+        return Ok(RuntimeCheckResponse {
+            ok: false,
+            code: "IMAGE_DIR_UNAVAILABLE".to_string(),
+            message: format!("Image directory is unavailable: {}", e),
+        });
+    }
+
+    Ok(RuntimeCheckResponse {
+        ok: true,
+        code: "OK".to_string(),
+        message: "Runtime environment is ready".to_string(),
+    })
 }
 
 // ============================================================================

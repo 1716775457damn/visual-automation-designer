@@ -77,6 +77,7 @@ function AppContent() {
     executionLog,
     errorMessage,
     setExecutionState,
+    runtimeSelfCheck,
     executeFlow: tauriExecuteFlow,
     pauseExecution,
     resumeExecution,
@@ -367,6 +368,12 @@ function AppContent() {
   }, [edges, flow, nodes]);
 
   const validateBeforeExecution = useCallback(async () => {
+    const runtimeCheck = await runtimeSelfCheck();
+    if (!runtimeCheck.ok) {
+      setExecutionState('validation_blocked', runtimeCheck.message);
+      throw new Error(runtimeCheck.message);
+    }
+
     const currentFlow = buildCurrentFlowForValidation();
     if (!currentFlow) {
       return true;
@@ -381,7 +388,7 @@ function AppContent() {
     }
 
     return true;
-  }, [buildCurrentFlowForValidation]);
+  }, [buildCurrentFlowForValidation, runtimeSelfCheck, setExecutionState]);
 
   const refreshValidationState = useCallback(async () => {
     const currentFlow = buildCurrentFlowForValidation();

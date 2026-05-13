@@ -172,6 +172,12 @@ export interface ExecutionStatusResponse {
   isActive: boolean;
 }
 
+export interface RuntimeCheckResponse {
+  ok: boolean;
+  code: string;
+  message: string;
+}
+
 // ============================================================================
 // Event Listener Functions
 // ============================================================================
@@ -369,4 +375,16 @@ export async function getExecutionStatus(): Promise<ExecutionStatusResponse> {
   }
 
   return invoke<ExecutionStatusResponse>('get_execution_status');
+}
+
+export async function runtimeSelfCheck(): Promise<RuntimeCheckResponse> {
+  if (isBrowserExecutionMockEnabled()) {
+    return {
+      ok: true,
+      code: 'OK',
+      message: 'Runtime environment is ready',
+    };
+  }
+
+  return invoke<RuntimeCheckResponse>('runtime_self_check');
 }

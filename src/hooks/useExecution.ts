@@ -14,7 +14,9 @@ import {
   pauseExecution as tauriPauseExecution,
   resumeExecution as tauriResumeExecution,
   getExecutionStatus as tauriGetExecutionStatus,
+  runtimeSelfCheck as tauriRuntimeSelfCheck,
   type ExecutionEvent,
+  type RuntimeCheckResponse,
   type ExecutionStatusType as TauriExecutionStatusType,
   type ExecutionStatusResponse,
 } from '../tauri/execution';
@@ -50,6 +52,7 @@ export interface UseExecutionReturn {
   completedBlocks: number;
   errorMessage: string | null;
   setExecutionState: (status: ExecutionStatusType, errorMessage?: string | null) => void;
+  runtimeSelfCheck: () => Promise<RuntimeCheckResponse>;
   executeFlow: (flowId: string) => Promise<void>;
   stepExecution: (flowId: string) => Promise<void>;
   pauseExecution: () => Promise<void>;
@@ -310,6 +313,10 @@ export function useExecution(): UseExecutionReturn {
     }
   }, []);
 
+  const runtimeSelfCheck = useCallback(async (): Promise<RuntimeCheckResponse> => {
+    return tauriRuntimeSelfCheck();
+  }, []);
+
   return {
     status,
     currentBlockId,
@@ -318,6 +325,7 @@ export function useExecution(): UseExecutionReturn {
     completedBlocks,
     errorMessage,
     setExecutionState,
+    runtimeSelfCheck,
     executeFlow,
     stepExecution,
     pauseExecution,

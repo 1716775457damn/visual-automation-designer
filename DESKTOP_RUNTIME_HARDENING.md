@@ -34,7 +34,7 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 ## 5. Platform permission and environment checks
 
-- [ ] Add pre-execution runtime self-check command
+- [x] Add pre-execution runtime self-check command
 - [ ] Detect screen capture unavailability
 - [ ] Detect input/accessibility unavailability
 - [ ] Add platform-specific remediation text

@@ -178,6 +178,7 @@ pub fn run() {
             commands::pause_execution,
             commands::resume_execution,
             commands::get_execution_status,
+            commands::runtime_self_check,
         ])
         .run(tauri::generate_context!());
 
