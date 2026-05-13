@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from './App';
 
 const hookMocks = vi.hoisted(() => ({
@@ -219,8 +219,11 @@ describe('App node placement feedback', () => {
 });
 
 describe('App execution uses saved flow state', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     flowState = {
       flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
       nodes: [],
@@ -235,10 +238,16 @@ describe('App execution uses saved flow state', () => {
     hookMocks.canonicalFlowBuilder.mockImplementation((flow) => flow);
   });
 
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
   it('saves dirty changes before execution', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
+    });
 
     await waitFor(() => {
       expect(saveFlowMock).toHaveBeenCalledTimes(1);
@@ -409,7 +418,9 @@ describe('App execution uses saved flow state', () => {
 
     const flowCanvasProps = flowEditorMocks.lastFlowCanvasProps;
 
-    flowCanvasProps?.onConnect?.({ source: 'condition-1', target: 'next-1' });
+    await act(async () => {
+      flowCanvasProps?.onConnect?.({ source: 'condition-1', target: 'next-1' });
+    });
 
     await waitFor(() => {
       expect(addConnectionMock).not.toHaveBeenCalled();
