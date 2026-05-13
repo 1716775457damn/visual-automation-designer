@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::models::block::{BlockConfig, BlockId};
+use crate::models::block::{BlockConfig, BlockId, BlockType, ControlType};
 use crate::models::flow::Flow;
 
 /// Validation error severity
@@ -225,8 +225,14 @@ impl FlowValidator {
     /// Validate connections in the flow
     fn validate_connections(&self, flow: &Flow) -> Vec<ValidationError> {
         let mut errors = Vec::new();
-        
+        let mut outgoing_by_source: HashMap<BlockId, Vec<&crate::models::Connection>> = HashMap::new();
+
         for connection in &flow.connections {
+            outgoing_by_source
+                .entry(connection.source.clone())
+                .or_default()
+                .push(connection);
+
             // Check source block exists
             if !flow.blocks.contains_key(&connection.source) {
                 errors.push(
@@ -274,7 +280,85 @@ impl FlowValidator {
             }
             seen_connections.insert(key);
         }
+
+        errors.extend(self.validate_control_block_structure(flow, &outgoing_by_source));
         
+        errors
+    }
+
+    fn validate_control_block_structure(
+        &self,
+        flow: &Flow,
+        outgoing_by_source: &HashMap<BlockId, Vec<&crate::models::Connection>>,
+    ) -> Vec<ValidationError> {
+        let mut errors = Vec::new();
+
+        for (block_id, block) in &flow.blocks {
+            let BlockType::Control { control } = &block.block_type else {
+                continue;
+            };
+
+            match control {
+                ControlType::Condition => {
+                    let outgoing = outgoing_by_source.get(block_id).cloned().unwrap_or_default();
+                    let default_outgoing = outgoing
+                        .iter()
+                        .filter(|connection| connection.source_handle.is_none())
+                        .count();
+
+                    if default_outgoing > 0 {
+                        errors.push(
+                            ValidationError::error(
+                                "CONDITION_DEFAULT_OUTGOING_UNSUPPORTED",
+                                "Condition blocks only support true/false branch connections during execution. Remove default outgoing connections or move continuation into each branch.".to_string(),
+                            )
+                            .with_block(block_id.clone())
+                        );
+                    }
+
+                    let branch_targets: HashSet<BlockId> = match &block.config {
+                        BlockConfig::Condition { true_branch, false_branch, .. } => true_branch
+                            .iter()
+                            .chain(false_branch.iter())
+                            .cloned()
+                            .collect(),
+                        _ => HashSet::new(),
+                    };
+
+                    for branch_target in branch_targets {
+                        if let Some(branch_outgoing) = outgoing_by_source.get(&branch_target) {
+                            if !branch_outgoing.is_empty() {
+                                errors.push(
+                                    ValidationError::error(
+                                        "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED",
+                                        "Condition branches currently support only direct branch nodes. A branch node has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
+                                    )
+                                    .with_block(block_id.clone())
+                                );
+                                break;
+                            }
+                        }
+                    }
+                }
+                ControlType::Loop | ControlType::LoopInfinite => {
+                    for child_id in &block.children {
+                        if let Some(child_outgoing) = outgoing_by_source.get(child_id) {
+                            if !child_outgoing.is_empty() {
+                                errors.push(
+                                    ValidationError::error(
+                                        "LOOP_SUBCHAIN_UNSUPPORTED",
+                                        "Loop bodies currently support only direct child nodes. A loop child has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
+                                    )
+                                    .with_block(block_id.clone())
+                                );
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         errors
     }
     
@@ -583,17 +667,83 @@ mod tests {
     }
     
     #[test]
-    fn test_validate_invalid_connection() {
+    fn test_validate_condition_default_outgoing_is_unsupported() {
         let validator = FlowValidator::new();
         let mut flow = create_test_flow();
-        
-        let block1 = add_click_block(&mut flow, 10, 20);
-        let fake_id = BlockId::new();
-        
-        // Connection to non-existent block
-        flow.add_connection(Connection::new(block1, fake_id));
-        
+
+        let condition_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Condition },
+            BlockPosition::new(100.0, 100.0),
+            BlockConfig::Condition {
+                image_id: crate::models::ImageId::new(),
+                condition: crate::models::ConditionOp::ImageExists,
+                true_branch: vec![],
+                false_branch: vec![],
+            },
+        );
+        let condition_id = condition_block.id.clone();
+        flow.add_block(condition_block);
+
+        let next_block = add_wait_block(&mut flow, 1000);
+        flow.add_connection(Connection::new(condition_id, next_block));
+
         let errors = validator.get_errors(&flow);
-        assert!(errors.iter().any(|e| e.code == "INVALID_CONNECTION_TARGET"));
+        assert!(errors.iter().any(|e| e.code == "CONDITION_DEFAULT_OUTGOING_UNSUPPORTED"));
+    }
+
+    #[test]
+    fn test_validate_condition_branch_subchain_is_unsupported() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let branch_a = add_click_block(&mut flow, 10, 20);
+        let branch_b = add_wait_block(&mut flow, 1000);
+
+        let condition_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Condition },
+            BlockPosition::new(100.0, 100.0),
+            BlockConfig::Condition {
+                image_id: crate::models::ImageId::new(),
+                condition: crate::models::ConditionOp::ImageExists,
+                true_branch: vec![branch_a.clone()],
+                false_branch: vec![],
+            },
+        );
+        let condition_id = condition_block.id.clone();
+        flow.add_block(condition_block);
+
+        flow.add_connection(Connection::with_handle(condition_id, branch_a.clone(), "true".to_string()));
+        flow.add_connection(Connection::new(branch_a, branch_b));
+
+        let errors = validator.get_errors(&flow);
+        assert!(errors.iter().any(|e| e.code == "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED"));
+    }
+
+    #[test]
+    fn test_validate_loop_subchain_is_unsupported() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let loop_child = add_click_block(&mut flow, 10, 20);
+        let loop_child_next = add_wait_block(&mut flow, 1000);
+
+        let loop_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Loop },
+            BlockPosition::new(100.0, 100.0),
+            BlockConfig::Loop { count: 2 },
+        );
+        let loop_id = loop_block.id.clone();
+        flow.add_block(loop_block.clone());
+
+        if let Some(block) = flow.get_block_mut(&loop_id) {
+            block.children = vec![loop_child.clone()];
+        }
+
+        flow.add_connection(Connection::new(loop_id, loop_child.clone()));
+        flow.add_connection(Connection::new(loop_child, loop_child_next));
+
+        let errors = validator.get_errors(&flow);
+        assert!(errors.iter().any(|e| e.code == "LOOP_SUBCHAIN_UNSUPPORTED"));
     }
 }
+
