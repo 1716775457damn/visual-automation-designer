@@ -708,6 +708,9 @@ impl Executor {
                     message: "Execution stopped".to_string(),
                 });
             }
+
+            // Respect pause state during active waiting
+            self.wait_if_paused().await;
             
             // Check timeout
             if start.elapsed().as_millis() as u64 > timeout {
@@ -742,6 +745,9 @@ impl Executor {
                     message: "Execution stopped".to_string(),
                 });
             }
+
+            // Respect pause state during active waiting
+            self.wait_if_paused().await;
             
             // Check if duration elapsed
             if start.elapsed().as_millis() as u64 >= duration_ms {

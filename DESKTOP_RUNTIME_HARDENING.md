@@ -18,8 +18,8 @@ This document tracks high-priority runtime issues for the packaged desktop app.
 
 ## 3. Pause/stop responsiveness
 
-- [ ] Add pause checks inside wait-image loop
-- [ ] Add pause checks inside wait-time loop
+- [x] Add pause checks inside wait-image loop
+- [x] Add pause checks inside wait-time loop
 - [ ] Make text input cancellable between characters
 - [ ] Make repeated clicks cancellable between clicks
 - [ ] Verify stop latency under active execution
