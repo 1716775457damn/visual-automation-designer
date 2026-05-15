@@ -91,7 +91,7 @@ describe('Flow Tauri Commands', () => {
             'block-1': {
               ...flow.blocks['block-1'],
               config: {
-                type: 'wait_image',
+                type: 'waitImage',
                 image_id: 'image-1',
                 timeout_ms: 5000,
               },
@@ -233,12 +233,69 @@ describe('Flow Tauri Commands', () => {
       expect(mockInvoke).toHaveBeenCalledWith('create_block', {
         flowId: 'test-flow-id',
         blockType,
-        config,
+        config: {
+          type: 'click',
+          mode: { mode: 'coordinates', x: 100, y: 200 },
+          count: 1,
+        },
         position,
       });
       expect(result.id).toBe('test-block-id');
     });
 
+    it('should serialize wait image config for create block command', async () => {
+      const waitImageType: BlockType = { type: 'action', action: 'wait_image' };
+      const waitImageConfig: BlockConfig = { type: 'wait_image', imageId: 'image-1', timeoutMs: 5000 };
+      const mockBlock: BlockNode = {
+        id: 'test-block-id',
+        blockType: waitImageType,
+        position,
+        config: waitImageConfig,
+        children: [],
+      };
+
+      mockInvoke.mockResolvedValueOnce(mockBlock);
+
+      await createBlock('test-flow-id', waitImageType, waitImageConfig, position);
+
+      expect(mockInvoke).toHaveBeenCalledWith('create_block', {
+        flowId: 'test-flow-id',
+        blockType: waitImageType,
+        config: {
+          type: 'waitImage',
+          image_id: 'image-1',
+          timeout_ms: 5000,
+        },
+        position,
+      });
+    });
+
+    it('should allow create block payloads with an unset wait image id', async () => {
+      const waitImageType: BlockType = { type: 'action', action: 'wait_image' };
+      const waitImageConfig: BlockConfig = { type: 'wait_image', timeoutMs: 5000 };
+      const mockBlock: BlockNode = {
+        id: 'test-block-id',
+        blockType: waitImageType,
+        position,
+        config: waitImageConfig,
+        children: [],
+      };
+
+      mockInvoke.mockResolvedValueOnce(mockBlock);
+
+      await createBlock('test-flow-id', waitImageType, waitImageConfig, position);
+
+      expect(mockInvoke).toHaveBeenCalledWith('create_block', {
+        flowId: 'test-flow-id',
+        blockType: waitImageType,
+        config: {
+          type: 'waitImage',
+          image_id: undefined,
+          timeout_ms: 5000,
+        },
+        position,
+      });
+    });
     it('should update block position', async () => {
       mockInvoke.mockResolvedValueOnce(true);
 
@@ -276,8 +333,25 @@ describe('Flow Tauri Commands', () => {
         flowId: 'test-flow-id',
         blockId: 'test-block-id',
         config: {
-          type: 'wait_image',
+          type: 'waitImage',
           image_id: 'image-1',
+          timeout_ms: 2500,
+        },
+      });
+    });
+
+    it('should allow updating wait image config before an image is selected', async () => {
+      mockInvoke.mockResolvedValueOnce(true);
+
+      const newConfig: BlockConfig = { type: 'wait_image', timeoutMs: 2500 };
+      await updateBlockConfig('test-flow-id', 'test-block-id', newConfig);
+
+      expect(mockInvoke).toHaveBeenCalledWith('update_block_config', {
+        flowId: 'test-flow-id',
+        blockId: 'test-block-id',
+        config: {
+          type: 'waitImage',
+          image_id: undefined,
           timeout_ms: 2500,
         },
       });
@@ -304,6 +378,30 @@ describe('Flow Tauri Commands', () => {
           condition: 'image_exists',
           true_branch: ['block-a'],
           false_branch: ['block-b'],
+        },
+      });
+    });
+
+    it('should allow condition configs with no image selected yet', async () => {
+      mockInvoke.mockResolvedValueOnce(true);
+
+      const newConfig: BlockConfig = {
+        type: 'condition',
+        condition: 'image_exists',
+        trueBranch: [],
+        falseBranch: [],
+      };
+      await updateBlockConfig('test-flow-id', 'test-block-id', newConfig);
+
+      expect(mockInvoke).toHaveBeenCalledWith('update_block_config', {
+        flowId: 'test-flow-id',
+        blockId: 'test-block-id',
+        config: {
+          type: 'condition',
+          image_id: undefined,
+          condition: 'image_exists',
+          true_branch: [],
+          false_branch: [],
         },
       });
     });
