@@ -102,9 +102,9 @@
   --color-bg-panel: rgba(19, 25, 39, 0.82);
   
   /* 文字色 */
-  --color-text-primary: #edf3ff;
-  --color-text-secondary: #a8b5d1;
-  --color-text-muted: #74819e;
+  --color-text-primary: #f5f8ff;
+  --color-text-secondary: #c7d4f3;
+  --color-text-muted: #97a6c7;
   --color-canvas-grid: rgba(140, 170, 255, 0.08);
   --color-overlay: rgba(0, 0, 0, 0.68);
   
@@ -135,9 +135,9 @@
      --color-bg-panel: rgba(19, 25, 39, 0.82);
     
     /* 文字色 */
-     --color-text-primary: #edf3ff;
-     --color-text-secondary: #a8b5d1;
-     --color-text-muted: #74819e;
+     --color-text-primary: #f5f8ff;
+     --color-text-secondary: #c7d4f3;
+     --color-text-muted: #97a6c7;
      --color-canvas-grid: rgba(140, 170, 255, 0.08);
      --color-overlay: rgba(0, 0, 0, 0.68);
     

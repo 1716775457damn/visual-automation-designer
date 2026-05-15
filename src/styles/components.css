@@ -7335,7 +7335,8 @@
 }
 
 .execution-log__entry--info {
-  background: color-mix(in srgb, var(--color-bg-secondary) 82%, transparent);
+background: color-mix(in srgb, var(--color-bg-secondary) 82%, transparent);
+  color: var(--color-text-primary);
 }
 
 .execution-log__entry--success {
@@ -7347,7 +7348,8 @@
 }
 
 .execution-log__entry--warning {
-  background: color-mix(in srgb, var(--color-warning) 12%, var(--color-bg-primary) 88%);
+background: color-mix(in srgb, var(--color-warning) 12%, var(--color-bg-primary) 88%);
+  color: color-mix(in srgb, var(--color-warning) 55%, var(--color-text-primary) 45%);
 }
 
 .block-config__changes-indicator {
@@ -7777,11 +7779,15 @@
 }
 
 .execution-log {
-  background: transparent;
+background: transparent;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+flex-direction: column;
 }
 
 .execution-log__header {
-  padding: 14px 16px 10px;
+  padding: 14px 52px 10px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
 }
 
@@ -7798,24 +7804,28 @@
 }
 
 .execution-log__content {
+flex: 1;
+  min-height: 0;
   padding: 6px 0 10px;
 }
 
 .execution-log__entry {
-  margin: 0 12px 8px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-  border-left-width: 4px;
-  border-radius: 14px;
-  box-shadow: var(--shadow-inset);
+margin: 0 12px 8px;
+border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+border-left-width: 4px;
+border-radius: 14px;
+box-shadow: var(--shadow-inset);
+  color: var(--color-text-primary);
 }
 
 .execution-log__time {
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
+color: var(--color-text-secondary);
+font-variant-numeric: tabular-nums;
 }
 
 .execution-log__message {
-  line-height: 1.5;
+line-height: 1.5;
+  color: inherit;
 }
 
 .app__status {

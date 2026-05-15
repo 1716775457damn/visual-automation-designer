@@ -19,6 +19,7 @@ export interface ExecutionLogProps {
   entries?: LogEntry[];
   maxHeight?: number;
   autoScroll?: boolean;
+  collapsed?: boolean;
 }
 
 // Event type to log type mapping
@@ -65,6 +66,7 @@ export function ExecutionLog({
   entries = [],
   maxHeight = 200,
   autoScroll = true,
+  collapsed = false,
 }: ExecutionLogProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(autoScroll);
@@ -127,6 +129,8 @@ export function ExecutionLog({
         </span>
       </div>
 
+      {!collapsed && (
+        <>
       {/* UX优化82: 筛选器 */}
       <div className="execution-log__filters">
         {(['all', 'info', 'success', 'error', 'warning'] as const).map((type) => (
@@ -207,6 +211,8 @@ export function ExecutionLog({
         <div className="execution-log__pause-hint">
           ⏸️ 自动滚动已暂停
         </div>
+      )}
+        </>
       )}
     </div>
   );

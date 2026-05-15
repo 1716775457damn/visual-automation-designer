@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 import type { Connection } from 'reactflow';
 import './App.css';
 import './styles/index.css';
@@ -39,6 +40,8 @@ function AppContent() {
 
   // UX优化121: 日志面板折叠状态
   const [logCollapsed, setLogCollapsed] = useState(false);
+  const [logHeight, setLogHeight] = useState(240);
+  const logResizeStateRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // UX优化124: 快捷键帮助面板
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -313,6 +316,42 @@ function AppContent() {
   const handleDismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
     window.localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true');
+  }, []);
+
+  const handleToggleLogCollapsed = useCallback(() => {
+    setLogCollapsed((current) => !current);
+  }, []);
+
+  const handleLogResizeStart = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setLogCollapsed(false);
+    logResizeStateRef.current = {
+      startY: event.clientY,
+      startHeight: logHeight,
+    };
+  }, [logHeight]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: MouseEvent) => {
+      if (!logResizeStateRef.current) {
+        return;
+      }
+
+      const deltaY = logResizeStateRef.current.startY - event.clientY;
+      const nextHeight = Math.min(520, Math.max(140, logResizeStateRef.current.startHeight + deltaY));
+      setLogHeight(nextHeight);
+    };
+
+    const handlePointerUp = () => {
+      logResizeStateRef.current = null;
+    };
+
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('mouseup', handlePointerUp);
+    return () => {
+      window.removeEventListener('mousemove', handlePointerMove);
+      window.removeEventListener('mouseup', handlePointerUp);
+    };
   }, []);
 
   const handlePlacePendingNode = useCallback((position: { x: number; y: number }) => {
@@ -824,13 +863,24 @@ function AppContent() {
       />
 
       {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}
-      <div className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}>
-        <ExecutionLog entries={logEntries} maxHeight={logCollapsed ? 40 : 180} />
-        {/* UX优化121: 折叠按钮 */}
+      <div
+        className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}
+        style={{ height: logCollapsed ? 54 : logHeight }}
+      >
+        <button
+          className="execution-log__resize-handle"
+          type="button"
+          aria-label="调整日志面板高度"
+          title="拖动调整日志面板高度"
+          onMouseDown={handleLogResizeStart}
+        />
+        <ExecutionLog entries={logEntries} maxHeight={logCollapsed ? 0 : Math.max(logHeight - 54, 80)} collapsed={logCollapsed} />
         <button
           className="execution-log__collapse-btn"
-          onClick={() => setLogCollapsed(!logCollapsed)}
+          onClick={handleToggleLogCollapsed}
           title={logCollapsed ? '展开日志' : '折叠日志'}
+          aria-label={logCollapsed ? '展开日志' : '折叠日志'}
+          type="button"
         >
           {logCollapsed ? '▲' : '▼'}
         </button>
