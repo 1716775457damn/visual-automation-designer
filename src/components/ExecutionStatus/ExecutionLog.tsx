@@ -20,6 +20,7 @@ export interface ExecutionLogProps {
   maxHeight?: number;
   autoScroll?: boolean;
   collapsed?: boolean;
+  onClear?: () => void;
 }
 
 // Event type to log type mapping
@@ -67,6 +68,7 @@ export function ExecutionLog({
   maxHeight = 200,
   autoScroll = true,
   collapsed = false,
+  onClear,
 }: ExecutionLogProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(autoScroll);
@@ -124,9 +126,22 @@ export function ExecutionLog({
       {/* Header */}
       <div className="execution-log__header">
         <h4>📋 执行日志</h4>
-        <span className="execution-log__count" aria-label={`${entries.length} 条记录`}>
-          {entries.length} 条
-        </span>
+        <div className="execution-log__header-actions">
+          {!collapsed && onClear && (
+            <button
+              className="execution-log__clear-btn"
+              type="button"
+              onClick={onClear}
+              aria-label="清空执行日志"
+              title="清空执行日志"
+            >
+              清空
+            </button>
+          )}
+          <span className="execution-log__count" aria-label={`${entries.length} 条记录`}>
+            {entries.length} 条
+          </span>
+        </div>
       </div>
 
       {!collapsed && (

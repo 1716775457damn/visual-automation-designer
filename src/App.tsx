@@ -22,6 +22,9 @@ type PendingUnsavedAction =
 type PendingPlacement = { type: string; category: string };
 
 const ONBOARDING_DISMISSED_KEY = 'vad-onboarding-dismissed';
+const LOG_COLLAPSED_STORAGE_KEY = 'vad-log-collapsed';
+const LOG_HEIGHT_STORAGE_KEY = 'vad-log-height';
+const DEFAULT_LOG_HEIGHT = 240;
 
 function isInputLikeElement(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
@@ -39,8 +42,23 @@ function AppContent() {
   const { mode: themeMode, toggleTheme } = useTheme();
 
   // UX优化121: 日志面板折叠状态
-  const [logCollapsed, setLogCollapsed] = useState(false);
-  const [logHeight, setLogHeight] = useState(240);
+  const [logCollapsed, setLogCollapsed] = useState(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    return window.localStorage.getItem(LOG_COLLAPSED_STORAGE_KEY) === 'true';
+  });
+  const [logHeight, setLogHeight] = useState(() => {
+    if (typeof window === 'undefined') {
+      return DEFAULT_LOG_HEIGHT;
+    }
+
+    const savedHeight = Number(window.localStorage.getItem(LOG_HEIGHT_STORAGE_KEY));
+    return Number.isFinite(savedHeight) && savedHeight >= 140 && savedHeight <= 520
+      ? savedHeight
+      : DEFAULT_LOG_HEIGHT;
+  });
   const logResizeStateRef = useRef<{ startY: number; startHeight: number } | null>(null);
 
   // UX优化124: 快捷键帮助面板
@@ -322,6 +340,11 @@ function AppContent() {
     setLogCollapsed((current) => !current);
   }, []);
 
+  const handleClearExecutionLog = useCallback(() => {
+    clearLog();
+    showToast('info', '执行日志已清空');
+  }, [clearLog, showToast]);
+
   const handleLogResizeStart = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     setLogCollapsed(false);
@@ -329,6 +352,14 @@ function AppContent() {
       startY: event.clientY,
       startHeight: logHeight,
     };
+  }, [logHeight]);
+
+  useEffect(() => {
+    window.localStorage.setItem(LOG_COLLAPSED_STORAGE_KEY, String(logCollapsed));
+  }, [logCollapsed]);
+
+  useEffect(() => {
+    window.localStorage.setItem(LOG_HEIGHT_STORAGE_KEY, String(logHeight));
   }, [logHeight]);
 
   useEffect(() => {
@@ -874,7 +905,12 @@ function AppContent() {
           title="拖动调整日志面板高度"
           onMouseDown={handleLogResizeStart}
         />
-        <ExecutionLog entries={logEntries} maxHeight={logCollapsed ? 0 : Math.max(logHeight - 54, 80)} collapsed={logCollapsed} />
+        <ExecutionLog
+          entries={logEntries}
+          maxHeight={logCollapsed ? 0 : Math.max(logHeight - 54, 80)}
+          collapsed={logCollapsed}
+          onClear={handleClearExecutionLog}
+        />
         <button
           className="execution-log__collapse-btn"
           onClick={handleToggleLogCollapsed}

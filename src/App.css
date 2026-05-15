@@ -597,17 +597,38 @@ min-height: 54px;
 }
 
 .execution-log__collapse-btn {
-  position: absolute;
-  top: 18px;
-  right: 14px;
-  z-index: 2;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
+position: absolute;
+top: 18px;
+right: 14px;
+z-index: 2;
+width: 32px;
+height: 32px;
+border-radius: 999px;
+border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+color: var(--color-text-primary);
+cursor: pointer;
+}
+
+.execution-log__collapse-btn:hover,
+.execution-log__clear-btn:hover {
+  background: color-mix(in srgb, var(--color-bg-secondary) 82%, transparent);
+}
+
+.execution-log__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.execution-log__clear-btn {
   border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  border-radius: 999px;
   background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
-  color: var(--color-text-primary);
+  color: var(--color-text-secondary);
+  padding: 4px 10px;
   cursor: pointer;
+  font-size: var(--font-size-xs);
 }
 
 .config-placeholder {
