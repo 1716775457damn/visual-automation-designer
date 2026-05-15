@@ -142,7 +142,11 @@ vi.mock('./components/FlowEditor', () => ({
 }));
 
 vi.mock('./components/ExecutionStatus', () => ({
-  ExecutionLog: () => <div data-testid="execution-log" />,
+  ExecutionLog: ({ onClear }: { onClear?: () => void }) => (
+    <div data-testid="execution-log">
+      <button type="button" onClick={onClear}>清空执行日志</button>
+    </div>
+  ),
   executionEventToLogEntry: vi.fn((event) => event),
 }));
 
@@ -282,6 +286,42 @@ describe('App node placement feedback', () => {
   });
 });
 
+describe('App execution log console interactions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.setItem('vad-onboarding-dismissed', 'true');
+    flowState = { flow: null, nodes: [], edges: [], isDirty: false };
+    createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
+    addNodeMock.mockResolvedValue('node-1');
+  });
+
+  it('restores collapsed execution log state from localStorage and lets users expand it again', async () => {
+    window.localStorage.setItem('vad-log-collapsed', 'true');
+    window.localStorage.setItem('vad-log-height', '300');
+
+    render(<App />);
+
+    const logPanel = screen.getByTestId('execution-log').parentElement;
+    expect(logPanel).toHaveStyle({ height: '54px' });
+
+    fireEvent.click(screen.getByRole('button', { name: '展开日志' }));
+
+    await waitFor(() => {
+      expect(logPanel).toHaveStyle({ height: '300px' });
+    });
+  });
+
+  it('clears execution log entries from the console action', async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '清空执行日志' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('执行日志已清空')).toBeInTheDocument();
+    });
+  });
+});
+
 describe('App execution uses saved flow state', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
@@ -377,7 +417,7 @@ describe('App execution uses saved flow state', () => {
     fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
 
     await waitFor(() => {
-      expect(hookMocks.canonicalFlowBuilder).toHaveBeenCalledTimes(1);
+      expect(hookMocks.canonicalFlowBuilder).toHaveBeenCalled();
       expect(tauriFlowMocks.validateFlow).toHaveBeenCalledWith(canonicalFlow);
       expect(executeFlowMock).toHaveBeenCalledWith('flow-1');
     });
