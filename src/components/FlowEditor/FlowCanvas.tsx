@@ -107,6 +107,16 @@ interface CanvasPoint {
   y: number;
 }
 
+const PLACEMENT_IGNORE_SELECTOR = [
+  '.react-flow__controls',
+  '.react-flow__controls-button',
+  '.react-flow__minimap',
+  '.react-flow__panel',
+  '.react-flow__handle',
+  '.context-menu',
+  '.flow-canvas__placement-preview',
+].join(', ');
+
 function getPlacementHintMessage(pendingPlacement?: { type: string; category: string } | null): string {
   if (!pendingPlacement) {
     return '从工具箱拖拽积木块到画布';
@@ -121,6 +131,18 @@ function getPlacementHintMessage(pendingPlacement?: { type: string; category: st
   }
 
   return `点击白板放置: ${pendingPlacement.type}`;
+}
+
+function toFlowPosition(instance: ReactFlowInstance, point: { x: number; y: number }): { x: number; y: number } {
+  return instance.screenToFlowPosition(point);
+}
+
+function shouldIgnorePlacementClick(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.closest(PLACEMENT_IGNORE_SELECTOR) !== null;
 }
 
 export interface FlowCanvasProps {
@@ -196,9 +218,9 @@ export const FlowCanvas = memo(function FlowCanvas({
       }
 
       const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      return reactFlowInstance.project({
-        x: bounds.width / 2,
-        y: bounds.height / 2,
+      return toFlowPosition(reactFlowInstance, {
+        x: bounds.left + bounds.width / 2,
+        y: bounds.top + bounds.height / 2,
       });
     };
 
@@ -273,22 +295,42 @@ export const FlowCanvas = memo(function FlowCanvas({
     [onNodeSelect]
   );
 
-  // Handle pane click to deselect - memoized
-  const onPaneClick = useCallback((event: React.MouseEvent) => {
-    if (pendingPlacement && onPlacePendingNode && reactFlowInstance && reactFlowWrapper.current) {
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const clickedPosition = reactFlowInstance.project({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
-      });
-      setPlacementPreview(null);
-      onPlacePendingNode(clickedPosition);
+  const onPaneClick = useCallback(() => {
+    onNodeSelect?.(null);
+    setContextMenu(null);
+  }, [onNodeSelect]);
+
+  const handlePlacementClick = useCallback((clientX: number, clientY: number) => {
+    if (!pendingPlacement || !onPlacePendingNode || !reactFlowInstance) {
       return;
     }
 
-    onNodeSelect?.(null);
+    const clickedPosition = toFlowPosition(reactFlowInstance, {
+      x: clientX,
+      y: clientY,
+    });
+
+    setPlacementPreview(null);
+    onPlacePendingNode(clickedPosition);
     setContextMenu(null);
-  }, [onNodeSelect, onPlacePendingNode, pendingPlacement, reactFlowInstance]);
+  }, [onPlacePendingNode, pendingPlacement, reactFlowInstance]);
+
+  const onCanvasClickCapture = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!pendingPlacement) {
+      return;
+    }
+
+    if (event.button !== 0) {
+      return;
+    }
+
+    if (shouldIgnorePlacementClick(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    handlePlacementClick(event.clientX, event.clientY);
+  }, [handlePlacementClick, pendingPlacement]);
 
   // Handle drag over - memoized
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -358,10 +400,9 @@ export const FlowCanvas = memo(function FlowCanvas({
       }
 
       // Get drop position
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = reactFlowInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      const position = toFlowPosition(reactFlowInstance, {
+        x: event.clientX,
+        y: event.clientY,
       });
 
       // Snap to grid (20px)
@@ -432,10 +473,9 @@ export const FlowCanvas = memo(function FlowCanvas({
       if (!reactFlowInstance || !reactFlowWrapper.current) return;
 
       // Get click position in canvas coordinates
-      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
-      const canvasPosition = reactFlowInstance.project({
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+      const canvasPosition = toFlowPosition(reactFlowInstance, {
+        x: event.clientX,
+        y: event.clientY,
       });
 
       setContextMenu({
@@ -455,10 +495,9 @@ export const FlowCanvas = memo(function FlowCanvas({
         return;
       }
 
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = reactFlowInstance.project({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+      const position = toFlowPosition(reactFlowInstance, {
+        x: event.clientX,
+        y: event.clientY,
       });
 
       setPlacementPreview({
@@ -634,6 +673,8 @@ export const FlowCanvas = memo(function FlowCanvas({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      onMouseDownCapture={onCanvasClickCapture}
+      onClickCapture={onCanvasClickCapture}
     >
       <ReactFlowProvider>
         <ReactFlow

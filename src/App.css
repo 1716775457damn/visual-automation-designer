@@ -480,3 +480,141 @@
   width: 100%;
   height: 100%;
 }
+
+@media (max-width: 1100px) {
+  .app__execution-log {
+    left: 16px;
+    right: 16px;
+    bottom: 52px;
+  }
+}
+
+/* 2026 polish pass: desktop shell refinement */
+.app {
+  position: relative;
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 12%, transparent) 0%, transparent 32%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 10%, transparent) 0%, transparent 28%),
+    linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
+}
+
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 18%),
+    radial-gradient(circle at center, transparent 0%, rgba(7, 14, 30, 0.02) 100%);
+}
+
+.app__content {
+  position: relative;
+  gap: 0;
+}
+
+.app__sidebar {
+  position: relative;
+  backdrop-filter: blur(16px);
+}
+
+.app__sidebar--left,
+.app__sidebar--right {
+  background: color-mix(in srgb, var(--color-bg-panel) 100%, transparent);
+  box-shadow: var(--shadow-inset);
+}
+
+.app__sidebar--left {
+  width: 248px;
+}
+
+.app__sidebar--right {
+  width: 320px;
+}
+
+.app__main {
+  position: relative;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 88%, transparent), color-mix(in srgb, var(--color-bg-primary) 96%, transparent));
+}
+
+.app__status {
+  position: relative;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--color-bg-panel) 96%, transparent);
+  backdrop-filter: blur(18px);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+}
+
+.app__status-item--clean,
+.app__status-item--dirty,
+.app__status-item--stats,
+.app__status-item--flow,
+.app__status-item--loading,
+.app__status-item--error,
+.app__status-item--placement {
+  min-height: 30px;
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 72%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+}
+
+.app__execution-log {
+  left: 264px;
+  right: 336px;
+  bottom: 52px;
+  background: color-mix(in srgb, var(--color-bg-panel) 96%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: 20px 20px 0 0;
+  backdrop-filter: blur(18px);
+}
+
+.config-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 24px 20px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 86%, transparent), color-mix(in srgb, var(--color-bg-secondary) 94%, transparent));
+}
+
+.config-placeholder__icon {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-accent-soft) 100%);
+  box-shadow: var(--shadow-sm);
+  font-size: 28px;
+}
+
+.config-placeholder h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.config-placeholder p {
+  line-height: 1.6;
+}
+
+.config-placeholder__hint-box {
+  margin-top: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 82%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.config-placeholder__action-btn {
+  min-height: 44px;
+  border-radius: 14px;
+  box-shadow: 0 12px 24px rgba(35, 123, 255, 0.18);
+}
+
+.config-placeholder__action-btn--secondary {
+  box-shadow: none;
+}
