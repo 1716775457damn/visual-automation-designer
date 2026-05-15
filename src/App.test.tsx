@@ -11,7 +11,12 @@ const tauriFlowMocks = vi.hoisted(() => ({
 }));
 
 const flowEditorMocks = vi.hoisted(() => ({
-  lastFlowCanvasProps: null as null | { onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void; nodeValidation?: Record<string, { message: string }> },
+  lastFlowCanvasProps: null as null | {
+    onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void;
+    onPlacePendingNode?: (position: { x: number; y: number }) => void;
+    pendingPlacement?: { type: string; category: string } | null;
+    nodeValidation?: Record<string, { message: string }>;
+  },
 }));
 
 const createFlowMock = vi.fn();
@@ -102,15 +107,28 @@ vi.mock('./components/App', () => ({
 }));
 
 vi.mock('./components/FlowEditor', () => ({
-  FlowCanvas: (props: { onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void; nodeValidation?: Record<string, { message: string }> }) => {
+  FlowCanvas: (props: {
+    onConnect?: (connection: { source: string; target: string; sourceHandle?: string }) => void;
+    onPlacePendingNode?: (position: { x: number; y: number }) => void;
+    pendingPlacement?: { type: string; category: string } | null;
+    nodeValidation?: Record<string, { message: string }>;
+  }) => {
     flowEditorMocks.lastFlowCanvasProps = props;
-    const { nodeValidation } = props;
+    const { nodeValidation, pendingPlacement, onPlacePendingNode } = props;
 
     return (
       <div data-testid="flow-canvas">
         {nodeValidation && Object.entries(nodeValidation).map(([nodeId, validation]) => (
           <span key={nodeId} data-testid={`node-validation-${nodeId}`}>{validation.message}</span>
         ))}
+        {pendingPlacement && (
+          <button
+            type="button"
+            onClick={() => onPlacePendingNode?.({ x: 240, y: 180 })}
+          >
+            模拟在已有节点区域放置
+          </button>
+        )}
       </div>
     );
   },
@@ -129,7 +147,25 @@ vi.mock('./components/ExecutionStatus', () => ({
 }));
 
 vi.mock('./components/BlockToolbox', () => ({
-  Toolbox: () => <div data-testid="toolbox" />,
+  Toolbox: ({
+    onBlockSelect,
+    onArmPlacement,
+    pendingPlacementLabel,
+    onCancelPlacement,
+  }: {
+    onBlockSelect?: (type: string, category: string) => void;
+    onArmPlacement?: (type: string, category: string) => void;
+    pendingPlacementLabel?: string | null;
+    onCancelPlacement?: () => void;
+  }) => (
+    <div data-testid="toolbox">
+      <button type="button" onClick={() => onBlockSelect?.('click', 'action')}>⚡ 直接放一个点击积木块</button>
+      <button type="button" onClick={() => onArmPlacement?.('loop', 'control')}>在白板上指定位置放置 循环</button>
+      {pendingPlacementLabel && (
+        <button type="button" onClick={onCancelPlacement}>当前放置: {pendingPlacementLabel} · 点击取消</button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('./components/ConfigPanel', () => ({
@@ -195,7 +231,9 @@ describe('App node placement feedback', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.setItem('vad-onboarding-dismissed', 'true');
+    flowState = { flow: null, nodes: [], edges: [], isDirty: false };
     createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
+    addNodeMock.mockResolvedValue('node-1');
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
@@ -208,13 +246,39 @@ describe('App node placement feedback', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: '⚡ 直接放一个点击积木块' }));
+    fireEvent.click(screen.getAllByRole('button', { name: '⚡ 直接放一个点击积木块' })[0]);
 
     await waitFor(() => {
       expect(screen.getByText('添加节点失败')).toBeInTheDocument();
     });
 
     expect(screen.queryByText('click 已添加到当前视口')).not.toBeInTheDocument();
+  });
+
+  it('places a node even when precision placement completes over an existing node region', async () => {
+    addNodeMock.mockReset();
+    addNodeMock.mockResolvedValue('node-precision');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '在白板上指定位置放置 循环' }));
+
+    await waitFor(() => {
+      expect(createFlowMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: '模拟在已有节点区域放置' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: '模拟在已有节点区域放置' }));
+
+    await waitFor(() => {
+      expect(addNodeMock).toHaveBeenCalledWith('loop', 'control', { x: 240, y: 180 }, undefined, 'flow-1');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('loop 已放置到白板')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('当前放置: loop · 点击取消')).not.toBeInTheDocument();
   });
 });
 
