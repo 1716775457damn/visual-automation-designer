@@ -8,6 +8,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Node, Edge, Connection, addEdge, NodeChange, applyNodeChanges, EdgeChange, applyEdgeChanges } from 'reactflow';
 import type { BlockNodeData } from '../components/FlowEditor/BlockNode';
+import { logRuntimeIssue } from '../tauri/logging';
 import {
   createFlow as tauriCreateFlow,
   saveFlow as tauriSaveFlow,
@@ -157,6 +158,10 @@ function getBlockCategory(blockType: BlockType): 'action' | 'control' {
   return blockType.type;
 }
 
+function createPlaceholderImageId(): string {
+  return '00000000-0000-0000-0000-000000000000';
+}
+
 /**
  * Convert BlockConfig to plain record for display
  */
@@ -173,7 +178,7 @@ function createDefaultConfig(type: string, category: string): BlockConfig {
       case 'click':
         return { type: 'click', mode: { mode: 'coordinates', x: 0, y: 0 }, count: 1 };
       case 'wait_image':
-        return { type: 'wait_image', imageId: '', timeoutMs: 5000 };
+        return { type: 'wait_image', imageId: createPlaceholderImageId(), timeoutMs: 5000 };
       case 'wait_time':
         return { type: 'wait_time', durationMs: 1000 };
       case 'input_text':
@@ -188,7 +193,7 @@ function createDefaultConfig(type: string, category: string): BlockConfig {
       case 'loop_infinite':
         return { type: 'loop_infinite' };
       case 'condition':
-        return { type: 'condition', imageId: '', condition: 'image_exists', trueBranch: [], falseBranch: [] };
+        return { type: 'condition', imageId: createPlaceholderImageId(), condition: 'image_exists', trueBranch: [], falseBranch: [] };
       default:
         return { type: 'loop', count: 1 };
     }
@@ -274,6 +279,17 @@ function synchronizeNodeSemantics(
   });
 
   return applyEntryPointFlag(normalizedNodes, entryBlock);
+}
+
+async function reportRuntimeIssue(source: string, error: unknown): Promise<void> {
+  const message = error instanceof Error ? error.message : String(error);
+  const details = error instanceof Error && error.stack ? error.stack : undefined;
+
+  try {
+    await logRuntimeIssue({ source, message, details });
+  } catch (loggingError) {
+    console.error('Failed to write runtime issue log:', loggingError);
+  }
 }
 
 export function buildCanonicalFlow(
@@ -534,6 +550,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
       return block.id;
     } catch (err) {
+      await reportRuntimeIssue('useFlow.addNode', err);
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;
@@ -593,6 +610,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       await tauriUpdateBlockConfig(flow.id, nodeId, config);
       await refreshUndoRedoForFlow(flow.id);
     } catch (err) {
+      await reportRuntimeIssue('useFlow.updateNodeConfig', err);
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
       throw error;

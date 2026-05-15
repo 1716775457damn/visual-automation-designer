@@ -40,7 +40,7 @@ export interface BlockPosition {
  */
 export type ClickMode =
   | { mode: 'coordinates'; x: number; y: number }
-  | { mode: 'image'; imageId: string };
+  | { mode: 'image'; imageId?: string };
 
 /**
  * 条件操作
@@ -58,7 +58,7 @@ export type BlockConfig =
     }
   | {
       type: 'wait_image';
-      imageId: string;
+      imageId?: string;
       timeoutMs?: number;
     }
   | {
@@ -79,7 +79,7 @@ export type BlockConfig =
     }
   | {
       type: 'condition';
-      imageId: string;
+      imageId?: string;
       condition: ConditionOp;
       trueBranch: BlockId[];
       falseBranch: BlockId[];

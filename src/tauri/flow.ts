@@ -136,7 +136,7 @@ export interface BlockPosition {
  */
 export type ClickMode =
   | { mode: 'coordinates'; x: number; y: number }
-  | { mode: 'image'; imageId: ImageId };
+  | { mode: 'image'; imageId?: ImageId };
 
 /**
  * Condition operator
@@ -154,7 +154,7 @@ export type BlockConfig =
     }
   | {
       type: 'wait_image';
-      imageId: ImageId;
+      imageId?: ImageId;
       timeoutMs?: number;
     }
   | {
@@ -175,7 +175,7 @@ export type BlockConfig =
     }
   | {
       type: 'condition';
-      imageId: ImageId;
+      imageId?: ImageId;
       condition: ConditionOp;
       trueBranch: BlockId[];
       falseBranch: BlockId[];
@@ -252,20 +252,20 @@ type TauriBlockConfigPayload =
       type: 'click';
       mode:
         | { mode: 'coordinates'; x: number; y: number }
-        | { mode: 'image'; image_id: string };
+        | { mode: 'image'; image_id?: string };
       count: number;
     }
   | {
-      type: 'wait_image';
-      image_id: string;
+      type: 'waitImage';
+      image_id?: string;
       timeout_ms?: number;
     }
   | {
-      type: 'wait_time';
+      type: 'waitTime';
       duration_ms: number;
     }
   | {
-      type: 'input_text';
+      type: 'inputText';
       text: string;
       interval_ms?: number;
     }
@@ -274,11 +274,11 @@ type TauriBlockConfigPayload =
       count: number;
     }
   | {
-      type: 'loop_infinite';
+      type: 'loopInfinite';
     }
   | {
       type: 'condition';
-      image_id: string;
+      image_id?: string;
       condition: ConditionOp;
       true_branch: BlockId[];
       false_branch: BlockId[];
@@ -296,25 +296,30 @@ function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
       };
     case 'wait_image':
       return {
-        type: 'wait_image',
+        type: 'waitImage',
         image_id: config.imageId,
         timeout_ms: config.timeoutMs,
       };
     case 'wait_time':
       return {
-        type: 'wait_time',
+        type: 'waitTime',
         duration_ms: config.durationMs,
       };
     case 'input_text':
       return {
-        type: 'input_text',
+        type: 'inputText',
         text: config.text,
         interval_ms: config.intervalMs,
       };
     case 'loop':
-      return config;
+      return {
+        type: 'loop',
+        count: config.count,
+      };
     case 'loop_infinite':
-      return config;
+      return {
+        type: 'loopInfinite',
+      };
     case 'condition':
       return {
         type: 'condition',
