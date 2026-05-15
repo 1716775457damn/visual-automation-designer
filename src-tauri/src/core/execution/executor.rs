@@ -551,7 +551,7 @@ impl Executor {
                 self.execute_click_block(mode, *count).await
             }
             BlockConfig::WaitImage { image_id, timeout_ms } => {
-                self.execute_wait_image_block(image_id, *timeout_ms).await
+                self.execute_wait_image_block(image_id.as_ref(), *timeout_ms).await
             }
             BlockConfig::WaitTime { duration_ms } => {
                 self.execute_wait_time_block(*duration_ms).await
@@ -580,7 +580,7 @@ impl Executor {
                     self.execute_infinite_loop_block(block_node.id.clone(), &block_node.children).await
                 }
                 BlockConfig::Condition { image_id, condition, true_branch, false_branch } => {
-                    self.execute_conditional_block(image_id, condition, true_branch, false_branch).await
+                    self.execute_conditional_block(image_id.as_ref(), condition, true_branch, false_branch).await
                 }
                 _ => {
                     Err(AppError::ExecutionFailed("Invalid control block config".to_string()))
@@ -642,6 +642,9 @@ impl Executor {
         let (x, y) = match mode {
             ClickMode::Coordinates { x, y } => (*x, *y),
             ClickMode::Image { image_id } => {
+                let image_id = image_id.as_ref().ok_or_else(|| {
+                    AppError::ExecutionFailed("Click block requires an image before execution".to_string())
+                })?;
                 // Check cache first
                 let cached = {
                     let ctx = self.context.lock().await;
@@ -703,9 +706,12 @@ impl Executor {
     /// Execute WaitImageBlock
     async fn execute_wait_image_block(
         &mut self,
-        image_id: &ImageId,
+        image_id: Option<&ImageId>,
         timeout_ms: Option<u64>,
     ) -> Result<BlockResult> {
+        let image_id = image_id.ok_or_else(|| {
+            AppError::ExecutionFailed("WaitImage block requires a selected image before execution".to_string())
+        })?;
         let timeout = timeout_ms.unwrap_or(DEFAULT_WAIT_TIMEOUT_MS);
         let start = std::time::Instant::now();
         
@@ -934,12 +940,15 @@ impl Executor {
     /// Execute ConditionalBlock
     fn execute_conditional_block<'a>(
         &'a mut self,
-        image_id: &'a ImageId,
+        image_id: Option<&'a ImageId>,
         condition: &'a ConditionOp,
         true_branch: &'a [BlockId],
         false_branch: &'a [BlockId],
     ) -> BoxFuture<'a, Result<BlockResult>> {
         Box::pin(async move {
+            let image_id = image_id.ok_or_else(|| {
+                AppError::ExecutionFailed("Condition block requires a selected image before execution".to_string())
+            })?;
             // Find image on screen
             let (found, _) = self.find_image_on_screen(image_id).await?;
             
