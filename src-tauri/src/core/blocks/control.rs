@@ -208,7 +208,7 @@ impl Block for InfiniteLoopBlock {
 pub struct ConditionalBlock {
     pub id: BlockId,
     pub position: BlockPosition,
-    pub image_id: ImageId,
+    pub image_id: Option<ImageId>,
     pub condition: ConditionOp,
     pub true_branch: Vec<BlockId>,
     pub false_branch: Vec<BlockId>,
@@ -217,7 +217,7 @@ pub struct ConditionalBlock {
 impl ConditionalBlock {
     /// Create a new conditional block
     pub fn new(
-        image_id: ImageId,
+        image_id: Option<ImageId>,
         condition: ConditionOp,
         position: BlockPosition,
     ) -> Self {
@@ -396,7 +396,7 @@ mod tests {
     fn test_conditional_block_creation() {
         let image_id = ImageId::new();
         let block = ConditionalBlock::new(
-            image_id.clone(),
+            Some(image_id.clone()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -409,7 +409,7 @@ mod tests {
     #[test]
     fn test_conditional_block_add_branches() {
         let mut block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn test_conditional_block_evaluate_condition() {
         let block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn test_conditional_block_validation_valid() {
         let mut block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -462,7 +462,7 @@ mod tests {
     #[test]
     fn test_conditional_block_validation_no_branches() {
         let block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -483,7 +483,7 @@ mod tests {
     #[test]
     fn test_conditional_block_serialization() {
         let mut block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageNotExists,
             BlockPosition::new(50.0, 100.0),
         );

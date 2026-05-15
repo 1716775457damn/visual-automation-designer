@@ -88,7 +88,7 @@ pub enum ClickMode {
     /// Click at specific coordinates
     Coordinates { x: u32, y: u32 },
     /// Click at the center of an image found on screen
-    Image { image_id: crate::models::image::ImageId },
+    Image { image_id: Option<crate::models::image::ImageId> },
 }
 
 /// Condition operator for conditional blocks
@@ -115,7 +115,7 @@ pub enum BlockConfig {
     /// Wait for image block configuration
     WaitImage {
         /// Image ID to wait for
-        image_id: crate::models::image::ImageId,
+        image_id: Option<crate::models::image::ImageId>,
         /// Timeout in milliseconds (optional)
         timeout_ms: Option<u64>,
     },
@@ -141,7 +141,7 @@ pub enum BlockConfig {
     /// Conditional block configuration
     Condition {
         /// Image ID to check
-        image_id: crate::models::image::ImageId,
+        image_id: Option<crate::models::image::ImageId>,
         /// Condition operator
         condition: ConditionOp,
         /// Block IDs to execute when condition is true

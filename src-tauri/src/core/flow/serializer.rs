@@ -197,14 +197,20 @@ impl FlowExportSerializer {
             match &block.config {
                 BlockConfig::Click { mode, .. } => {
                     if let ClickMode::Image { image_id } = mode {
-                        image_ids.push(image_id.clone());
+                        if let Some(image_id) = image_id {
+                            image_ids.push(image_id.clone());
+                        }
                     }
                 }
                 BlockConfig::WaitImage { image_id, .. } => {
-                    image_ids.push(image_id.clone());
+                    if let Some(image_id) = image_id {
+                        image_ids.push(image_id.clone());
+                    }
                 }
                 BlockConfig::Condition { image_id, .. } => {
-                    image_ids.push(image_id.clone());
+                    if let Some(image_id) = image_id {
+                        image_ids.push(image_id.clone());
+                    }
                 }
                 _ => {}
             }
@@ -362,7 +368,7 @@ mod tests {
             BlockType::Action { action: ActionType::WaitImage },
             BlockPosition::new(100.0, 100.0),
             BlockConfig::WaitImage {
-                image_id: image_id.clone(),
+                image_id: Some(image_id.clone()),
                 timeout_ms: Some(5000),
             },
         );
@@ -384,7 +390,7 @@ mod tests {
             BlockType::Action { action: ActionType::WaitImage },
             BlockPosition::new(100.0, 100.0),
             BlockConfig::WaitImage {
-                image_id: image_id.clone(),
+                image_id: Some(image_id.clone()),
                 timeout_ms: Some(5000),
             },
         );
@@ -392,7 +398,7 @@ mod tests {
             BlockType::Action { action: ActionType::Click },
             BlockPosition::new(200.0, 100.0),
             BlockConfig::Click {
-                mode: ClickMode::Image { image_id: image_id.clone() },
+                mode: ClickMode::Image { image_id: Some(image_id.clone()) },
                 count: 1,
             },
         );

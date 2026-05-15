@@ -466,6 +466,18 @@ impl FlowValidator {
                     if let crate::models::block::ClickMode::Image { image_id } = mode {
                         // Note: We can't check if the image actually exists here
                         // That check should be done at execution time or with ImageLibrary access
+                        if let Some(image_id) = image_id {
+                            if image_id.0.is_nil() {
+                                errors.push(
+                                    ValidationError::error("INVALID_IMAGE_REFERENCE", "Image ID is invalid (nil UUID)".to_string())
+                                        .with_block(block_id.clone())
+                                );
+                            }
+                        }
+                    }
+                }
+                BlockConfig::WaitImage { image_id, .. } => {
+                    if let Some(image_id) = image_id {
                         if image_id.0.is_nil() {
                             errors.push(
                                 ValidationError::error("INVALID_IMAGE_REFERENCE", "Image ID is invalid (nil UUID)".to_string())
@@ -474,20 +486,14 @@ impl FlowValidator {
                         }
                     }
                 }
-                BlockConfig::WaitImage { image_id, .. } => {
-                    if image_id.0.is_nil() {
-                        errors.push(
-                            ValidationError::error("INVALID_IMAGE_REFERENCE", "Image ID is invalid (nil UUID)".to_string())
-                                .with_block(block_id.clone())
-                        );
-                    }
-                }
                 BlockConfig::Condition { image_id, .. } => {
-                    if image_id.0.is_nil() {
-                        errors.push(
-                            ValidationError::error("INVALID_IMAGE_REFERENCE", "Image ID is invalid (nil UUID)".to_string())
-                                .with_block(block_id.clone())
-                        );
+                    if let Some(image_id) = image_id {
+                        if image_id.0.is_nil() {
+                            errors.push(
+                                ValidationError::error("INVALID_IMAGE_REFERENCE", "Image ID is invalid (nil UUID)".to_string())
+                                    .with_block(block_id.clone())
+                            );
+                        }
                     }
                 }
                 _ => {}
@@ -675,7 +681,7 @@ mod tests {
             BlockType::Control { control: ControlType::Condition },
             BlockPosition::new(100.0, 100.0),
             BlockConfig::Condition {
-                image_id: crate::models::ImageId::new(),
+                image_id: Some(crate::models::ImageId::new()),
                 condition: crate::models::ConditionOp::ImageExists,
                 true_branch: vec![],
                 false_branch: vec![],
@@ -703,7 +709,7 @@ mod tests {
             BlockType::Control { control: ControlType::Condition },
             BlockPosition::new(100.0, 100.0),
             BlockConfig::Condition {
-                image_id: crate::models::ImageId::new(),
+                image_id: Some(crate::models::ImageId::new()),
                 condition: crate::models::ConditionOp::ImageExists,
                 true_branch: vec![branch_a.clone()],
                 false_branch: vec![],

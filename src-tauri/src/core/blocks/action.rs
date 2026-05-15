@@ -46,7 +46,7 @@ impl ClickBlock {
         Self {
             id: BlockId::new(),
             position,
-            mode: ClickMode::Image { image_id },
+            mode: ClickMode::Image { image_id: Some(image_id) },
             count: count.max(1),
         }
     }
@@ -62,7 +62,7 @@ impl ClickBlock {
     /// Get image ID (if in image mode)
     pub fn image_id(&self) -> Option<&ImageId> {
         match &self.mode {
-            ClickMode::Image { image_id } => Some(image_id),
+            ClickMode::Image { image_id } => image_id.as_ref(),
             ClickMode::Coordinates { .. } => None,
         }
     }
@@ -124,13 +124,13 @@ impl Block for ClickBlock {
 pub struct WaitImageBlock {
     pub id: BlockId,
     pub position: BlockPosition,
-    pub image_id: ImageId,
+    pub image_id: Option<ImageId>,
     pub timeout_ms: Option<u64>,
 }
 
 impl WaitImageBlock {
     /// Create a new wait image block
-    pub fn new(image_id: ImageId, timeout_ms: Option<u64>, position: BlockPosition) -> Self {
+    pub fn new(image_id: Option<ImageId>, timeout_ms: Option<u64>, position: BlockPosition) -> Self {
         Self {
             id: BlockId::new(),
             position,
@@ -175,7 +175,7 @@ impl Block for WaitImageBlock {
         // Actual wait logic will be implemented in Task 12
         Ok(BlockResult::WaitFor {
             duration_ms: self.timeout_ms,
-            image_id: Some(self.image_id.clone()),
+            image_id: self.image_id.clone(),
         })
     }
 
