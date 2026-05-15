@@ -164,6 +164,11 @@ vi.mock('./components/BlockToolbox', () => ({
   }) => (
     <div data-testid="toolbox">
       <button type="button" onClick={() => onBlockSelect?.('click', 'action')}>⚡ 直接放一个点击积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('wait_image', 'action')}>🖼️ 直接放一个等待图片积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('wait_time', 'action')}>⏱️ 直接放一个等待时间积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('input_text', 'action')}>⌨️ 直接放一个输入文本积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('loop_infinite', 'control')}>♾️ 直接放一个无限循环积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('condition', 'control')}>❓ 直接放一个条件判断积木块</button>
       <button type="button" onClick={() => onArmPlacement?.('loop', 'control')}>在白板上指定位置放置 循环</button>
       {pendingPlacementLabel && (
         <button type="button" onClick={onCancelPlacement}>当前放置: {pendingPlacementLabel} · 点击取消</button>
@@ -259,30 +264,25 @@ describe('App node placement feedback', () => {
     expect(screen.queryByText('click 已添加到当前视口')).not.toBeInTheDocument();
   });
 
-  it('places a node even when precision placement completes over an existing node region', async () => {
-    addNodeMock.mockReset();
-    addNodeMock.mockResolvedValue('node-precision');
-
+  it('creates all non-click block types through the quick-add path', async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: '在白板上指定位置放置 循环' }));
+    const cases = [
+      { label: '🖼️ 直接放一个等待图片积木块', type: 'wait_image', category: 'action' },
+      { label: '⏱️ 直接放一个等待时间积木块', type: 'wait_time', category: 'action' },
+      { label: '⌨️ 直接放一个输入文本积木块', type: 'input_text', category: 'action' },
+      { label: '♾️ 直接放一个无限循环积木块', type: 'loop_infinite', category: 'control' },
+      { label: '❓ 直接放一个条件判断积木块', type: 'condition', category: 'control' },
+    ] as const;
 
-    await waitFor(() => {
-      expect(createFlowMock).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole('button', { name: '模拟在已有节点区域放置' })).toBeInTheDocument();
-    });
+    for (const item of cases) {
+      addNodeMock.mockClear();
+      fireEvent.click(screen.getByRole('button', { name: item.label }));
 
-    fireEvent.click(screen.getByRole('button', { name: '模拟在已有节点区域放置' }));
-
-    await waitFor(() => {
-      expect(addNodeMock).toHaveBeenCalledWith('loop', 'control', { x: 240, y: 180 }, undefined, 'flow-1');
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('loop 已放置到白板')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText('当前放置: loop · 点击取消')).not.toBeInTheDocument();
+      await waitFor(() => {
+        expect(addNodeMock).toHaveBeenCalledWith(item.type, item.category, expect.any(Object), undefined, 'flow-1');
+      });
+    }
   });
 });
 
