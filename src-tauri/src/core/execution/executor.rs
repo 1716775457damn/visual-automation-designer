@@ -694,7 +694,7 @@ impl Executor {
             }
             
             // Small delay between clicks
-            sleep(Duration::from_millis(50)).await;
+            sleep(Duration::from_millis(25)).await;
         }
         
         Ok(BlockResult::Continue)
@@ -744,7 +744,7 @@ impl Executor {
     /// Execute WaitTimeBlock
     async fn execute_wait_time_block(&mut self, duration_ms: u64) -> Result<BlockResult> {
         let start = std::time::Instant::now();
-        let check_interval = 100.min(duration_ms);
+        let check_interval = 50.min(duration_ms.max(1));
         
         loop {
             // Check stop signal
@@ -776,7 +776,6 @@ impl Executor {
         interval_ms: Option<u64>,
     ) -> Result<BlockResult> {
         let interval = interval_ms.unwrap_or(10);
-        let mut input = InputController::new()?;
 
         for character in text.chars() {
             if *self.stop_receiver.borrow() {
@@ -787,7 +786,10 @@ impl Executor {
 
             self.wait_if_paused().await;
 
-            input.type_text_with_interval(&character.to_string(), 0)?;
+            {
+                let mut input = InputController::new()?;
+                input.type_text_with_interval(&character.to_string(), 0)?;
+            }
 
             sleep(Duration::from_millis(interval)).await;
         }
