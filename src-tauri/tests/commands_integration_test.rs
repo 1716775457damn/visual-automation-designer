@@ -341,8 +341,8 @@ fn test_screen_capture_windows() {
     }
     // May fail in headless CI environments
     
-    // Capture region
-    let region_result = capture.capture_region(0, 0, 100, 100);
+    // Capture region (using virtual desktop coordinates)
+    let region_result = ScreenCapture::capture_virtual_region(0, 0, 100, 100);
     if region_result.is_ok() {
         let region = region_result.unwrap();
         assert_eq!(region.width, 100);
@@ -387,7 +387,7 @@ fn test_complete_workflow() {
         BlockType::Action { action: ActionType::Click },
         BlockPosition::new(100.0, 100.0),
         BlockConfig::Click {
-            mode: ClickMode::Image { image_id: image_id.clone() },
+            mode: ClickMode::Image { image_id: Some(image_id.clone()) },
             count: 1,
         },
     );
@@ -461,11 +461,11 @@ fn test_block_config_serialization() {
             count: 1,
         },
         BlockConfig::Click {
-            mode: ClickMode::Image { image_id: ImageId::new() },
+            mode: ClickMode::Image { image_id: Some(ImageId::new()) },
             count: 2,
         },
         BlockConfig::WaitImage {
-            image_id: ImageId::new(),
+            image_id: Some(ImageId::new()),
             timeout_ms: Some(5000),
         },
         BlockConfig::WaitTime {
@@ -480,7 +480,7 @@ fn test_block_config_serialization() {
         },
         BlockConfig::LoopInfinite,
         BlockConfig::Condition {
-            image_id: ImageId::new(),
+            image_id: Some(ImageId::new()),
             condition: ConditionOp::ImageExists,
             true_branch: vec![BlockId::new()],
             false_branch: vec![],
@@ -531,4 +531,276 @@ fn test_flow_json_roundtrip() {
     assert_eq!(flow.name, deserialized.name);
     assert_eq!(flow.blocks.len(), deserialized.blocks.len());
     assert_eq!(flow.connections.len(), deserialized.connections.len());
+}
+
+// ============================================================================
+// Complex Nesting Pattern Tests
+// ============================================================================
+
+/// Helper: create a click action block
+fn make_click_block(x: f64, y: f64, cx: u32, cy: u32) -> BlockNode {
+    BlockNode::new(
+        BlockType::Action { action: ActionType::Click },
+        BlockPosition::new(x, y),
+        BlockConfig::Click {
+            mode: ClickMode::Coordinates { x: cx, y: cy },
+            count: 1,
+        },
+    )
+}
+
+/// Helper: create a wait-image block
+fn make_wait_image_block(x: f64, y: f64) -> BlockNode {
+    BlockNode::new(
+        BlockType::Action { action: ActionType::WaitImage },
+        BlockPosition::new(x, y),
+        BlockConfig::WaitImage {
+            image_id: Some(ImageId::new()),
+            timeout_ms: Some(5000),
+        },
+    )
+}
+
+#[test]
+fn test_nesting_condition_inside_loop() {
+    // Build a flow where a Loop block wraps a Condition block as its child.
+    // Structure:
+    //   entry -> Loop (count=2)
+    //              └── Condition
+    //                    ├── true:  Click
+    //                    └── false: WaitTime
+    //
+    // The LoopBlock tracks children, the ConditionalBlock tracks true/false branches.
+    // Connections link entry → loop → condition, and condition → true/false blocks.
+
+    let mut flow = Flow::new("Condition Inside Loop".to_string());
+
+    // Block 1: entry click
+    let entry = make_click_block(100.0, 50.0, 100, 100);
+    let entry_id = entry.id.clone();
+    flow.add_block(entry);
+
+    // Block 2: loop block (count=2)
+    let loop_block = BlockNode::new(
+        BlockType::Control { control: ControlType::Loop },
+        BlockPosition::new(300.0, 50.0),
+        BlockConfig::Loop { count: 2 },
+    );
+    let loop_id = loop_block.id.clone();
+    flow.add_block(loop_block);
+
+    // Block 3: condition block (inside the loop)
+    let cond_block = BlockNode::new(
+        BlockType::Control { control: ControlType::Condition },
+        BlockPosition::new(500.0, 50.0),
+        BlockConfig::Condition {
+            image_id: Some(ImageId::new()),
+            condition: ConditionOp::ImageExists,
+            true_branch: vec![],
+            false_branch: vec![],
+        },
+    );
+    let cond_id = cond_block.id.clone();
+    flow.add_block(cond_block);
+
+    // Block 4: click action in true branch
+    let true_action = make_click_block(700.0, 0.0, 200, 200);
+    let true_id = true_action.id.clone();
+    flow.add_block(true_action);
+
+    // Block 5: wait-time action in false branch
+    let false_action = BlockNode::new(
+        BlockType::Action { action: ActionType::WaitTime },
+        BlockPosition::new(700.0, 100.0),
+        BlockConfig::WaitTime { duration_ms: 500 },
+    );
+    let false_id = false_action.id.clone();
+    flow.add_block(false_action);
+
+    // Wire up children: loop references condition as its child
+    if let Some(lb) = flow.get_block_mut(&loop_id) {
+        lb.children.push(cond_id.clone());
+    }
+
+    // Wire up condition branches
+    if let Some(cb) = flow.get_block_mut(&cond_id) {
+        // Replace config with real branch IDs
+        cb.config = BlockConfig::Condition {
+            image_id: Some(ImageId::new()),
+            condition: ConditionOp::ImageExists,
+            true_branch: vec![true_id.clone()],
+            false_branch: vec![false_id.clone()],
+        };
+    }
+
+    // Connections: entry → loop → condition → (true_action, false_action)
+    // We also link condition → true_action and condition → false_action via handles
+    flow.add_connection(Connection::new(entry_id.clone(), loop_id.clone()));
+    flow.add_connection(Connection::new(loop_id.clone(), cond_id.clone()));
+    flow.add_connection(Connection::with_handle(cond_id.clone(), true_id.clone(), "true".to_string()));
+    flow.add_connection(Connection::with_handle(cond_id.clone(), false_id.clone(), "false".to_string()));
+
+    // Set entry block
+    flow.set_entry_block(Some(entry_id.clone()));
+
+    // Verify structure in memory
+    assert_eq!(flow.block_count(), 5);
+    assert_eq!(flow.connections.len(), 4);
+
+    // Verify loop block has condition as child
+    let loop_node = flow.get_block(&loop_id).expect("Loop block should exist");
+    assert_eq!(loop_node.children.len(), 1, "Loop should have one child");
+    assert_eq!(loop_node.children[0], cond_id);
+
+    // Verify condition block has branches
+    let cond_node = flow.get_block(&cond_id).expect("Condition block should exist");
+    if let BlockConfig::Condition { ref true_branch, ref false_branch, .. } = cond_node.config {
+        assert_eq!(true_branch.len(), 1, "True branch should have one block");
+        assert_eq!(true_branch[0], true_id);
+        assert_eq!(false_branch.len(), 1, "False branch should have one block");
+        assert_eq!(false_branch[0], false_id);
+    } else {
+        panic!("Expected Condition config");
+    }
+
+    // Validate the flow - structural validation should complete without panicking
+    let validator = FlowValidator::new();
+    let _errors = validator.validate(&flow);
+    // We're testing structural integrity and save/load round-trip, not strict validation
+
+    // Test save/load round-trip
+    let temp_dir = create_temp_dir();
+    let data_dir = temp_dir.path().to_path_buf();
+    let mut manager = FlowManager::new(&data_dir).expect("Failed to create flow manager");
+    manager.save_flow(&flow).expect("Failed to save nested flow");
+
+    let loaded = manager.load_flow(&flow.id).expect("Failed to load nested flow");
+    assert_eq!(loaded.block_count(), 5);
+    assert_eq!(loaded.connections.len(), 4);
+    assert_eq!(loaded.entry_block, Some(entry_id));
+
+    // Verify nesting preserved after load
+    let loaded_loop = loaded.get_block(&loop_id).expect("Loop block lost");
+    assert_eq!(loaded_loop.children.len(), 1, "Loop children preserved after load");
+}
+
+#[test]
+fn test_nesting_loop_inside_condition() {
+    // Build a flow where a Condition block wraps a Loop block in its true branch.
+    // Structure:
+    //   entry -> Condition
+    //              ├── true:  Loop (count=3) → Click
+    //              └── false: WaitImage
+    //
+    // The loop block has a click action as its child, and the loop is
+    // itself a child of the condition's true branch.
+
+    let mut flow = Flow::new("Loop Inside Condition".to_string());
+
+    // Block 1: entry click
+    let entry = make_click_block(100.0, 100.0, 50, 50);
+    let entry_id = entry.id.clone();
+    flow.add_block(entry);
+
+    // Block 2: condition block
+    let cond_block = BlockNode::new(
+        BlockType::Control { control: ControlType::Condition },
+        BlockPosition::new(300.0, 100.0),
+        BlockConfig::Condition {
+            image_id: Some(ImageId::new()),
+            condition: ConditionOp::ImageNotExists,
+            true_branch: vec![],
+            false_branch: vec![],
+        },
+    );
+    let cond_id = cond_block.id.clone();
+    flow.add_block(cond_block);
+
+    // Block 3: loop block (inside condition's true branch)
+    let loop_block = BlockNode::new(
+        BlockType::Control { control: ControlType::Loop },
+        BlockPosition::new(500.0, 50.0),
+        BlockConfig::Loop { count: 3 },
+    );
+    let loop_id = loop_block.id.clone();
+    flow.add_block(loop_block);
+
+    // Block 4: click action inside the loop
+    let inner_click = make_click_block(700.0, 50.0, 10, 20);
+    let inner_id = inner_click.id.clone();
+    flow.add_block(inner_click);
+
+    // Block 5: wait-image in condition's false branch
+    let fallback = make_wait_image_block(500.0, 200.0);
+    let fallback_id = fallback.id.clone();
+    flow.add_block(fallback);
+
+    // Wire up children: loop → click
+    if let Some(lb) = flow.get_block_mut(&loop_id) {
+        lb.children.push(inner_id.clone());
+    }
+
+    // Wire up condition config with branch references
+    if let Some(cb) = flow.get_block_mut(&cond_id) {
+        cb.config = BlockConfig::Condition {
+            image_id: Some(ImageId::new()),
+            condition: ConditionOp::ImageNotExists,
+            true_branch: vec![loop_id.clone()],
+            false_branch: vec![fallback_id.clone()],
+        };
+    }
+
+    // Connections
+    flow.add_connection(Connection::new(entry_id.clone(), cond_id.clone()));
+    flow.add_connection(Connection::with_handle(cond_id.clone(), loop_id.clone(), "true".to_string()));
+    flow.add_connection(Connection::new(loop_id.clone(), inner_id.clone()));
+    flow.add_connection(Connection::with_handle(cond_id.clone(), fallback_id.clone(), "false".to_string()));
+
+    // Set entry block
+    flow.set_entry_block(Some(entry_id.clone()));
+
+    // Verify structure
+    assert_eq!(flow.block_count(), 5);
+    assert_eq!(flow.connections.len(), 4);
+
+    // Verify condition branches
+    let cond_node = flow.get_block(&cond_id).expect("Condition block should exist");
+    if let BlockConfig::Condition { ref true_branch, ref false_branch, .. } = cond_node.config {
+        assert_eq!(true_branch.len(), 1, "True branch should have loop");
+        assert_eq!(true_branch[0], loop_id);
+        assert_eq!(false_branch.len(), 1, "False branch should have fallback");
+        assert_eq!(false_branch[0], fallback_id);
+    } else {
+        panic!("Expected Condition config");
+    }
+
+    // Verify loop child
+    let loop_node = flow.get_block(&loop_id).expect("Loop block should exist");
+    assert_eq!(loop_node.children.len(), 1, "Loop should have inner click as child");
+    assert_eq!(loop_node.children[0], inner_id);
+
+    // Test save/load round-trip
+    let temp_dir = create_temp_dir();
+    let data_dir = temp_dir.path().to_path_buf();
+    let mut manager = FlowManager::new(&data_dir).expect("Failed to create flow manager");
+    manager.save_flow(&flow).expect("Failed to save nested flow");
+
+    let loaded = manager.load_flow(&flow.id).expect("Failed to load nested flow");
+    assert_eq!(loaded.block_count(), 5);
+    assert_eq!(loaded.connections.len(), 4);
+    assert_eq!(loaded.entry_block, Some(entry_id));
+
+    // Verify nesting preserved after load
+    let loaded_loop = loaded.get_block(&loop_id).expect("Loop block lost");
+    assert_eq!(loaded_loop.children.len(), 1, "Loop children preserved after load");
+
+    let loaded_cond = loaded.get_block(&cond_id).expect("Condition block lost");
+    if let BlockConfig::Condition { ref true_branch, ref false_branch, .. } = loaded_cond.config {
+        assert_eq!(true_branch.len(), 1, "True branch preserved");
+        assert_eq!(true_branch[0], loop_id);
+        assert_eq!(false_branch.len(), 1, "False branch preserved");
+        assert_eq!(false_branch[0], fallback_id);
+    } else {
+        panic!("Expected Condition config after load");
+    }
 }

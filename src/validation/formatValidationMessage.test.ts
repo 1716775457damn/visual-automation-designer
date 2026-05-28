@@ -16,12 +16,20 @@ describe('formatValidationMessage', () => {
       'LOOP_SUBCHAIN_UNSUPPORTED',
       '循环暂不支持把多个子节点串成循环体。请先保留一个直接子节点作为循环内容，或把复杂步骤拆到循环块之后执行。',
     ],
+    [
+      'CYCLE_DETECTED',
+      '检测到流程中存在循环连接（回路）。积木块不能形成首尾相连的环路。请删除导致环路的连线，避免执行时陷入死循环。',
+    ],
+    [
+      'NO_ENTRY',
+      '当前流程未设置启动入口。请右键任意一个节点并选择“设为入口”，以指定自动化执行的起点。',
+    ],
   ])('returns actionable Chinese guidance for %s', (code, expectedMessage) => {
     expect(formatValidationMessage({ code, message: 'raw backend message' })).toBe(expectedMessage);
   });
 
   it('preserves unknown validation messages', () => {
-    expect(formatValidationMessage({ code: 'ZERO_WAIT_TIME', message: 'Wait time is zero' })).toBe('Wait time is zero');
+    expect(formatValidationMessage({ code: 'SOME_UNKNOWN_CODE_KEY', message: 'Wait time is zero' })).toBe('Wait time is zero');
   });
 
   it('preserves metadata while replacing supported messages', () => {

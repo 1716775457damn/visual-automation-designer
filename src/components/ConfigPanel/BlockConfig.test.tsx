@@ -34,6 +34,8 @@ describe('BlockConfig', () => {
     blockId: 'test-block-1',
     blockType: 'click',
     config: {},
+    externalValidationSeverity: undefined as 'error' | 'warning' | undefined,
+    externalValidationMessage: null as string | null,
     onSave: vi.fn(),
     onCancel: vi.fn(),
   };
@@ -43,9 +45,35 @@ describe('BlockConfig', () => {
   });
 
   describe('基础渲染', () => {
-    it('应该渲染配置面板容器', () => {
-      render(<BlockConfig {...defaultProps} />);
-      expect(screen.getByTestId('block-config-test-block-1')).toBeInTheDocument();
+  it('应该渲染配置面板容器', () => {
+  render(<BlockConfig {...defaultProps} />);
+  expect(screen.getByTestId('block-config-test-block-1')).toBeInTheDocument();
+  });
+
+    it('应该在传入节点级校验信息时显示结构错误摘要', () => {
+      render(
+        <BlockConfig
+          {...defaultProps}
+          externalValidationSeverity="error"
+          externalValidationMessage="条件块结构错误"
+        />
+      );
+
+      expect(screen.getByText('结构错误：')).toBeInTheDocument();
+      expect(screen.getByText('条件块结构错误')).toBeInTheDocument();
+    });
+
+    it('应该在传入节点级校验信息时显示结构警告摘要', () => {
+      render(
+        <BlockConfig
+          {...defaultProps}
+          externalValidationSeverity="warning"
+          externalValidationMessage="等待时间为 0"
+        />
+      );
+
+      expect(screen.getByText('结构警告：')).toBeInTheDocument();
+      expect(screen.getByText('等待时间为 0')).toBeInTheDocument();
     });
 
     it('应该显示积木块类型的显示名称', () => {

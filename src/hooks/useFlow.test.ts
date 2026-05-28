@@ -226,11 +226,12 @@ describe('useFlow undo/redo state', () => {
     expect(result.current.nodes.find((node) => node.id === 'loop-1')?.data.isEntryPoint).toBe(true);
   });
 
-  it('synchronizes condition branches immediately when connections change', async () => {
+  it('updates entry point flags immediately when setEntryBlock is called', async () => {
     const { result } = renderHook(() => useFlow({
       initialFlow: {
         id: 'flow-1',
         name: 'Test Flow',
+        entryBlock: 'condition-1',
         blocks: {},
         connections: [],
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -247,6 +248,20 @@ describe('useFlow undo/redo state', () => {
             blockCategory: 'control',
             config: { type: 'condition', imageId: 'image-1', condition: 'image_exists', trueBranch: [], falseBranch: [] },
             executing: false,
+            isEntryPoint: true,
+          },
+        },
+        {
+          id: 'loop-1',
+          type: 'blockNode',
+          position: { x: 10, y: 10 },
+          data: {
+            label: '循环',
+            blockType: 'loop',
+            blockCategory: 'control',
+            config: { type: 'loop', count: 2 },
+            executing: false,
+            isEntryPoint: false,
           },
         },
       ] as never,
@@ -254,25 +269,78 @@ describe('useFlow undo/redo state', () => {
     }));
 
     await act(async () => {
-      await result.current.addConnection({ source: 'condition-1', target: 'true-1', sourceHandle: 'true' } as never);
-      await result.current.addConnection({ source: 'condition-1', target: 'false-1', sourceHandle: 'false' } as never);
+      await result.current.setEntryBlock('loop-1');
     });
 
-    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.config).toMatchObject({
-      trueBranch: ['true-1'],
-      falseBranch: ['false-1'],
-    });
+    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.isEntryPoint).toBe(false);
+    expect(result.current.nodes.find((node) => node.id === 'loop-1')?.data.isEntryPoint).toBe(true);
+  });
 
-    const trueEdgeId = result.current.edges.find((edge) => edge.sourceHandle === 'true')?.id;
-    expect(trueEdgeId).toBeTruthy();
+  it('synchronizes loop children after loop edges are removed and the next save uses updated edges', async () => {
+    const { result } = renderHook(() => useFlow({
+      initialFlow: {
+        id: 'flow-1',
+        name: 'Test Flow',
+        blocks: {},
+        connections: [],
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+      initialNodes: [
+        {
+          id: 'loop-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '循环',
+            blockType: 'loop',
+            blockCategory: 'control',
+            config: { type: 'loop', count: 2 },
+            executing: false,
+          },
+        },
+        {
+          id: 'loop-child-1',
+          type: 'blockNode',
+          position: { x: 10, y: 10 },
+          data: {
+            label: '点击',
+            blockType: 'click',
+            blockCategory: 'action',
+            config: { type: 'click', mode: { mode: 'coordinates', x: 0, y: 0 }, count: 1 },
+            executing: false,
+          },
+        },
+      ] as never,
+      initialEdges: [] as never,
+    }));
 
     await act(async () => {
-      await result.current.deleteConnection(trueEdgeId!);
+      await result.current.addConnection({ source: 'loop-1', target: 'loop-child-1' } as never);
     });
 
-    expect(result.current.nodes.find((node) => node.id === 'condition-1')?.data.config).toMatchObject({
-      trueBranch: [],
-      falseBranch: ['false-1'],
+    await act(async () => {
+      await result.current.saveFlow();
     });
+    let savedFlow = mocks.saveFlow.mock.calls[mocks.saveFlow.mock.calls.length - 1]?.[0];
+    expect(savedFlow.blocks['loop-1'].children).toEqual(['loop-child-1']);
+
+    const loopEdgeId = result.current.edges.find((edge) => edge.source === 'loop-1' && edge.target === 'loop-child-1')?.id;
+    expect(loopEdgeId).toBeTruthy();
+
+    await act(async () => {
+      await result.current.deleteConnection(loopEdgeId!);
+    });
+
+    await waitFor(() => {
+      expect(result.current.edges.find((edge) => edge.id === loopEdgeId)).toBeUndefined();
+    });
+
+    await act(async () => {
+      await result.current.saveFlow();
+    });
+
+    savedFlow = mocks.saveFlow.mock.calls[mocks.saveFlow.mock.calls.length - 1]?.[0];
+    expect(savedFlow.blocks['loop-1'].children).toEqual([]);
   });
 });

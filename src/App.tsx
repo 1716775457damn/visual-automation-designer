@@ -10,6 +10,7 @@ import { Toolbox } from './components/BlockToolbox';
 import { BlockConfig } from './components/ConfigPanel';
 import { ConfirmDialog, ToastProvider, useToast } from './components/common';
 import { useFlow, useExecution, useKeyboardShortcuts, useTheme, buildCanonicalFlow } from './hooks';
+import type { InternalExecutionEvent } from './hooks/useExecution';
 import type { Flow as TauriFlow, ValidationErrorResponse } from './tauri/flow';
 import { validateFlow } from './tauri/flow';
 import { formatValidationResponse } from './validation/formatValidationMessage';
@@ -119,8 +120,8 @@ function AppContent() {
   const [pendingUnsavedAction, setPendingUnsavedAction] = useState<PendingUnsavedAction | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<PendingPlacement | null>(null);
   const [recentNodeId, setRecentNodeId] = useState<string | null>(null);
-  const [flowValidationError, setFlowValidationError] = useState<ValidationErrorResponse | null>(null);
-  const [flowValidationWarning, setFlowValidationWarning] = useState<ValidationErrorResponse | null>(null);
+  const [flowValidationErrors, setFlowValidationErrors] = useState<ValidationErrorResponse[]>([]);
+  const [flowValidationWarnings, setFlowValidationWarnings] = useState<ValidationErrorResponse[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (typeof window === 'undefined') {
       return false;
@@ -129,6 +130,9 @@ function AppContent() {
     return window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) !== 'true';
   });
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
+
+  const [focusedValidationNodeId, setFocusedValidationNodeId] = useState<string | null>(null);
+  const [frontendRuntimeEvents, setFrontendRuntimeEvents] = useState<InternalExecutionEvent[]>([]);
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
   const buildDialogFlowName = useCallback(() => `新流程_${new Date().toLocaleDateString()}`, []);
@@ -150,42 +154,89 @@ function AppContent() {
   const hasSelection = selectedNodeId !== null;
 
   // Convert execution log entries to log entries for display
-  const logEntries = executionLog.map((event, index) =>
+  const mergedExecutionLog = useMemo(
+    () => [...executionLog, ...frontendRuntimeEvents].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
+    [executionLog, frontendRuntimeEvents]
+  );
+
+  const logEntries = mergedExecutionLog.map((event, index) =>
     executionEventToLogEntry(event, index)
   );
 
-  const formattedFlowValidationError = useMemo(
-    () => flowValidationError ? formatValidationResponse(flowValidationError) : null,
-    [flowValidationError]
+  const formattedFlowValidationErrors = useMemo(
+    () => flowValidationErrors.map(formatValidationResponse),
+    [flowValidationErrors]
   );
-  const formattedFlowValidationWarning = useMemo(
-    () => flowValidationWarning ? formatValidationResponse(flowValidationWarning) : null,
-    [flowValidationWarning]
+  const formattedFlowValidationWarnings = useMemo(
+    () => flowValidationWarnings.map(formatValidationResponse),
+    [flowValidationWarnings]
   );
+
+  const primaryFlowValidationError = formattedFlowValidationErrors[0] ?? null;
+  const primaryFlowValidationWarning = formattedFlowValidationWarnings[0] ?? null;
 
   const validationByNodeId = useMemo(() => {
     const entries: Record<string, { severity: 'error' | 'warning'; message: string }> = {};
 
-    if (formattedFlowValidationError?.blockId) {
-      entries[formattedFlowValidationError.blockId] = {
-        severity: 'error',
-        message: formattedFlowValidationError.message,
+    for (const validation of formattedFlowValidationWarnings) {
+      if (!validation.blockId || entries[validation.blockId]) {
+        continue;
+      }
+
+      entries[validation.blockId] = {
+        severity: 'warning',
+        message: validation.message,
       };
     }
 
-    if (formattedFlowValidationWarning?.blockId && !entries[formattedFlowValidationWarning.blockId]) {
-      entries[formattedFlowValidationWarning.blockId] = {
-        severity: 'warning',
-        message: formattedFlowValidationWarning.message,
+    for (const validation of formattedFlowValidationErrors) {
+      if (!validation.blockId) {
+        continue;
+      }
+
+      entries[validation.blockId] = {
+        severity: 'error',
+        message: validation.message,
       };
     }
 
     return entries;
-  }, [formattedFlowValidationError, formattedFlowValidationWarning]);
+  }, [formattedFlowValidationErrors, formattedFlowValidationWarnings]);
+
+  const selectedNodeValidation = selectedNodeId ? validationByNodeId[selectedNodeId] ?? null : null;
+
+  const validationItems = useMemo(() => {
+    const items = [
+      ...formattedFlowValidationErrors.map((validation, index) => ({
+        id: `error-${validation.code}-${validation.blockId ?? 'global'}-${index}`,
+        severity: 'error' as const,
+        message: validation.message,
+        blockId: validation.blockId ?? null,
+      })),
+      ...formattedFlowValidationWarnings.map((validation, index) => ({
+        id: `warning-${validation.code}-${validation.blockId ?? 'global'}-${index}`,
+        severity: 'warning' as const,
+        message: validation.message,
+        blockId: validation.blockId ?? null,
+      })),
+    ];
+
+    return items;
+  }, [formattedFlowValidationErrors, formattedFlowValidationWarnings]);
+
+  const handleSelectValidationBlock = useCallback((blockId: string | null) => {
+    if (!blockId) {
+      return;
+    }
+
+    setSelectedNodeId(blockId);
+    setFocusedValidationNodeId(blockId);
+  }, []);
 
   // Handle node selection
   const handleNodeSelect = useCallback((nodeId: string | null) => {
     setSelectedNodeId(nodeId);
+    setFocusedValidationNodeId((current) => (nodeId === current ? null : current));
   }, []);
 
   const getQuickAddPosition = useCallback(() => {
@@ -265,20 +316,22 @@ function AppContent() {
   const handleConnect = useCallback(async (connection: Connection) => {
     const guardValidation = getConnectionGuardValidation(connection, nodes, edges);
     if (guardValidation) {
-      setFlowValidationError(guardValidation);
+      setFlowValidationErrors([guardValidation]);
       showToast('warning', guardValidation.message);
       return;
     }
 
     try {
       await addConnection(connection);
-      setFlowValidationError((current) => (
-        current?.code === 'CONDITION_DEFAULT_OUTGOING_UNSUPPORTED'
-          || current?.code === 'CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED'
-          || current?.code === 'LOOP_SUBCHAIN_UNSUPPORTED'
-          ? null
-          : current
-      ));
+      setFlowValidationErrors((current) => {
+        const blockingCodes = new Set([
+          'CONDITION_DEFAULT_OUTGOING_UNSUPPORTED',
+          'CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED',
+          'LOOP_SUBCHAIN_UNSUPPORTED',
+        ]);
+
+        return current.filter((validation) => !blockingCodes.has(validation.code));
+      });
     } catch (err) {
       console.error('Failed to add connection:', err);
       showToast('error', err instanceof Error ? err.message : '连接创建失败');
@@ -353,6 +406,52 @@ function AppContent() {
       startHeight: logHeight,
     };
   }, [logHeight]);
+
+  useEffect(() => {
+    const handleWindowError = (event: ErrorEvent) => {
+      if (!event.message) {
+        return;
+      }
+
+      setFrontendRuntimeEvents((current) => [
+        ...current,
+        {
+          type: 'block_error',
+          source: 'frontend',
+          error: event.message,
+          timestamp: new Date(),
+        },
+      ]);
+      showToast('error', `[前端异常] ${event.message}`);
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const message = reason instanceof Error ? reason.message : String(reason);
+      if (!message) {
+        return;
+      }
+
+      setFrontendRuntimeEvents((current) => [
+        ...current,
+        {
+          type: 'block_error',
+          source: 'frontend',
+          error: message,
+          timestamp: new Date(),
+        },
+      ]);
+      showToast('error', `[前端异常] ${message}`);
+    };
+
+    window.addEventListener('error', handleWindowError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleWindowError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, [showToast]);
 
   useEffect(() => {
     window.localStorage.setItem(LOG_COLLAPSED_STORAGE_KEY, String(logCollapsed));
@@ -448,8 +547,8 @@ function AppContent() {
     }
 
     const validation = await validateFlow(currentFlow);
-    setFlowValidationError(validation.errors[0] ?? null);
-    setFlowValidationWarning(validation.warnings[0] ?? null);
+      setFlowValidationErrors(validation.errors);
+      setFlowValidationWarnings(validation.warnings);
     if (!validation.isValid && validation.errors.length > 0) {
       const formattedError = formatValidationResponse(validation.errors[0]);
       setExecutionState('validation_blocked', formattedError.message);
@@ -462,20 +561,20 @@ function AppContent() {
   const refreshValidationState = useCallback(async () => {
     const currentFlow = buildCurrentFlowForValidation();
     if (!currentFlow) {
-      setFlowValidationError(null);
-      setFlowValidationWarning(null);
+      setFlowValidationErrors([]);
+      setFlowValidationWarnings([]);
       return;
     }
 
     const validation = await validateFlow(currentFlow);
-    setFlowValidationError(validation.errors[0] ?? null);
-    setFlowValidationWarning(validation.warnings[0] ?? null);
+    setFlowValidationErrors(validation.errors);
+    setFlowValidationWarnings(validation.warnings);
   }, [buildCurrentFlowForValidation]);
 
   useEffect(() => {
     if (!flow) {
-      setFlowValidationError(null);
-      setFlowValidationWarning(null);
+      setFlowValidationErrors([]);
+      setFlowValidationWarnings([]);
       return;
     }
 
@@ -486,13 +585,13 @@ function AppContent() {
     return () => window.clearTimeout(timeoutId);
   }, [flow, edges, isDirty, nodes, refreshValidationState]);
 
-  const handleSetEntryNode = useCallback(async (nodeId: string) => {
+  const handleSetEntryNode = useCallback(async (nodeId: string | null) => {
     try {
       await setEntryBlock(nodeId);
-      showToast('success', '已设为入口节点');
+      showToast('success', nodeId ? '已设为入口节点' : '已清除入口节点');
     } catch (err) {
-      console.error('Failed to set entry block:', err);
-      showToast('error', '设置入口节点失败');
+      console.error('Failed to set/clear entry block:', err);
+      showToast('error', '操作入口节点失败');
     }
   }, [setEntryBlock, showToast]);
 
@@ -802,10 +901,11 @@ function AppContent() {
         {/* Center - Flow Canvas */}
         <main className="app__main">
           <FlowCanvas
-            nodes={nodes}
-            edges={edges}
-            nodeValidation={validationByNodeId}
-            onNodeSelect={handleNodeSelect}
+          nodes={nodes}
+          edges={edges}
+          nodeValidation={validationByNodeId}
+          focusedNodeId={focusedValidationNodeId}
+              onNodeSelect={handleNodeSelect}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={handleConnect}
@@ -842,11 +942,35 @@ function AppContent() {
             </div>
           )}
 
+          {validationItems.length > 0 && (
+            <div className="config-placeholder__hint-box app__validation-panel" data-testid="validation-panel">
+              <p className="config-placeholder__hint-title">🩺 流程问题清单</p>
+              <ul className="app__validation-list">
+                {validationItems.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className={`app__validation-item app__validation-item--${item.severity}`}
+                      onClick={() => handleSelectValidationBlock(item.blockId)}
+                      data-testid={`validation-item-${item.id}`}
+                    >
+                      <strong>{item.severity === 'error' ? '错误' : '警告'}</strong>
+                      <span>{item.message}</span>
+                      {item.blockId && <span className="app__validation-item-meta">定位到节点</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {selectedNode ? (
             <BlockConfig
               blockId={selectedNode.id}
               blockType={selectedNode.data.blockType}
               config={selectedNode.data.config}
+              externalValidationSeverity={selectedNodeValidation?.severity}
+              externalValidationMessage={selectedNodeValidation?.message ?? null}
               onSave={handleConfigSave}
               onCancel={handleConfigCancel}
             />
@@ -888,9 +1012,12 @@ function AppContent() {
         loading={loading}
         isDirty={isDirty}
         flowError={error}
-        flowValidationError={formattedFlowValidationError}
-        flowValidationWarning={formattedFlowValidationWarning}
+        flowValidationErrors={formattedFlowValidationErrors}
+        flowValidationWarnings={formattedFlowValidationWarnings}
+        primaryFlowValidationError={primaryFlowValidationError}
+        primaryFlowValidationWarning={primaryFlowValidationWarning}
         placementLabel={pendingPlacement?.type ?? null}
+        onFocusNode={(blockId) => setFocusedValidationNodeId(blockId)}
       />
 
       {/* Execution Log Panel - UX优化85: 总是显示日志面板 */}

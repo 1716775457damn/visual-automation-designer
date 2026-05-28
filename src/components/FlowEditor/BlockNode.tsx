@@ -198,8 +198,12 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       )}
 
       {validationSeverity && (
-        <div className={`block-node__validation-badge block-node__validation-badge--${validationSeverity}`} title={validationMessage ?? ''}>
-          {validationSeverity === 'error' ? '⚠' : '!'}
+        <div
+          className={`block-node__validation-badge block-node__validation-badge--${validationSeverity}`}
+          title={validationMessage ?? ''}
+          aria-label={validationSeverity === 'error' ? '节点存在错误' : '节点存在警告'}
+        >
+          {validationSeverity === 'error' ? '错' : '警'}
         </div>
       )}
 
@@ -224,7 +228,10 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       {validationMessage && (
         <div className={`block-node__validation-message block-node__validation-message--${validationSeverity ?? 'warning'}`}>
-          {validationMessage}
+          <strong className="block-node__validation-label">
+            {validationSeverity === 'error' ? '错误：' : '警告：'}
+          </strong>
+          <span>{validationMessage}</span>
         </div>
       )}
 

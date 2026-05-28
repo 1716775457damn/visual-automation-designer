@@ -149,13 +149,14 @@ export interface FlowCanvasProps {
   nodes?: Node[];
   edges?: Edge[];
   nodeValidation?: Record<string, { severity: 'error' | 'warning'; message: string }>;
+  focusedNodeId?: string | null;
   onNodeSelect?: (nodeId: string | null) => void;
   onNodesChange?: (changes: NodeChange[]) => void;
   onEdgesChange?: (changes: EdgeChange[]) => void;
   onConnect?: (connection: Connection) => void;
   onNodeDelete?: (nodeId: string) => void;
   onEdgeDelete?: (edgeId: string) => void;
-  onSetEntryNode?: (nodeId: string) => void;
+  onSetEntryNode?: (nodeId: string | null) => void;
   onNodeConfig?: (nodeId: string) => void;
   onAddNode?: (type: string, category: string, position: { x: number; y: number }) => void;
   pendingPlacement?: { type: string; category: string } | null;
@@ -173,6 +174,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   nodes: externalNodes,
   edges: externalEdges,
   nodeValidation,
+  focusedNodeId,
   onNodeSelect,
   onNodesChange,
   onEdgesChange,
@@ -242,6 +244,23 @@ export const FlowCanvas = memo(function FlowCanvas({
       },
     }));
   }, [nodes, executingBlockId, nodeValidation, recentNodeId]);
+
+  useEffect(() => {
+    if (!focusedNodeId || !reactFlowInstance) {
+      return;
+    }
+
+    const targetNode = nodes.find((node) => node.id === focusedNodeId);
+    if (!targetNode) {
+      return;
+    }
+
+    reactFlowInstance.setCenter(
+      targetNode.position.x,
+      targetNode.position.y,
+      { zoom: 1.1, duration: 300 }
+    );
+  }, [focusedNodeId, nodes, reactFlowInstance]);
 
   // Handle node changes - memoized
   const handleNodesChange = useCallback(
@@ -566,6 +585,11 @@ export const FlowCanvas = memo(function FlowCanvas({
         action: () => onSetEntryNode?.(nodeId),
         disabled: isEntryNode,
       },
+      ...(isEntryNode ? [{
+        label: '清除入口',
+        icon: '🛑',
+        action: () => onSetEntryNode?.(null),
+      }] : []),
       {
         label: '复制',
         icon: '📋',

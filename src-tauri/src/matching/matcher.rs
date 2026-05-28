@@ -188,8 +188,11 @@ impl ImageMatcher {
         let search_height = haystack_height - needle_height + 1;
 
         // Search in a grid pattern
-        for y in (0..search_height).step_by(needle_height as usize / 2) {
-            for x in (0..search_width).step_by(needle_width as usize / 2) {
+        // Clamp step to at least 1 to avoid panic on step_by(0) for 1-pixel templates
+        let y_step = (needle_height as usize / 2).max(1);
+        let x_step = (needle_width as usize / 2).max(1);
+        for y in (0..search_height).step_by(y_step) {
+            for x in (0..search_width).step_by(x_step) {
                 // Skip if this position overlaps with a found match
                 if used_positions.iter().any(|(px, py)| {
                     (x as i32 - *px as i32).abs() < needle_width as i32 / 2
@@ -594,18 +597,25 @@ impl ConcurrentMatcher {
             return vec![(image_id, result)];
         }
         
-        // For multiple images, use parallel processing
-        // Clone haystack as Arc for sharing across threads
+        // For multiple images, use parallel processing with bounded threads.
+        // Cap concurrent OS threads to the number of available CPU cores to
+        // prevent resource exhaustion (thread stack memory, OS scheduler overload).
+        let max_threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4)
+            .min(needles_count);
         let haystack = Arc::new(haystack.clone());
         let config = Arc::new(self.config.clone());
         let results = Arc::new(Mutex::new(Vec::with_capacity(needles_count)));
         
-        let handles: Vec<_> = needles
-            .into_iter()
-            .map(|(image_id, needle)| {
+        // Process in batches of max_threads so we never exceed the thread limit
+        for chunk in needles.chunks(max_threads) {
+            let handles: Vec<_> = chunk.iter().map(|(image_id, needle)| {
                 let haystack = Arc::clone(&haystack);
                 let config = Arc::clone(&config);
                 let results = Arc::clone(&results);
+                let image_id = image_id.clone();
+                let needle = needle.clone();
                 
                 std::thread::spawn(move || {
                     let matcher = ImageMatcher::with_config((*config).clone());
@@ -630,13 +640,13 @@ impl ConcurrentMatcher {
                     
                     results.lock().unwrap().push((image_id, result));
                 })
-            })
-            .collect();
-        
-        // Wait for all threads to complete
-        for handle in handles {
-            if let Err(e) = handle.join() {
-                log::error!("Thread panicked: {:?}", e);
+            }).collect();
+            
+            // Wait for all threads in this batch to complete
+            for handle in handles {
+                if let Err(e) = handle.join() {
+                    log::error!("Thread panicked: {:?}", e);
+                }
             }
         }
         

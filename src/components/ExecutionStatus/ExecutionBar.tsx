@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from 'react';
+import { classifyDiagnosticKind } from './diagnostics';
 
 export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
 
@@ -62,6 +63,12 @@ export function ExecutionBar({
   const radius = 20;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const errorCategory = errorMessage
+    ? classifyDiagnosticKind({
+        type: status === 'validation_blocked' ? 'validation_blocked' : status,
+        message: errorMessage,
+      })
+    : null;
 
   return (
     <div
@@ -143,7 +150,7 @@ export function ExecutionBar({
           data-testid="execution-error"
           role="alert"
         >
-          {status === 'stopped' ? '⏹️' : status === 'validation_blocked' ? '🚫' : '❌'} {errorMessage}
+          {status === 'stopped' ? '⏹️' : status === 'validation_blocked' ? '🚫' : '❌'} {errorCategory ? `[${errorCategory}] ` : ''}{errorMessage}
         </div>
       )}
     </div>

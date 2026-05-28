@@ -27,8 +27,17 @@ use super::events::{ExecutionEvent, ExecutionStatus};
 /// Default timeout for wait operations (30 seconds)
 const DEFAULT_WAIT_TIMEOUT_MS: u64 = 30_000;
 
-/// Default polling interval for image matching (200ms)
-const POLL_INTERVAL_MS: u64 = 200;
+/// Default polling interval for image matching — reduced from 200ms to 50ms
+/// to keep stop latency well below the 100ms target.
+const POLL_INTERVAL_MS: u64 = 50;
+
+/// Polling interval for pause/resume checks — reduced from 100ms to 50ms.
+const PAUSE_POLL_INTERVAL_MS: u64 = 50;
+
+/// Maximum stop latency target (used for documentation and assertions).
+/// All wait/sleep loops must check the stop signal at least this frequently.
+#[allow(dead_code)]
+const MAX_STOP_LATENCY_MS: u64 = 100;
 
 /// Type alias for boxed future
 type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -85,6 +94,9 @@ pub struct Executor {
     images_dir: std::path::PathBuf,
     /// Cached image matcher for performance
     matcher: Arc<Mutex<CachedImageMatcher>>,
+    /// DPI scale factor for coordinate correction (1.0 = 100%).
+    /// When set > 1.0, click coordinates from user input are scaled to physical pixels.
+    dpi_scale: f32,
 }
 
 /// Lightweight control handle for an active executor.
@@ -95,12 +107,19 @@ pub struct ExecutionController {
     paused: Arc<Mutex<bool>>,
     context: Arc<Mutex<ExecutionContext>>,
     app_handle: AppHandle,
+    /// DPI scale factor for coordinate correction (read from executor).
+    dpi_scale: f32,
 }
 
 impl ExecutionController {
     /// Get the current execution status.
     pub async fn status(&self) -> ExecutionStatus {
         *self.status.lock().await
+    }
+
+    /// Get the current DPI scale factor.
+    pub fn dpi_scale(&self) -> f32 {
+        self.dpi_scale
     }
 
     /// Pause execution.
@@ -180,6 +199,7 @@ impl Executor {
             image_library: HashMap::new(),
             images_dir,
             matcher: Arc::new(Mutex::new(matcher)),
+            dpi_scale: 1.0,
         }
     }
 
@@ -196,7 +216,18 @@ impl Executor {
             paused: Arc::clone(&self.paused),
             context: Arc::clone(&self.context),
             app_handle: self.app_handle.clone(),
+            dpi_scale: self.dpi_scale,
         }
+    }
+
+    /// Set the DPI scale factor for coordinate correction.
+    ///
+    /// When this is set to a non-1.0 value (e.g., 1.5 for 150% scaling),
+    /// click coordinates in `ClickMode::Coordinates` will be automatically
+    /// multiplied by this factor to convert from logical (CSS) pixels
+    /// to physical pixels.
+    pub fn set_dpi_scale(&mut self, scale: f32) {
+        self.dpi_scale = scale;
     }
 
     /// Get the current execution status
@@ -409,8 +440,8 @@ impl Executor {
                 return Ok(());
             }
             
-            // Execute the block with panic handling
-            let result = self.execute_block_with_panic_handling(&block_id).await;
+            // Execute the block
+            let result = self.execute_block(&block_id).await;
             
             match result {
                 Ok(block_result) => {
@@ -432,56 +463,16 @@ impl Executor {
         Ok(())
     }
     
-    /// Execute a block with panic handling
-    ///
-    /// This method wraps the block execution in catch_unwind to prevent
-    /// panics from crashing the application.
-    async fn execute_block_with_panic_handling(&mut self, block_id: &BlockId) -> Result<BlockResult> {
-        let block_id_owned = block_id.clone();
-        
-        // Use AssertUnwindSafe to allow catch_unwind with async code
-        let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            // We need to use a blocking approach here since catch_unwind doesn't work with async
-            // The actual async execution will happen through tokio::task::block_in_place
-            tokio::task::block_in_place(|| {
-                // Execute the block synchronously within the async context
-                futures::executor::block_on(self.execute_block(&block_id_owned))
-            })
-        }));
-        
-        match result {
-            Ok(Ok(block_result)) => Ok(block_result),
-            Ok(Err(e)) => Err(e),
-            Err(panic_payload) => {
-                // Extract panic message
-                let message = if let Some(s) = panic_payload.downcast_ref::<&str>() {
-                    s.to_string()
-                } else if let Some(s) = panic_payload.downcast_ref::<String>() {
-                    s.clone()
-                } else {
-                    "Unknown panic during block execution".to_string()
-                };
-                
-                // Log the panic
-                crate::logging::log_panic(
-                    &format!("Block {} panicked: {}", block_id, message),
-                    None
-                );
-                
-                // Return as ExecutionError
-                Err(AppError::ExecutionFailed(format!("Panic: {}", message)))
-            }
-        }
-    }
-
     /// Wait if execution is paused
+    ///
+    /// Polls every PAUSE_POLL_INTERVAL_MS so stop latency is bounded.
     async fn wait_if_paused(&self) {
         loop {
             let paused = *self.paused.lock().await;
             if !paused {
                 break;
             }
-            sleep(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(PAUSE_POLL_INTERVAL_MS)).await;
         }
     }
 
@@ -638,9 +629,24 @@ impl Executor {
     /// Execute ClickBlock
     ///
     /// Validates: Requirements 8.4 - Exception handling for input operations
+    ///
+    /// DPI scaling: Coordinates from user input (ClickMode::Coordinates) are scaled from
+    /// logical (CSS) pixels to physical pixels using the configured dpi_scale factor.
+    /// Coordinates from image matching are already in physical pixels and not scaled.
     async fn execute_click_block(&mut self, mode: &ClickMode, count: u32) -> Result<BlockResult> {
         let (x, y) = match mode {
-            ClickMode::Coordinates { x, y } => (*x, *y),
+            ClickMode::Coordinates { x, y } => {
+                // Apply DPI scaling: logical → physical pixels
+                if self.dpi_scale != 1.0 {
+                    let sf = self.dpi_scale as f64;
+                    (
+                        (*x as f64 * sf).round() as u32,
+                        (*y as f64 * sf).round() as u32,
+                    )
+                } else {
+                    (*x, *y)
+                }
+            }
             ClickMode::Image { image_id } => {
                 let image_id = image_id.as_ref().ok_or_else(|| {
                     AppError::ExecutionFailed("Click block requires an image before execution".to_string())
@@ -665,6 +671,13 @@ impl Executor {
                 }
             }
         };
+
+        // Check stop signal before starting clicks
+        if *self.stop_receiver.borrow() {
+            return Ok(BlockResult::Error {
+                message: "Execution stopped".to_string(),
+            });
+        }
         
         // Perform clicks with panic handling
         for i in 0..count {
@@ -1021,17 +1034,19 @@ impl Executor {
             "Image loading"
         )??;
         
-        // Capture screen with panic handling
-        let capture = ScreenCapture::new();
-        let screen = safe_execute(
-            || capture.capture_screen(),
+        // Capture only the primary monitor instead of the full virtual desktop.
+        // This is significantly faster—single capture vs capturing and stitching N monitors.
+        // Match coordinates are returned in virtual desktop space (monitor origin + match offset)
+        // for use with enigo::Coordinate::Abs.
+        let capture = safe_execute(
+            || ScreenCapture::new().capture_screen(),
             "Screen capture"
         )??;
         
         // Use cached matcher for better performance
         let result = {
             let mut matcher = self.matcher.lock().await;
-            matcher.find_image_cached(&screen.image, &template, image_id)
+            matcher.find_image_cached(&capture.image, &template, image_id)
         };
         
         let duration = start.elapsed();
@@ -1052,9 +1067,11 @@ impl Executor {
         }
         
         if result.found {
+            // Convert virtual-desktop-relative coordinates to absolute screen coordinates
+            // by adding the virtual desktop origin offset.
             let center = (
-                result.center_x.unwrap_or(0),
-                result.center_y.unwrap_or(0),
+                (capture.origin_x as u32).saturating_add(result.center_x.unwrap_or(0)),
+                (capture.origin_y as u32).saturating_add(result.center_y.unwrap_or(0)),
             );
             Ok((true, center))
         } else {
@@ -1092,27 +1109,10 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{ActionType, BlockPosition, BlockType, BlockConfig, Flow};
     
     // Note: Many tests here would require mocking Tauri's AppHandle,
     // which is complex. Integration tests are better suited for full execution testing.
     
-    fn create_test_flow() -> Flow {
-        let mut flow = Flow::new("Test Flow".to_string());
-        
-        // Add a simple wait block
-        let block = BlockNode::new(
-            BlockType::Action { action: ActionType::WaitTime },
-            BlockPosition::new(0.0, 0.0),
-            BlockConfig::WaitTime { duration_ms: 100 },
-        );
-        let block_id = block.id.clone();
-        flow.add_block(block);
-        flow.set_entry_block(Some(block_id));
-        
-        flow
-    }
-
     #[test]
     fn test_execution_status_default() {
         let status = ExecutionStatus::default();

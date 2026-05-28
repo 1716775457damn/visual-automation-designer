@@ -108,6 +108,14 @@ pub async fn execute_flow(
     // Create executor
     let mut executor = Executor::new(flow, execution_state.app_handle.clone(), images_dir);
     executor.set_image_library(image_library);
+
+    // Query real DPI scale factor for coordinate correction.
+    // Uses primary monitor (index 0) scale factor by default.
+    if let Ok(monitors) = ScreenCapture::list_monitors_with_tauri(&execution_state.app_handle) {
+        if let Some(primary) = monitors.first() {
+            executor.set_dpi_scale(primary.scale_factor);
+        }
+    }
     
     // Clear any interactive executor before starting a background run.
     {
@@ -223,6 +231,13 @@ pub async fn step_execution(
         // Create executor
         let mut executor = Executor::new(flow, execution_state.app_handle.clone(), images_dir);
         executor.set_image_library(image_library);
+
+        // Query real DPI scale factor for coordinate correction
+        if let Ok(monitors) = ScreenCapture::list_monitors_with_tauri(&execution_state.app_handle) {
+            if let Some(primary) = monitors.first() {
+                executor.set_dpi_scale(primary.scale_factor);
+            }
+        }
         
         // Store executor
         let mut exec_guard = execution_state.executor.lock().await;

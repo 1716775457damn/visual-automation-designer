@@ -92,8 +92,8 @@ describe('Flow Tauri Commands', () => {
               ...flow.blocks['block-1'],
               config: {
                 type: 'waitImage',
-                image_id: 'image-1',
-                timeout_ms: 5000,
+                imageId: 'image-1',
+                timeoutMs: 5000,
               },
             },
           },
@@ -199,10 +199,10 @@ describe('Flow Tauri Commands', () => {
               ...flow.blocks['block-1'],
               config: {
                 type: 'condition',
-                image_id: 'image-1',
+                imageId: 'image-1',
                 condition: 'image_exists',
-                true_branch: ['block-2'],
-                false_branch: ['block-3'],
+                trueBranch: ['block-2'],
+                falseBranch: ['block-3'],
               },
             },
           },
@@ -263,8 +263,8 @@ describe('Flow Tauri Commands', () => {
         blockType: waitImageType,
         config: {
           type: 'waitImage',
-          image_id: 'image-1',
-          timeout_ms: 5000,
+          imageId: 'image-1',
+          timeoutMs: 5000,
         },
         position,
       });
@@ -290,8 +290,8 @@ describe('Flow Tauri Commands', () => {
         blockType: waitImageType,
         config: {
           type: 'waitImage',
-          image_id: undefined,
-          timeout_ms: 5000,
+          imageId: undefined,
+          timeoutMs: 5000,
         },
         position,
       });
@@ -334,8 +334,8 @@ describe('Flow Tauri Commands', () => {
         blockId: 'test-block-id',
         config: {
           type: 'waitImage',
-          image_id: 'image-1',
-          timeout_ms: 2500,
+          imageId: 'image-1',
+          timeoutMs: 2500,
         },
       });
     });
@@ -351,8 +351,8 @@ describe('Flow Tauri Commands', () => {
         blockId: 'test-block-id',
         config: {
           type: 'waitImage',
-          image_id: undefined,
-          timeout_ms: 2500,
+          imageId: undefined,
+          timeoutMs: 2500,
         },
       });
     });
@@ -374,10 +374,10 @@ describe('Flow Tauri Commands', () => {
         blockId: 'test-block-id',
         config: {
           type: 'condition',
-          image_id: 'image-1',
+          imageId: 'image-1',
           condition: 'image_exists',
-          true_branch: ['block-a'],
-          false_branch: ['block-b'],
+          trueBranch: ['block-a'],
+          falseBranch: ['block-b'],
         },
       });
     });
@@ -396,13 +396,13 @@ describe('Flow Tauri Commands', () => {
       expect(mockInvoke).toHaveBeenCalledWith('update_block_config', {
         flowId: 'test-flow-id',
         blockId: 'test-block-id',
-        config: {
-          type: 'condition',
-          image_id: undefined,
-          condition: 'image_exists',
-          true_branch: [],
-          false_branch: [],
-        },
+          config: {
+            type: 'condition',
+            imageId: undefined,
+            condition: 'image_exists',
+            trueBranch: [],
+            falseBranch: [],
+          },
       });
     });
 

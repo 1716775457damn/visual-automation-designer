@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn test_validate_condition_config_valid() {
         let config = BlockConfig::Condition {
-            image_id: ImageId::new(),
+            image_id: Some(ImageId::new()),
             condition: ConditionOp::ImageExists,
             true_branch: vec![BlockId::new()],
             false_branch: vec![],
@@ -243,7 +243,7 @@ mod tests {
     #[test]
     fn test_validate_condition_config_no_branches() {
         let config = BlockConfig::Condition {
-            image_id: ImageId::new(),
+            image_id: Some(ImageId::new()),
             condition: ConditionOp::ImageExists,
             true_branch: vec![],
             false_branch: vec![],

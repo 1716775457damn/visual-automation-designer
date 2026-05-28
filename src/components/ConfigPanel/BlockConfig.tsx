@@ -17,6 +17,8 @@ export interface BlockConfigProps {
   blockId: string;
   blockType: string;
   config?: Record<string, unknown>;
+  externalValidationSeverity?: 'error' | 'warning';
+  externalValidationMessage?: string | null;
   onSave?: (config: Record<string, unknown>) => void;
   onCancel?: () => void;
 }
@@ -420,6 +422,8 @@ export function BlockConfig({
   blockId,
   blockType,
   config = {},
+  externalValidationSeverity,
+  externalValidationMessage,
   onSave,
   onCancel,
 }: BlockConfigProps) {
@@ -563,6 +567,13 @@ export function BlockConfig({
         </div>
         <span className="block-config__type">{getBlockTypeName(blockType)}</span>
       </div>
+      
+      {externalValidationMessage && (
+        <div className={`block-config__validation-summary block-config__validation-summary--${externalValidationSeverity ?? 'warning'}`}>
+          <strong>{externalValidationSeverity === 'error' ? '结构错误：' : '结构警告：'}</strong>
+          <span>{externalValidationMessage}</span>
+        </div>
+      )}
       
       {/* UX优化44: 显示未保存提示 */}
       {hasChanges && (

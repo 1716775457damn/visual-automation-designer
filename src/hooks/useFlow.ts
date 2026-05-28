@@ -653,10 +653,13 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
     }
 
     try {
+      if (!connection.source || !connection.target) {
+        throw new Error('Cannot create connection: source and target block IDs are required');
+      }
       const createdConnection = await tauriCreateConnection(
         flow.id,
-        connection.source!,
-        connection.target!,
+        connection.source,
+        connection.target,
         connection.sourceHandle || undefined
       );
       setEdges((eds) => {

@@ -29,7 +29,7 @@ describe('getConnectionGuardValidation', () => {
     expect(validation?.code).toBe('CONDITION_DEFAULT_OUTGOING_UNSUPPORTED');
   });
 
-  it('blocks subchains from condition branch nodes', () => {
+  it('blocks subchains from condition branch nodes and points to the parent condition block', () => {
     const validation = getConnectionGuardValidation(
       { source: 'branch-1', target: 'after-1' } as Connection,
       [
@@ -41,9 +41,10 @@ describe('getConnectionGuardValidation', () => {
     );
 
     expect(validation?.code).toBe('CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED');
+    expect(validation?.blockId).toBe('condition-1');
   });
 
-  it('blocks subchains from loop child nodes', () => {
+  it('blocks subchains from loop child nodes and points to the parent loop block', () => {
     const validation = getConnectionGuardValidation(
       { source: 'loop-child-1', target: 'after-1' } as Connection,
       [
@@ -55,6 +56,7 @@ describe('getConnectionGuardValidation', () => {
     );
 
     expect(validation?.code).toBe('LOOP_SUBCHAIN_UNSUPPORTED');
+    expect(validation?.blockId).toBe('loop-1');
   });
 
   it('allows supported condition branch connections', () => {

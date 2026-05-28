@@ -36,6 +36,7 @@ function mapStatus(status: TauriExecutionStatusType): ExecutionStatusType {
  */
 export interface InternalExecutionEvent {
   type: 'started' | 'block_started' | 'block_completed' | 'block_error' | 'execution_failed' | 'flow_completed' | 'stopped' | 'paused' | 'resumed';
+  source?: 'frontend' | 'backend';
   flowId?: string;
   blockId?: string;
   success?: boolean;
@@ -108,6 +109,7 @@ export function useExecution(): UseExecutionReturn {
               setErrorMessage(null);
               addEventRef.current({
                 type: 'started',
+                source: 'backend',
                 timestamp: new Date(event.timestamp),
               });
               break;
@@ -116,6 +118,7 @@ export function useExecution(): UseExecutionReturn {
               setCurrentBlockId(event.blockId);
               addEventRef.current({
                 type: 'block_started',
+                source: 'backend',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
               });
@@ -125,6 +128,7 @@ export function useExecution(): UseExecutionReturn {
               setCompletedBlocks((prev) => prev + 1);
               addEventRef.current({
                 type: 'block_completed',
+                source: 'backend',
                 blockId: event.blockId,
                 success: event.success,
                 timestamp: new Date(event.timestamp),
@@ -134,6 +138,7 @@ export function useExecution(): UseExecutionReturn {
             case 'blockError':
               addEventRef.current({
                 type: 'block_error',
+                source: 'backend',
                 blockId: event.blockId,
                 error: event.message,
                 timestamp: new Date(event.timestamp),
@@ -146,6 +151,7 @@ export function useExecution(): UseExecutionReturn {
               setErrorMessage(event.message);
               addEventRef.current({
                 type: 'execution_failed',
+                source: 'backend',
                 blockId: event.blockId ?? undefined,
                 error: event.message,
                 timestamp: new Date(event.timestamp),
@@ -157,6 +163,7 @@ export function useExecution(): UseExecutionReturn {
               setCurrentBlockId(null);
               addEventRef.current({
                 type: 'flow_completed',
+                source: 'backend',
                 timestamp: new Date(event.timestamp),
               });
               break;
@@ -167,6 +174,7 @@ export function useExecution(): UseExecutionReturn {
               setErrorMessage(event.reason || '执行已停止');
               addEventRef.current({
                 type: 'stopped',
+                source: 'backend',
                 timestamp: new Date(event.timestamp),
               });
               break;
@@ -175,6 +183,7 @@ export function useExecution(): UseExecutionReturn {
               setStatus('paused');
               addEventRef.current({
                 type: 'paused',
+                source: 'backend',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
               });
@@ -184,6 +193,7 @@ export function useExecution(): UseExecutionReturn {
               setStatus('running');
               addEventRef.current({
                 type: 'resumed',
+                source: 'backend',
                 blockId: event.blockId,
                 timestamp: new Date(event.timestamp),
               });
@@ -220,6 +230,7 @@ export function useExecution(): UseExecutionReturn {
       setErrorMessage(error instanceof Error ? error.message : 'Execution failed');
       addEventRef.current({
         type: 'block_error',
+        source: 'frontend',
         error: error instanceof Error ? error.message : 'Execution failed',
         timestamp: new Date(),
       });
@@ -237,6 +248,7 @@ export function useExecution(): UseExecutionReturn {
       setErrorMessage(error instanceof Error ? error.message : 'Step execution failed');
       addEventRef.current({
         type: 'block_error',
+        source: 'frontend',
         error: error instanceof Error ? error.message : 'Step execution failed',
         timestamp: new Date(),
       });

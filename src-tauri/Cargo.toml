@@ -1,6 +1,6 @@
 [package]
 name = "visual-automation-designer"
-version = "0.4.10"
+version = "0.4.11"
 description = "Visual Automation Designer - A visual programming tool for screen automation"
 authors = ["Visual Automation Designer Team"]
 edition = "2021"

@@ -157,6 +157,7 @@ pub fn run() {
             commands::list_flows,
             commands::delete_flow,
             commands::validate_flow,
+            commands::log_runtime_issue,
             // Block operation commands
             commands::create_block,
             commands::update_block_position,

@@ -142,12 +142,17 @@
 
 .block-node--validation-error {
   border-color: var(--color-danger, #dc3545);
-  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.16);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.16), 0 0 12px rgba(220, 53, 69, 0.25);
+  animation: validation-error-glow 1.5s ease-in-out infinite;
+  outline: 2px solid rgba(220, 53, 69, 0.4);
+  outline-offset: 1px;
 }
 
 .block-node--validation-warning {
   border-color: var(--color-warning, #f59e0b);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.10);
+  outline: none;
 }
 
 .block-node--action {
@@ -168,24 +173,26 @@
   position: absolute;
   top: -10px;
   right: -10px;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  z-index: 10;
 }
 
 .block-node__validation-badge--error {
   background: var(--color-danger, #dc3545);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5), 0 0 16px rgba(220, 53, 69, 0.3);
 }
 
 .block-node__validation-badge--warning {
   background: var(--color-warning, #f59e0b);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
 }
 
 .block-node__validation-message {
@@ -197,13 +204,17 @@
 }
 
 .block-node__validation-message--error {
-  background: rgba(220, 53, 69, 0.08);
+  background: rgba(220, 53, 69, 0.10);
   color: var(--color-danger, #dc3545);
+  border-left: 3px solid var(--color-danger, #dc3545);
+  font-weight: 500;
 }
 
 .block-node__validation-message--warning {
-  background: rgba(245, 158, 11, 0.10);
+  background: rgba(245, 158, 11, 0.07);
   color: #a16207;
+  border-left: 2px solid var(--color-warning, #f59e0b);
+  opacity: 0.9;
 }
 
 /* BlockConnection */
@@ -231,6 +242,15 @@
   }
   50% {
     box-shadow: 0 0 0 6px rgba(40, 167, 69, 0.2);
+  }
+}
+
+@keyframes validation-error-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.16), 0 0 12px rgba(220, 53, 69, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.25), 0 0 20px rgba(220, 53, 69, 0.35);
   }
 }
 
@@ -4484,6 +4504,38 @@
   font-size: var(--font-size-xs);
 }
 
+.app__status-item--warning {
+  color: var(--color-warning, #ffc107);
+  font-size: var(--font-size-xs);
+}
+
+.app__status-item--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+
+.app__status-item--clickable:hover {
+  opacity: 0.8;
+  text-decoration-style: solid;
+}
+
+.app__status-item--clickable:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[data-theme="dark"] .app__status-item--warning {
+  color: var(--color-warning, #ffc107);
+}
+
 /* Config Validation States - UX优化45 */
 .block-config__input--invalid {
   border-color: var(--color-danger);
@@ -7253,6 +7305,33 @@
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.block-config__validation-summary {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+
+.block-config__validation-summary strong {
+  flex: 0 0 auto;
+}
+
+.block-config__validation-summary--error {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-primary) 88%);
+  color: color-mix(in srgb, var(--color-danger) 82%, var(--color-text-primary) 18%);
+}
+
+.block-config__validation-summary--warning {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-bg-primary) 86%);
+  color: color-mix(in srgb, var(--color-warning) 78%, var(--color-text-primary) 22%);
 }
 
 .block-config__changes-indicator {

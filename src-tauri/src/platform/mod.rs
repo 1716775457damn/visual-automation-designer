@@ -10,5 +10,5 @@ pub mod screen;
 pub mod input;
 
 // Re-export platform types
-pub use screen::{ScreenCapture, CaptureResult};
+pub use screen::{ScreenCapture, CaptureResult, MonitorInfo};
 pub use input::{InputController, MouseButton, KeyModifier};

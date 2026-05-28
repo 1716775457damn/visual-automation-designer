@@ -16,6 +16,7 @@ const flowEditorMocks = vi.hoisted(() => ({
     onPlacePendingNode?: (position: { x: number; y: number }) => void;
     pendingPlacement?: { type: string; category: string } | null;
     nodeValidation?: Record<string, { message: string }>;
+    focusedNodeId?: string | null;
   },
 }));
 
@@ -98,10 +99,21 @@ vi.mock('./components/App', () => ({
   FlowListModal: () => null,
   NewFlowDialog: () => null,
   ShortcutCheatsheet: () => null,
-  StatusBar: ({ flowValidationError, flowValidationWarning }: { flowValidationError?: { message?: string } | null; flowValidationWarning?: { message?: string } | null }) => (
+  StatusBar: ({
+    flowValidationErrors = [],
+    flowValidationWarnings = [],
+    primaryFlowValidationError,
+    primaryFlowValidationWarning,
+  }: {
+    flowValidationErrors?: Array<{ message?: string }>;
+    flowValidationWarnings?: Array<{ message?: string }>;
+    primaryFlowValidationError?: { message?: string } | null;
+    primaryFlowValidationWarning?: { message?: string } | null;
+  }) => (
     <div data-testid="status-bar-mock">
-      {flowValidationError?.message && <span>{flowValidationError.message}</span>}
-      {flowValidationWarning?.message && <span>{flowValidationWarning.message}</span>}
+      {primaryFlowValidationError?.message && <span>{primaryFlowValidationError.message}</span>}
+      {primaryFlowValidationWarning?.message && <span>{primaryFlowValidationWarning.message}</span>}
+      <span data-testid="status-bar-counts">errors:{flowValidationErrors.length};warnings:{flowValidationWarnings.length}</span>
     </div>
   ),
 }));
@@ -112,12 +124,15 @@ vi.mock('./components/FlowEditor', () => ({
     onPlacePendingNode?: (position: { x: number; y: number }) => void;
     pendingPlacement?: { type: string; category: string } | null;
     nodeValidation?: Record<string, { message: string }>;
+    focusedNodeId?: string | null;
+    onNodeSelect?: (nodeId: string | null) => void;
   }) => {
     flowEditorMocks.lastFlowCanvasProps = props;
-    const { nodeValidation, pendingPlacement, onPlacePendingNode } = props;
+    const { nodeValidation, pendingPlacement, onPlacePendingNode, focusedNodeId } = props;
 
     return (
       <div data-testid="flow-canvas">
+        <span data-testid="flow-canvas-focused-node">{focusedNodeId ?? ''}</span>
         {nodeValidation && Object.entries(nodeValidation).map(([nodeId, validation]) => (
           <span key={nodeId} data-testid={`node-validation-${nodeId}`}>{validation.message}</span>
         ))}
@@ -142,12 +157,18 @@ vi.mock('./components/FlowEditor', () => ({
 }));
 
 vi.mock('./components/ExecutionStatus', () => ({
-  ExecutionLog: ({ onClear }: { onClear?: () => void }) => (
+  ExecutionLog: ({ entries = [], onClear }: { entries?: Array<{ id: string; message: string }>; onClear?: () => void }) => (
     <div data-testid="execution-log">
       <button type="button" onClick={onClear}>清空执行日志</button>
+      {entries.map((entry) => (
+        <span key={entry.id} data-testid={`execution-log-entry-${entry.id}`}>{entry.message}</span>
+      ))}
     </div>
   ),
-  executionEventToLogEntry: vi.fn((event) => event),
+  executionEventToLogEntry: vi.fn((event, index) => ({
+    id: `log-${index}`,
+    message: `${event.source === 'frontend' ? '[前端] ' : ''}${event.error ? `[执行错误] 执行错误 - ${event.error}` : event.type}`,
+  })),
 }));
 
 vi.mock('./components/BlockToolbox', () => ({
@@ -178,7 +199,12 @@ vi.mock('./components/BlockToolbox', () => ({
 }));
 
 vi.mock('./components/ConfigPanel', () => ({
-  BlockConfig: () => <div data-testid="block-config" />,
+  BlockConfig: ({ blockId, externalValidationMessage }: { blockId: string; externalValidationMessage?: string | null }) => (
+    <div data-testid="block-config">
+      <span data-testid="block-config-selected-id">{blockId}</span>
+      {externalValidationMessage && <span data-testid="block-config-validation-message">{externalValidationMessage}</span>}
+    </div>
+  ),
 }));
 
 vi.mock('./components/common', async () => {
@@ -188,6 +214,49 @@ vi.mock('./components/common', async () => {
     ...actual,
     ConfirmDialog: () => null,
   };
+});
+
+describe('App frontend runtime issue visibility', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.localStorage.setItem('vad-onboarding-dismissed', 'true');
+    flowState = { flow: null, nodes: [], edges: [], isDirty: false };
+    createFlowMock.mockResolvedValue({ id: 'flow-1', name: '快速流程', blocks: {}, connections: [] });
+    addNodeMock.mockResolvedValue('node-1');
+    runtimeSelfCheckMock.mockResolvedValue({ ok: true, code: 'OK', message: 'Runtime environment is ready' });
+    tauriFlowMocks.validateFlow.mockResolvedValue({ isValid: true, errors: [], warnings: [] });
+    hookMocks.canonicalFlowBuilder.mockImplementation((flow) => flow);
+  });
+
+  it('shows a toast and records a log entry when a window error occurs', async () => {
+    render(<App />);
+
+    await act(async () => {
+      window.dispatchEvent(new ErrorEvent('error', { message: 'UI renderer crashed' }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('[前端异常] UI renderer crashed')).toBeInTheDocument();
+      expect(screen.getByTestId('execution-log')).toHaveTextContent('[前端] [执行错误] 执行错误 - UI renderer crashed');
+    });
+  });
+
+  it('shows a toast and records a log entry when an unhandled rejection occurs', async () => {
+    render(<App />);
+
+    await act(async () => {
+      const rejectionEvent = new Event('unhandledrejection') as PromiseRejectionEvent;
+      Object.defineProperty(rejectionEvent, 'reason', {
+        value: new Error('Async pipeline exploded'),
+      });
+      window.dispatchEvent(rejectionEvent);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('[前端异常] Async pipeline exploded')).toBeInTheDocument();
+      expect(screen.getByTestId('execution-log')).toHaveTextContent('[前端] [执行错误] 执行错误 - Async pipeline exploded');
+    });
+  });
 });
 
 describe('App quick-create entry points', () => {
@@ -424,7 +493,7 @@ describe('App execution uses saved flow state', () => {
   });
 
   it('blocks execution when validation fails', async () => {
-    tauriFlowMocks.validateFlow.mockResolvedValueOnce({
+    tauriFlowMocks.validateFlow.mockResolvedValue({
       isValid: false,
       errors: [{ code: 'EMPTY_CONDITION_BRANCHES', message: 'Both condition branches are empty' }],
       warnings: [],
@@ -436,9 +505,9 @@ describe('App execution uses saved flow state', () => {
 
     await waitFor(() => {
       expect(executeFlowMock).not.toHaveBeenCalled();
-      expect(setExecutionStateMock).toHaveBeenCalledWith('validation_blocked', 'Both condition branches are empty');
+      expect(setExecutionStateMock).toHaveBeenCalledWith('validation_blocked', '条件判断的“真”与“假”分支均为空。请从条件块底部的“真/假”出口拉出连线，连接至对应要执行的积木块。');
       expect(screen.getByText('执行失败')).toBeInTheDocument();
-      expect(screen.getByText('Both condition branches are empty')).toBeInTheDocument();
+      expect(screen.getByTestId('status-bar-mock')).toHaveTextContent('条件判断的“真”与“假”分支均为空。请从条件块底部的“真/假”出口拉出连线，连接至对应要执行的积木块。');
     });
   });
 
@@ -485,7 +554,8 @@ describe('App execution uses saved flow state', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Wait time is zero')).toBeInTheDocument();
+      expect(screen.getByTestId('status-bar-mock')).toHaveTextContent('等待时间不能为 0ms。请设置一个大于 0 的有效等待毫秒数。');
+      expect(screen.getByTestId('validation-panel')).toBeInTheDocument();
     });
   });
 
@@ -532,7 +602,7 @@ describe('App execution uses saved flow state', () => {
     });
   });
 
-  it('blocks unsupported condition and loop structure validation text', async () => {
+  it('lets users jump from the validation list to the referenced node', async () => {
     tauriFlowMocks.validateFlow.mockResolvedValue({
       isValid: false,
       errors: [
@@ -544,9 +614,73 @@ describe('App execution uses saved flow state', () => {
       ],
       warnings: [
         {
-          code: 'LOOP_SUBCHAIN_UNSUPPORTED',
-          message: 'Loop subchains are unsupported',
-          blockId: 'loop-1',
+          code: 'ZERO_WAIT_TIME',
+          message: 'Wait time is zero',
+          blockId: 'wait-1',
+        },
+      ],
+    });
+
+    flowState = {
+      flow: { id: 'flow-1', name: '测试流程', blocks: {}, connections: [] },
+      nodes: [
+        {
+          id: 'condition-1',
+          type: 'blockNode',
+          position: { x: 0, y: 0 },
+          data: {
+            label: '条件判断',
+            blockType: 'condition',
+            blockCategory: 'control',
+            config: {},
+          },
+        },
+        {
+          id: 'wait-1',
+          type: 'blockNode',
+          position: { x: 100, y: 0 },
+          data: {
+            label: '等待时间',
+            blockType: 'wait_time',
+            blockCategory: 'action',
+            config: { durationMs: 0 },
+          },
+        },
+      ],
+      edges: [],
+      isDirty: false,
+    };
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('validation-panel')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /错误.*条件判断暂不支持默认出口连接/ }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('flow-canvas-focused-node')).toHaveTextContent('condition-1');
+      expect(screen.getByTestId('block-config-selected-id')).toHaveTextContent('condition-1');
+      expect(screen.getByTestId('block-config-validation-message')).toHaveTextContent('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。');
+    });
+  });
+
+  it('shows the global validation list with summary items', async () => {
+    tauriFlowMocks.validateFlow.mockResolvedValue({
+      isValid: false,
+      errors: [
+        {
+          code: 'CONDITION_DEFAULT_OUTGOING_UNSUPPORTED',
+          message: 'Condition default outgoing edges are unsupported',
+          blockId: 'condition-1',
+        },
+      ],
+      warnings: [
+        {
+          code: 'ZERO_WAIT_TIME',
+          message: 'Wait time is zero',
+          blockId: 'wait-1',
         },
       ],
     });
@@ -560,19 +694,11 @@ describe('App execution uses saved flow state', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: '执行流程' }));
-
     await waitFor(() => {
-      expect(screen.getAllByText('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。').length).toBeGreaterThan(0);
-      expect(screen.getByTestId('node-validation-condition-1')).toHaveTextContent('条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。');
-      expect(screen.getByTestId('node-validation-loop-1')).toHaveTextContent('循环暂不支持把多个子节点串成循环体。请先保留一个直接子节点作为循环内容，或把复杂步骤拆到循环块之后执行。');
-      expect(setExecutionStateMock).toHaveBeenCalledWith(
-        'validation_blocked',
-        '条件判断暂不支持默认出口连接。请删除条件块底部的普通连线，只使用“真/假”两个分支出口连接后续节点。'
-      );
+      expect(screen.getByTestId('validation-panel')).toBeInTheDocument();
+      expect(screen.getByText('🩺 流程问题清单')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /错误.*条件判断暂不支持默认出口连接/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /警告.*等待时间不能为 0ms/ })).toBeInTheDocument();
     });
-
-    expect(screen.queryByText('Condition default outgoing edges are unsupported')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loop subchains are unsupported')).not.toBeInTheDocument();
   });
 });

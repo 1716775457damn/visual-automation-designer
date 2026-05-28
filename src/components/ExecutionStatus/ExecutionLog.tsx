@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { classifyDiagnosticKind, classifyDiagnosticSource, type DiagnosticEventSource } from './diagnostics';
 
 export interface LogEntry {
   id: string;
@@ -239,6 +240,7 @@ export function ExecutionLog({
 export function executionEventToLogEntry(
   event: { 
     type: string; 
+    source?: DiagnosticEventSource;
     timestamp: Date; 
     blockId?: string; 
     error?: string;
@@ -249,6 +251,8 @@ export function executionEventToLogEntry(
   const logType = event.error ? 'error' : EVENT_TYPE_TO_LOG_TYPE[event.type] || 'info';
   
   let message = EVENT_TYPE_LABELS[event.type] || event.type;
+  const sourceLabel = classifyDiagnosticSource(event);
+  const messageCategory = classifyDiagnosticKind(event);
   
   // Add block ID to message if present
   if (event.blockId) {
@@ -258,6 +262,14 @@ export function executionEventToLogEntry(
   // Add error message if present
   if (event.error) {
     message = `${message} - ${event.error}`;
+  }
+
+  if (sourceLabel) {
+    message = `[${sourceLabel}] ${message}`;
+  }
+
+  if (messageCategory) {
+    message = `[${messageCategory}] ${message}`;
   }
 
   return {

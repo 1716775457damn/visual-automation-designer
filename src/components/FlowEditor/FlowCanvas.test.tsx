@@ -127,4 +127,50 @@ describe('FlowCanvas Context Menu', () => {
     fireEvent.contextMenu(screen.getByTestId('react-flow-node-node-1'));
     expect(screen.getByText('设为入口').closest('button')).toBeDisabled();
   });
+
+  it('should show clear entry action for the current entry node', () => {
+    render(
+      <FlowCanvas
+        nodes={[
+          {
+            id: 'node-1',
+            type: 'blockNode',
+            position: { x: 0, y: 0 },
+            data: {
+              label: '点击',
+              blockType: 'click',
+              blockCategory: 'action',
+              isEntryPoint: true,
+            },
+          },
+        ] as never}
+      />
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('react-flow-node-node-1'));
+    expect(screen.getByText('清除入口')).toBeInTheDocument();
+  });
+
+  it('should not show clear entry action for non-entry nodes', () => {
+    render(
+      <FlowCanvas
+        nodes={[
+          {
+            id: 'node-1',
+            type: 'blockNode',
+            position: { x: 0, y: 0 },
+            data: {
+              label: '点击',
+              blockType: 'click',
+              blockCategory: 'action',
+              isEntryPoint: false,
+            },
+          },
+        ] as never}
+      />
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('react-flow-node-node-1'));
+    expect(screen.queryByText('清除入口')).not.toBeInTheDocument();
+  });
 });

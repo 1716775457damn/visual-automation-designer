@@ -32,19 +32,19 @@ export function getConnectionGuardValidation(
     });
   }
 
-  const isConditionBranchNode = edges.some((edge) =>
+  const conditionBranchParent = edges.find((edge) =>
     edge.target === sourceId && (edge.sourceHandle === 'true' || edge.sourceHandle === 'false')
   );
 
-  if (isConditionBranchNode) {
+  if (conditionBranchParent) {
     return formatValidationResponse({
       code: 'CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED',
       message: 'Condition branch subchains are unsupported',
-      blockId: sourceId,
+      blockId: conditionBranchParent.source,
     });
   }
 
-  const isLoopChildNode = edges.some((edge) => {
+  const loopChildParent = edges.find((edge) => {
     if (edge.target !== sourceId) {
       return false;
     }
@@ -53,11 +53,11 @@ export function getConnectionGuardValidation(
     return isLoopNode(parentNode);
   });
 
-  if (isLoopChildNode) {
+  if (loopChildParent) {
     return formatValidationResponse({
       code: 'LOOP_SUBCHAIN_UNSUPPORTED',
       message: 'Loop subchains are unsupported',
-      blockId: sourceId,
+      blockId: loopChildParent.source,
     });
   }
 

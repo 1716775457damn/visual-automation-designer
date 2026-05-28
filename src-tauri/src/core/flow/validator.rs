@@ -131,6 +131,7 @@ impl FlowValidator {
                     "Flow contains a cycle: blocks cannot form an infinite loop (found cycle starting at {})",
                     cycle
                 ))
+                .with_block(cycle.clone())
             );
         }
         
@@ -147,6 +148,10 @@ impl FlowValidator {
                     ))
                 );
             }
+        } else if !flow.blocks.is_empty() {
+            errors.push(
+                ValidationError::warning("NO_ENTRY", "No entry point is set for the flow".to_string())
+            );
         }
         
         // Check for missing image references
@@ -276,6 +281,7 @@ impl FlowValidator {
                         connection.source, connection.target
                     ))
                     .with_connection(connection.id.to_string())
+                    .with_block(connection.source.clone())
                 );
             }
             seen_connections.insert(key);
@@ -333,7 +339,7 @@ impl FlowValidator {
                                         "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED",
                                         "Condition branches currently support only direct branch nodes. A branch node has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
                                     )
-                                    .with_block(block_id.clone())
+                                    .with_block(branch_target.clone())
                                 );
                                 break;
                             }
@@ -349,7 +355,7 @@ impl FlowValidator {
                                         "LOOP_SUBCHAIN_UNSUPPORTED",
                                         "Loop bodies currently support only direct child nodes. A loop child has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
                                     )
-                                    .with_block(block_id.clone())
+                                    .with_block(child_id.clone())
                                 );
                                 break;
                             }
@@ -719,10 +725,12 @@ mod tests {
         flow.add_block(condition_block);
 
         flow.add_connection(Connection::with_handle(condition_id, branch_a.clone(), "true".to_string()));
-        flow.add_connection(Connection::new(branch_a, branch_b));
+        flow.add_connection(Connection::new(branch_a.clone(), branch_b));
 
         let errors = validator.get_errors(&flow);
-        assert!(errors.iter().any(|e| e.code == "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED"));
+        let subchain_error = errors.iter().find(|e| e.code == "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED");
+        assert!(subchain_error.is_some());
+        assert_eq!(subchain_error.unwrap().block_id, Some(branch_a));
     }
 
     #[test]
@@ -746,10 +754,39 @@ mod tests {
         }
 
         flow.add_connection(Connection::new(loop_id, loop_child.clone()));
-        flow.add_connection(Connection::new(loop_child, loop_child_next));
+        flow.add_connection(Connection::new(loop_child.clone(), loop_child_next));
 
         let errors = validator.get_errors(&flow);
-        assert!(errors.iter().any(|e| e.code == "LOOP_SUBCHAIN_UNSUPPORTED"));
+        let subchain_error = errors.iter().find(|e| e.code == "LOOP_SUBCHAIN_UNSUPPORTED");
+        assert!(subchain_error.is_some());
+        assert_eq!(subchain_error.unwrap().block_id, Some(loop_child));
+    }
+
+    #[test]
+    fn test_validate_cycle_contains_block_id() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let block1 = add_click_block(&mut flow, 10, 20);
+        let block2 = add_wait_block(&mut flow, 1000);
+
+        flow.add_connection(Connection::new(block1.clone(), block2.clone()));
+        flow.add_connection(Connection::new(block2, block1.clone()));
+
+        let errors = validator.get_errors(&flow);
+        let cycle_error = errors.iter().find(|e| e.code == "CYCLE_DETECTED");
+        assert!(cycle_error.is_some());
+        assert!(cycle_error.unwrap().block_id.is_some());
+    }
+
+    #[test]
+    fn test_validate_no_entry_warning() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+        add_click_block(&mut flow, 10, 20);
+
+        let warnings = validator.get_warnings(&flow);
+        assert!(warnings.iter().any(|e| e.code == "NO_ENTRY"));
     }
 }
 

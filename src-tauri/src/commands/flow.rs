@@ -9,6 +9,7 @@
 
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
+use serde::Deserialize;
 
 use crate::core::flow::{FlowManager, FlowValidator};
 use crate::core::flow::validator::ValidationSeverity;
@@ -16,6 +17,13 @@ use crate::core::{DefaultOperationApplier, FlowOperation, History, OperationAppl
 use crate::error::{AppError, Result};
 use crate::models::block::{BlockConfig, BlockId, BlockNode, BlockPosition, BlockType};
 use crate::models::flow::{Connection, ConnectionId, Flow, FlowId, FlowMetadata};
+
+#[derive(Debug, Deserialize)]
+pub struct RuntimeIssuePayload {
+    pub source: String,
+    pub message: String,
+    pub details: Option<String>,
+}
 
 /// Application state containing the flow manager
 pub struct FlowState {
@@ -65,6 +73,17 @@ fn apply_history_operation(state: &FlowState, fid: &FlowId, operation: FlowOpera
 // ============================================================================
 // Flow Management Commands
 // ============================================================================
+
+#[tauri::command]
+pub fn log_runtime_issue(payload: RuntimeIssuePayload) -> Result<bool> {
+    crate::logging::log_error(
+        &format!("Runtime issue from {}", payload.source),
+        Some(&payload.message),
+        payload.details.as_deref(),
+    );
+
+    Ok(true)
+}
 
 /// Create a new flow with the given name.
 ///

@@ -372,14 +372,14 @@ mod tests {
     #[test]
     fn test_wait_image_block_creation() {
         let image_id = ImageId::new();
-        let block = WaitImageBlock::new(image_id.clone(), Some(5000), BlockPosition::new(0.0, 0.0));
-        assert_eq!(block.image_id, image_id);
+        let block = WaitImageBlock::new(Some(image_id.clone()), Some(5000), BlockPosition::new(0.0, 0.0));
+        assert_eq!(block.image_id, Some(image_id));
         assert_eq!(block.timeout_ms, Some(5000));
     }
 
     #[test]
     fn test_wait_image_block_validation_valid() {
-        let block = WaitImageBlock::new(ImageId::new(), Some(1000), BlockPosition::new(0.0, 0.0));
+        let block = WaitImageBlock::new(Some(ImageId::new()), Some(1000), BlockPosition::new(0.0, 0.0));
         let errors = block.validate();
         assert!(errors.is_empty());
     }

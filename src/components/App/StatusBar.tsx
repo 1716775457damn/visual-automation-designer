@@ -12,9 +12,12 @@ export interface StatusBarProps {
   loading: boolean;
   isDirty: boolean;
   flowError?: Error | null;
-  flowValidationError?: ValidationErrorResponse | null;
-  flowValidationWarning?: ValidationErrorResponse | null;
+  flowValidationErrors?: ValidationErrorResponse[];
+  flowValidationWarnings?: ValidationErrorResponse[];
+  primaryFlowValidationError?: ValidationErrorResponse | null;
+  primaryFlowValidationWarning?: ValidationErrorResponse | null;
   placementLabel?: string | null;
+  onFocusNode?: (blockId: string) => void;
 }
 
 export function StatusBar({
@@ -28,15 +31,22 @@ export function StatusBar({
   loading,
   isDirty,
   flowError,
-  flowValidationError,
-  flowValidationWarning,
+  flowValidationErrors = [],
+  flowValidationWarnings = [],
+  primaryFlowValidationError,
+  primaryFlowValidationWarning,
   placementLabel,
+  onFocusNode,
 }: StatusBarProps) {
   const saveStatusLabel = loading ? '同步中' : isDirty ? '未保存' : '已同步';
-  const validationMessage = flowValidationError?.message ?? flowValidationWarning?.message ?? null;
-  const validationClassName = flowValidationError
+  const validationMessage = primaryFlowValidationError?.message ?? primaryFlowValidationWarning?.message ?? null;
+  const validationClassName = primaryFlowValidationError
     ? 'app__status-item app__status-item--error'
     : 'app__status-item app__status-item--warning';
+  const validationSummary = [
+    flowValidationErrors.length > 0 ? `错误 ${flowValidationErrors.length}` : null,
+    flowValidationWarnings.length > 0 ? `警告 ${flowValidationWarnings.length}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div className="app__status">
@@ -62,7 +72,27 @@ export function StatusBar({
         )}
         {loading && <span className="app__status-item app__status-item--loading">⏳ 加载中...</span>}
         {flowError && <span className="app__status-item app__status-item--error">⚠️ {flowError.message}</span>}
-        {!flowError && validationMessage && <span className={validationClassName}>⚠️ {validationMessage}</span>}
+        {!flowError && validationMessage && (
+          (primaryFlowValidationError?.blockId || primaryFlowValidationWarning?.blockId) && onFocusNode ? (
+            <button
+              className={`${validationClassName} app__status-item--clickable`}
+              onClick={() => {
+                const blockId = primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId;
+                if (blockId) onFocusNode(blockId);
+              }}
+              title={`定位到积木块 ${primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId ?? ''}`}
+              type="button"
+            >
+              ⚠️ {validationMessage}
+              {validationSummary ? `（${validationSummary}）` : ''}
+            </button>
+          ) : (
+            <span className={validationClassName}>
+              ⚠️ {validationMessage}
+              {validationSummary ? `（${validationSummary}）` : ''}
+            </span>
+          )
+        )}
       </div>
     </div>
   );

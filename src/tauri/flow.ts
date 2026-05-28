@@ -252,22 +252,22 @@ type TauriBlockConfigPayload =
       type: 'click';
       mode:
         | { mode: 'coordinates'; x: number; y: number }
-        | { mode: 'image'; image_id?: string };
+        | { mode: 'image'; imageId?: string };
       count: number;
     }
   | {
       type: 'waitImage';
-      image_id?: string;
-      timeout_ms?: number;
+      imageId?: string;
+      timeoutMs?: number;
     }
   | {
       type: 'waitTime';
-      duration_ms: number;
+      durationMs: number;
     }
   | {
       type: 'inputText';
       text: string;
-      interval_ms?: number;
+      intervalMs?: number;
     }
   | {
       type: 'loop';
@@ -278,10 +278,10 @@ type TauriBlockConfigPayload =
     }
   | {
       type: 'condition';
-      image_id?: string;
+      imageId?: string;
       condition: ConditionOp;
-      true_branch: BlockId[];
-      false_branch: BlockId[];
+      trueBranch: BlockId[];
+      falseBranch: BlockId[];
     };
 
 function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
@@ -290,26 +290,26 @@ function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
       return {
         type: 'click',
         mode: config.mode.mode === 'image'
-          ? { mode: 'image', image_id: config.mode.imageId }
+          ? { mode: 'image', imageId: config.mode.imageId }
           : config.mode,
         count: config.count,
       };
     case 'wait_image':
       return {
         type: 'waitImage',
-        image_id: config.imageId,
-        timeout_ms: config.timeoutMs,
+        imageId: config.imageId,
+        timeoutMs: config.timeoutMs,
       };
     case 'wait_time':
       return {
         type: 'waitTime',
-        duration_ms: config.durationMs,
+        durationMs: config.durationMs,
       };
     case 'input_text':
       return {
         type: 'inputText',
         text: config.text,
-        interval_ms: config.intervalMs,
+        intervalMs: config.intervalMs,
       };
     case 'loop':
       return {
@@ -323,10 +323,10 @@ function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
     case 'condition':
       return {
         type: 'condition',
-        image_id: config.imageId,
+        imageId: config.imageId,
         condition: config.condition,
-        true_branch: config.trueBranch,
-        false_branch: config.falseBranch,
+        trueBranch: config.trueBranch,
+        falseBranch: config.falseBranch,
       };
   }
 }

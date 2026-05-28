@@ -400,7 +400,7 @@ mod tests {
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );
-        assert_eq!(block.image_id, image_id);
+        assert_eq!(block.image_id, Some(image_id));
         assert_eq!(block.condition, ConditionOp::ImageExists);
         assert!(block.true_branch.is_empty());
         assert!(block.false_branch.is_empty());
@@ -437,7 +437,7 @@ mod tests {
         assert!(!block.evaluate_condition(false));
         
         let block_not_exists = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageNotExists,
             BlockPosition::new(0.0, 0.0),
         );
@@ -505,7 +505,7 @@ mod tests {
     #[tokio::test]
     async fn test_conditional_block_execute() {
         let mut block = ConditionalBlock::new(
-            ImageId::new(),
+            Some(ImageId::new()),
             ConditionOp::ImageExists,
             BlockPosition::new(0.0, 0.0),
         );

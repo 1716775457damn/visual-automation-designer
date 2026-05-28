@@ -281,20 +281,42 @@ impl InputController {
 
         thread::sleep(Duration::from_millis(self.key_interval_ms));
 
-        // Press main key
-        let key_code = self.parse_key(key)?;
-        self.enigo.key(key_code, Direction::Click).map_err(|e| {
-            AppError::ExecutionFailed(format!("Failed to press key: {:?}", e))
-        })?;
+        // Parse key (before pressing so we can still release modifiers on parse failure)
+        let key_code = match self.parse_key(key) {
+            Ok(kc) => kc,
+            Err(e) => {
+                // Release modifiers before propagating parse error
+                for modifier in modifiers {
+                    let modifier_key = self.modifier_to_key(*modifier);
+                    let _ = self.enigo.key(modifier_key, Direction::Release);
+                }
+                return Err(e);
+            }
+        };
+
+        // Press main key — collect error instead of short-circuiting
+        let main_key_result = self.enigo.key(key_code, Direction::Click);
 
         thread::sleep(Duration::from_millis(self.key_interval_ms));
 
-        // Release modifiers
+        // Always release modifiers, even if the main key press failed,
+        // to prevent stuck modifier keys in the OS.
+        let mut release_error: Option<AppError> = None;
         for modifier in modifiers {
             let modifier_key = self.modifier_to_key(*modifier);
-            self.enigo.key(modifier_key, Direction::Release).map_err(|e| {
-                AppError::ExecutionFailed(format!("Failed to release modifier: {:?}", e))
-            })?;
+            if let Err(e) = self.enigo.key(modifier_key, Direction::Release) {
+                release_error = Some(AppError::ExecutionFailed(
+                    format!("Failed to release modifier: {:?}", e)
+                ));
+            }
+        }
+
+        // Return the first error (main key failure takes priority)
+        main_key_result.map_err(|e| {
+            AppError::ExecutionFailed(format!("Failed to press key: {:?}", e))
+        })?;
+        if let Some(e) = release_error {
+            return Err(e);
         }
 
         Ok(())
@@ -364,7 +386,7 @@ mod tests {
         // This test may fail in CI environments without display
         // but should work on a local machine
         if let Ok(_controller) = Enigo::new(&Settings::default()) {
-            let controller = InputController::new();
+            let controller = InputController::new().unwrap();
             assert_eq!(controller.click_interval_ms, 50);
             assert_eq!(controller.key_interval_ms, 10);
         }
@@ -379,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_parse_key() {
-        let controller = InputController::new();
+        let controller = InputController::new().unwrap();
         
         assert!(matches!(controller.parse_key("Enter"), Ok(Key::Return)));
         assert!(matches!(controller.parse_key("Tab"), Ok(Key::Tab)));
