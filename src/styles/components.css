@@ -7933,3 +7933,210 @@ line-height: 1.5;
     right: 316px;
   }
 }
+
+/* ============================================================================
+   Visual Design Polish - Block Toolbox Enhancement
+   Color-coded block items with improved visual hierarchy
+   ============================================================================ */
+
+/* Distinct left-border color coding for action vs control */
+.action-blocks__item::before,
+.control-blocks__item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.action-blocks__item {
+  position: relative;
+  overflow: hidden;
+}
+
+.action-blocks__item::before {
+  background: linear-gradient(180deg, var(--color-block-click), var(--color-block-action));
+}
+
+.control-blocks__item {
+  position: relative;
+  overflow: hidden;
+}
+
+.control-blocks__item::before {
+  background: linear-gradient(180deg, var(--color-block-loop), var(--color-block-control));
+}
+
+.action-blocks__item:hover::before,
+.control-blocks__item:hover::before {
+  opacity: 1;
+}
+
+/* Enhanced icon backgrounds per block type */
+.action-blocks__item[data-testid*="click"] .action-blocks__icon,
+.action-blocks__item[title*="点击"] .action-blocks__icon {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 152, 0, 0.08));
+}
+
+.action-blocks__item[data-testid*="wait_image"] .action-blocks__icon,
+.action-blocks__item[title*="等待图片"] .action-blocks__icon {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(156, 39, 176, 0.08));
+}
+
+.action-blocks__item[data-testid*="wait_time"] .action-blocks__icon,
+.action-blocks__item[title*="等待时间"] .action-blocks__icon {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.08));
+}
+
+.action-blocks__item[data-testid*="input_text"] .action-blocks__icon,
+.action-blocks__item[title*="输入文本"] .action-blocks__icon {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(33, 150, 243, 0.08));
+}
+
+.control-blocks__item[data-testid*="loop"] .control-blocks__icon,
+.control-blocks__item[title*="循环"]:not([title*="无限"]) .control-blocks__icon {
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.08));
+}
+
+.control-blocks__item[data-testid*="loop_infinite"] .control-blocks__icon {
+  background: linear-gradient(135deg, rgba(0, 188, 212, 0.15), rgba(0, 188, 212, 0.05));
+}
+
+.control-blocks__item[data-testid*="condition"] .control-blocks__icon,
+.control-blocks__item[title*="条件判断"] .control-blocks__icon {
+  background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(233, 30, 99, 0.08));
+}
+
+/* Enhanced drag ghost styling */
+.action-blocks__item--dragging,
+.control-blocks__item--dragging {
+  opacity: 0.5;
+  transform: scale(0.95) rotate(-1deg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Refined drag-over state for canvas */
+.flow-canvas--drop-active {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: -2px;
+  background-color: color-mix(in srgb, var(--color-primary-soft) 100%, transparent) !important;
+  transition: background-color var(--transition-normal);
+}
+
+/* Placement preview refinements */
+.flow-canvas__placement-preview {
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: placement-pulse 1.2s ease-in-out infinite;
+}
+
+.flow-canvas__placement-core {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.flow-canvas__placement-ring {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary);
+  opacity: 0.4;
+  animation: placement-ring 1.2s ease-out infinite;
+}
+
+@keyframes placement-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+@keyframes placement-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* ============================================================================
+   Visual Design Polish - Execution Log Refinements
+   ============================================================================ */
+
+.execution-log__entry--info {
+  border-left-color: var(--color-primary);
+}
+
+.execution-log__entry--success,
+.execution-log__entry--completed {
+  border-left-color: var(--color-success);
+}
+
+.execution-log__entry--warning {
+  border-left-color: var(--color-warning);
+}
+
+.execution-log__entry--error {
+  border-left-color: var(--color-danger);
+}
+
+.execution-log__entry:hover {
+  background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  transition: background var(--transition-fast);
+}
+
+/* ============================================================================
+   Visual Design Polish - Animations & Micro-interactions
+   ============================================================================ */
+
+/* Staggered appear animation for block items */
+.action-blocks__item,
+.control-blocks__item {
+  animation: block-appear 0.3s ease-out both;
+}
+
+.action-blocks__item:nth-child(1) { animation-delay: 0ms; }
+.action-blocks__item:nth-child(2) { animation-delay: 40ms; }
+.action-blocks__item:nth-child(3) { animation-delay: 80ms; }
+.action-blocks__item:nth-child(4) { animation-delay: 120ms; }
+.control-blocks__item:nth-child(1) { animation-delay: 60ms; }
+.control-blocks__item:nth-child(2) { animation-delay: 100ms; }
+.control-blocks__item:nth-child(3) { animation-delay: 140ms; }
+
+@keyframes block-appear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .action-blocks__item,
+  .control-blocks__item,
+  .flow-canvas__placement-core,
+  .flow-canvas__placement-ring {
+    animation: none !important;
+  }
+
+  .action-blocks__item:hover,
+  .control-blocks__item:hover {
+    transform: none !important;
+  }
+
+  .action-blocks__item--dragging,
+  .control-blocks__item--dragging {
+    transform: scale(0.95) !important;
+  }
+}
