@@ -1,0 +1,10 @@
+Goal:
+Fix issues in the visual-automation-designer repository and iterate toward a passing test run.
+
+Requirements:
+1. Make direct code changes instead of only analyzing.
+2. Prefer the smallest correct change first.
+3. Use the latest test output to guide the next round.
+4. Avoid unrelated refactors unless they unblock the fix.
+5. Prioritize frontend and Tauri integration issues that affect correctness or tests.
+6. End after this round. The outer runner will decide whether to continue.

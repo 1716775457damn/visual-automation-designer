@@ -83,12 +83,15 @@ impl BlockPosition {
 
 /// Click mode configuration
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "mode", rename_all = "camelCase")]
+#[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ClickMode {
     /// Click at specific coordinates
     Coordinates { x: u32, y: u32 },
     /// Click at the center of an image found on screen
-    Image { image_id: Option<crate::models::image::ImageId> },
+    Image {
+        #[serde(alias = "image_id")]
+        image_id: Option<crate::models::image::ImageId>,
+    },
 }
 
 /// Condition operator for conditional blocks
@@ -103,7 +106,7 @@ pub enum ConditionOp {
 
 /// Block configuration - varies by block type
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum BlockConfig {
     /// Click block configuration
     Click {
@@ -115,13 +118,16 @@ pub enum BlockConfig {
     /// Wait for image block configuration
     WaitImage {
         /// Image ID to wait for
+        #[serde(alias = "image_id")]
         image_id: Option<crate::models::image::ImageId>,
         /// Timeout in milliseconds (optional)
+        #[serde(alias = "timeout_ms")]
         timeout_ms: Option<u64>,
     },
     /// Wait for time block configuration
     WaitTime {
         /// Duration to wait in milliseconds
+        #[serde(alias = "duration_ms")]
         duration_ms: u64,
     },
     /// Input text block configuration
@@ -129,6 +135,7 @@ pub enum BlockConfig {
         /// Text to input
         text: String,
         /// Interval between keystrokes in milliseconds (optional)
+        #[serde(alias = "interval_ms")]
         interval_ms: Option<u64>,
     },
     /// Loop block configuration
@@ -141,12 +148,15 @@ pub enum BlockConfig {
     /// Conditional block configuration
     Condition {
         /// Image ID to check
+        #[serde(alias = "image_id")]
         image_id: Option<crate::models::image::ImageId>,
         /// Condition operator
         condition: ConditionOp,
         /// Block IDs to execute when condition is true
+        #[serde(alias = "true_branch")]
         true_branch: Vec<BlockId>,
         /// Block IDs to execute when condition is false
+        #[serde(alias = "false_branch")]
         false_branch: Vec<BlockId>,
     },
 }
