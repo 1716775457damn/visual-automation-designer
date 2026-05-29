@@ -8140,3 +8140,111 @@ line-height: 1.5;
     transform: scale(0.95) !important;
   }
 }
+
+/* ============================================================================
+   Visual Design Polish - App Status Bar & Layout
+   ============================================================================ */
+
+.app__status {
+  padding: 8px 16px;
+  background: linear-gradient(180deg, 
+    color-mix(in srgb, var(--color-bg-panel) 100%, transparent),
+    color-mix(in srgb, var(--color-bg-secondary) 100%, transparent));
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  backdrop-filter: blur(12px);
+  font-size: var(--font-size-xs);
+}
+
+.app__status-item--stats,
+.app__status-item--flow {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.app__status-item--autosave {
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: var(--font-size-xs);
+}
+
+.app__status-item--autosave::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--color-success);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--color-success) 50%, transparent);
+}
+
+.app__status-item--loading::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--color-warning);
+  animation: status-pulse 1s ease-in-out infinite;
+}
+
+.app__status-item--error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.app__status-item--warning {
+  color: var(--color-warning);
+}
+
+.app__status-item--clickable {
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.app__status-item--clickable:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 100%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Sidebar refined rounded transitions */
+.app__sidebar--left,
+.app__sidebar--right {
+  transition: width var(--transition-normal), min-width var(--transition-normal);
+}
+
+.app__sidebar--left {
+  background: linear-gradient(180deg, 
+    color-mix(in srgb, var(--color-bg-secondary) 60%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg-primary) 100%, transparent) 100%);
+}
+
+.app__sidebar--right {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--color-bg-primary) 100%, transparent) 0%,
+    color-mix(in srgb, var(--color-bg-secondary) 80%, transparent) 100%);
+}
+
+/* Flow canvas subtle canvas glow */
+.flow-canvas {
+  background:
+    radial-gradient(ellipse at 30% 20%, color-mix(in srgb, var(--color-primary-soft) 100%, transparent) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, color-mix(in srgb, var(--color-accent-soft, var(--color-primary-soft)) 80%, transparent) 0%, transparent 50%),
+    linear-gradient(var(--color-canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-canvas-grid) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 78%, transparent), color-mix(in srgb, var(--color-bg-primary) 96%, transparent));
+  background-size: auto, auto, 20px 20px, 20px 20px, auto;
+}
