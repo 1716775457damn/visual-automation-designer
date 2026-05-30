@@ -24,19 +24,61 @@ if ([string]::IsNullOrEmpty($status)) {
     return
 }
 
-Write-Host "`n[Files] Detected modified files:" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "[Files] Detected modified files:" -ForegroundColor Cyan
 git status -s
 
 # 4. Stage all changes
-Write-Host "`nStaging changes..." -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "Staging changes..." -ForegroundColor DarkGray
 git add -A
+
+# 4.5. Security Check (防止敏感密钥和关键凭据意外泄漏)
+Write-Host ""
+Write-Host "[Security] Scanning staged files for sensitive data..." -ForegroundColor DarkYellow
+$stagedFiles = git diff --cached --name-only
+$hasSecret = $false
+
+foreach ($file in $stagedFiles) {
+    if (Test-Path -Path $file -PathType Leaf) {
+        $filename = Split-Path -Leaf $file
+        if ($filename -match "\.env$" -or $filename -match "\.pem$" -or $filename -match "\.key$" -or $filename -match "id_rsa") {
+            Write-Host "❌ ALERT: Detected sensitive config or key file: '$file'!" -ForegroundColor Red
+            $hasSecret = $true
+            continue
+        }
+        
+        $content = Get-Content -Raw -Path $file 2>$null
+        if ($content) {
+            # 常见敏感前缀与凭证正则匹配 (使用单引号字符串，避免 PowerShell 转义问题)
+            if ($content -match 'sk-[a-zA-Z0-9-]{20,}' -or 
+                $content -match 'AIzaSy[a-zA-Z0-9_-]{35}' -or
+                $content -match '(?i)jwt_secret\s*[:=]\s*["''`][a-zA-Z0-9_-]{10,}["''`]' -or
+                $content -match '(?i)secret_key\s*[:=]\s*["''`][a-zA-Z0-9_-]{10,}["''`]' -or
+                $content -match '(?i)password\s*[:=]\s*["''`][a-zA-Z0-9_-]{8,}["''`]') {
+                Write-Host "❌ ALERT: Detected hardcoded API Key or Secret credential in '$file'!" -ForegroundColor Red
+                $hasSecret = $true
+            }
+        }
+    }
+}
+
+if ($hasSecret) {
+    Write-Host ""
+    Write-Host "⚠️ Security Block: Push blocked to prevent secret exposure." -ForegroundColor Red
+    Write-Host "Please remove the hardcoded secrets or move them to a secure untracked file (e.g. .env)." -ForegroundColor Yellow
+    Write-Host "Undoing staging to protect your files..." -ForegroundColor Gray
+    git reset
+    return
+}
 
 # 5. Determine commit message
 if ([string]::IsNullOrEmpty($Message)) {
     if ($env:CI -eq "true") {
         $Message = "update: auto-sync at (CI) $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
     } else {
-        Write-Host "`n[Message] Enter commit message (or press Enter to auto-generate):" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "[Message] Enter commit message (or press Enter to auto-generate):" -ForegroundColor Cyan
         $inputMsg = Read-Host "> "
         if (-not [string]::IsNullOrEmpty($inputMsg)) {
             $Message = $inputMsg.Trim()
@@ -55,7 +97,8 @@ if ([string]::IsNullOrEmpty($Message)) {
     }
 }
 
-Write-Host "`n[Commit] Committing changes: '$Message'" -ForegroundColor Gray
+Write-Host ""
+Write-Host "[Commit] Committing changes: '$Message'" -ForegroundColor Gray
 git commit -m $Message
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Error: Commit failed!" -ForegroundColor Red
@@ -64,11 +107,14 @@ if ($LASTEXITCODE -ne 0) {
 
 # 6. Push to remote
 $currentBranch = git branch --show-current
-Write-Host "`n[Push] Pushing to remote ($currentBranch)..." -ForegroundColor Cyan
+Write-Host ""
+Write-Host "[Push] Pushing to remote ($currentBranch)..." -ForegroundColor Cyan
 
 git push origin $currentBranch
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "`n🎉 Success! Changes pushed to origin [$currentBranch] successfully." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "🎉 Success! Changes pushed to origin [$currentBranch] successfully." -ForegroundColor Green
 } else {
-    Write-Host "`nError: Push failed! Check your connection or remote permissions." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Error: Push failed! Check your connection or remote permissions." -ForegroundColor Red
 }
