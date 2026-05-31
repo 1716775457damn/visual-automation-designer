@@ -1,0 +1,610 @@
+@import "../../styles/variables.css";
+
+
+
+.executionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border-top: 1px solid var(--color-border);
+}
+.executionBarIdle .executionBarIndicator {
+  background: var(--color-status-idle);
+}
+.executionBarRunning .executionBarIndicator {
+  background: var(--color-status-running);
+}
+.executionBarPaused .executionBarIndicator {
+  background: var(--color-status-paused);
+}
+.executionBarCompleted .executionBarIndicator {
+  background: var(--color-status-completed);
+}
+.executionBarError .executionBarIndicator {
+  background: var(--color-status-error);
+}
+.executionBarStatus {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+.executionBarIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.executionBarLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.executionBarProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+.executionBarProgressBar {
+  flex: 1;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.executionBarProgressFill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--transition-normal);
+}
+.executionBarProgressText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.executionBarError {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+/* ExecutionLog */
+
+.execution-log {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.executionLogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.executionLogHeader h4 {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+.executionLogCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.executionLogContent {
+  padding: var(--spacing-sm);
+  max-height: 200px;
+  overflow-y: auto;
+}
+.executionLogEmpty {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-md);
+}
+.executionLogEntry {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2px;
+}
+.executionLogEntryInfo {
+  background: var(--color-bg-secondary);
+}
+.executionLogEntrySuccess {
+  background: rgba(40, 167, 69, 0.1);
+  color: var(--color-success);
+}
+.executionLogEntryError {
+  background: rgba(220, 53, 69, 0.1);
+  color: var(--color-danger);
+}
+.executionLogEntryWarning {
+  background: rgba(255, 193, 7, 0.1);
+  color: #856404;
+}
+.executionLogTime {
+  margin-right: var(--spacing-xs);
+  color: var(--color-text-muted);
+}
+.executionLogMessage {
+  margin-right: var(--spacing-xs);
+}
+.executionLogBlockId {
+  color: var(--color-text-secondary);
+}
+.executionSpeedControlSlider {
+  width: 80px;
+  height: 4px;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.executionSpeedControlSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.executionLogFilterBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.executionLogFilterBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.executionLogFilterBtnActive {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+.executionLogFilterCount {
+  padding: 1px 4px;
+  background: var(--color-bg-tertiary);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.executionLogSearch {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+.executionLogSearchInput {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  padding-right: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+.executionLogSearchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.executionLogSearchClear {
+  position: absolute;
+  right: calc(var(--spacing-sm) + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: var(--color-bg-tertiary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+}
+.executionLogIcon {
+  font-size: 12px;
+}
+.executionLogPauseHint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--spacing-xs);
+  background: rgba(255, 193, 7, 0.9);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  color: #333;
+}
+.executionTimelineItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  transition: all var(--transition-fast);
+}
+.executionTimelineItemCompleted {
+  background: rgba(40, 167, 69, 0.1);
+}
+.executionTimelineItemRunning {
+  background: rgba(59, 130, 246, 0.1);
+}
+.executionTimelineItemPending {
+  background: var(--color-bg-secondary);
+}
+.executionTimelineStatus {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.executionTimelineConnector {
+  width: 2px;
+  height: 12px;
+  background: var(--color-border);
+  margin-left: 7px;
+}
+.executionLogFilterBtn {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.executionLogFilterBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.executionLogFilterBtnActive {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.executionLogSearch {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-primary);
+}
+.executionLogSearch:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.executionTimelineItem {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.executionTimelineItemCompleted {
+  background: var(--color-success);
+  color: white;
+}
+.executionTimelineItemCurrent {
+  background: var(--color-primary);
+  color: white;
+  animation: pulse 1s ease-in-out infinite;
+}
+.executionTimelineItemError {
+  background: var(--color-danger);
+  color: white;
+}
+.executionTimelineItemPending {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+.executionLog {
+  background: color-mix(in srgb, var(--color-bg-primary) 94%, transparent);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16);
+}
+.executionLogHeader {
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, var(--color-bg-primary) 24%);
+}
+.executionLogContent {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-bg-secondary) 90%, transparent) 100%);
+}
+.progressRingCircle {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--transition-normal);
+}
+.statusIndicatorRunning {
+  animation: statusPulse 1.5s ease-in-out infinite;
+}
+.executionLogToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  user-select: none;
+}
+.executionLogToggle:hover {
+  background: var(--color-bg-tertiary);
+}
+.executionLogToggleIcon {
+  transition: transform var(--transition-fast);
+}
+.executionLogExpanded .executionLogToggleIcon {
+  transform: rotate(180deg);
+}
+.executionSpeedControlLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.executionSpeedControlSlider {
+  width: 100px;
+  height: 4px;
+  appearance: none;
+  background: var(--color-border);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.executionSpeedControlSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  cursor: grab;
+}
+.executionSpeedControlValue {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  min-width: 40px;
+}
+.executionHeatmapNode {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  opacity: 0.3;
+}
+.executionHeatmapNodeHot {
+  background: rgba(220, 53, 69, 0.5);
+}
+.executionHeatmapNodeWarm {
+  background: rgba(255, 193, 7, 0.5);
+}
+.executionHeatmapNodeCold {
+  background: rgba(40, 167, 69, 0.3);
+}
+.executionProgressRingSvg {
+  transform: rotate(-90deg);
+}
+.executionProgressRingBackground {
+  fill: none;
+  stroke: var(--color-border);
+  stroke-width: 4;
+}
+.executionProgressRingProgress {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--transition-normal);
+}
+.executionProgressRingText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.executionTimelineBarSegment {
+  flex-shrink: 0;
+  width: 8px;
+  height: 24px;
+  background: var(--color-bg-tertiary);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.executionTimelineBarSegment:hover {
+  transform: scaleY(1.2);
+}
+.executionTimelineBarSegmentCompleted {
+  background: var(--color-success);
+}
+.executionTimelineBarSegmentCurrent {
+  background: var(--color-primary);
+  animation: pulse 1s ease-in-out infinite;
+}
+.executionTimelineBarSegmentError {
+  background: var(--color-danger);
+}
+.executionTimelineBarSegmentSkipped {
+  background: var(--color-border);
+}
+.executionLogCount {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+}
+.executionLogSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.executionLogSearchInput {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 90%, transparent);
+  color: var(--color-text-primary);
+}
+.executionLogSearchInput::placeholder {
+  color: var(--color-text-muted);
+}
+.executionLogSearchClear {
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 88%, transparent);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.executionLogSearchClear:hover {
+  background: var(--color-bg-primary);
+}
+.executionLogEntryInfo {
+background: color-mix(in srgb, var(--color-bg-secondary) 82%, transparent);
+  color: var(--color-text-primary);
+}
+.executionLogEntrySuccess {
+  background: color-mix(in srgb, var(--color-success) 12%, var(--color-bg-primary) 88%);
+}
+.executionLogEntryError {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-primary) 88%);
+}
+.executionLogEntryWarning {
+background: color-mix(in srgb, var(--color-warning) 12%, var(--color-bg-primary) 88%);
+  color: color-mix(in srgb, var(--color-warning) 55%, var(--color-text-primary) 45%);
+}
+.executionLog {
+  border-radius: 18px 18px 0 0;
+}
+.executionLogFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
+.executionLogFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-primary) 90%, transparent);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.executionLogFilterBtnActive {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.executionLogSearch {
+  padding: 10px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+.executionLogEntry {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+}
+.executionLogPauseHint {
+  padding: 10px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-bg-secondary) 75%, var(--color-bg-primary) 25%);
+}
+.executionLogEntryError .executionLogMessage,
+.executionLogEntryWarning .executionLogMessage {
+  font-weight: 500;
+}
+.executionLogBlockId {
+  opacity: 0.75;
+}
+.executionLog {
+background: transparent;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+flex-direction: column;
+}
+.executionLogHeader {
+  padding: 14px 52px 10px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+.executionLogHeader h4 {
+  font-size: 15px;
+}
+.executionLogCount {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary-soft) 100%, transparent);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.executionLogContent {
+flex: 1;
+  min-height: 0;
+  padding: 6px 0 10px;
+}
+.executionLogEntry {
+margin: 0 12px 8px;
+border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+border-left-width: 4px;
+border-radius: 14px;
+box-shadow: var(--shadow-inset);
+  color: var(--color-text-primary);
+}
+.executionLogTime {
+color: var(--color-text-secondary);
+font-variant-numeric: tabular-nums;
+}
+.executionLogMessage {
+line-height: 1.5;
+  color: inherit;
+}
+
+
+.executionLogEntryInfo {
+  border-left-color: var(--color-primary);
+}
+.executionLogEntrySuccess,
+.executionLogEntryCompleted {
+  border-left-color: var(--color-success);
+}
+.executionLogEntryWarning {
+  border-left-color: var(--color-warning);
+}
+.executionLogEntryError {
+  border-left-color: var(--color-danger);
+}
+.executionLogEntry:hover {
+  background: color-mix(in srgb, var(--color-bg-secondary) 60%, transparent);
+  transition: background var(--transition-fast);
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

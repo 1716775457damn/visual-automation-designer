@@ -1,0 +1,633 @@
+@import "../../styles/variables.css";
+
+
+
+.libraryView {
+  width: 250px;
+  height: 100%;
+  background: var(--color-bg-primary);
+  border-right: 1px solid var(--color-border);
+}
+.libraryViewHeader {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.libraryViewHeader h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+.libraryViewContent {
+  padding: var(--spacing-md);
+}
+/* ImageCard */
+
+.image-card {
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+.imageCardSelected {
+  border: 2px solid var(--color-primary);
+}
+.imageCardThumbnail {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.imageCardThumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imageCardInfo {
+  padding: var(--spacing-xs) 0;
+}
+.imageCardName {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.imageCardDimensions,
+.imageCardFormat {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+/* ImageUploader */
+
+.image-uploader__dropzone {
+  padding: var(--spacing-xl);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+.imageUploaderDropzone:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.imageUploaderInput {
+  display: none;
+}
+.imageUploaderHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.imageUploaderFormats {
+  font-size: var(--font-size-xs);
+  margin-top: var(--spacing-xs);
+}
+
+
+.libraryView {
+  width: 280px;
+  height: 100%;
+  background: var(--color-bg-primary);
+  border-right: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+}
+.libraryViewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.libraryViewHeader h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+.libraryViewCount {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.libraryViewSearch {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.libraryViewSearchInput {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast);
+}
+.libraryViewSearchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.libraryViewUpload {
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+.libraryViewUploadBtn {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.libraryViewUploadBtn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.libraryViewUploadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.libraryViewContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+.libraryViewGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.libraryViewLoading,
+.libraryViewError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+.libraryViewError {
+  color: var(--color-danger);
+}
+.libraryViewRetryBtn {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.libraryViewEmpty {
+  padding: var(--spacing-md);
+}
+.libraryViewNoResults {
+  padding: var(--spacing-md);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+/* ImageCard - Enhanced */
+
+.image-card {
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.imageCard:hover {
+  background: var(--color-bg-tertiary);
+}
+.imageCardSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.imageCardHoverActions .imageCardActions {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.imageCardHoverActions:hover .imageCardActions {
+  opacity: 1;
+}
+.imageCardThumbnail {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imageCardThumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imageCardPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+.imageCardInfo {
+  padding: var(--spacing-xs) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.imageCardName {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.imageCardNameInput {
+  width: 100%;
+  padding: 2px var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+}
+.imageCardNameInput:focus {
+  outline: none;
+}
+.imageCardDimensions,
+.imageCardFormat {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.imageCardActions {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+.imageCardBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xs);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.imageCardBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.imageCardBtnDelete:hover {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+/* ImageUploader - Enhanced */
+
+.image-uploader {
+  cursor: pointer;
+}
+.imageUploaderDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.imageUploaderDropzone {
+  padding: var(--spacing-xl);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+.imageUploaderDragging .imageUploaderDropzone {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.imageUploaderDropzone:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.imageUploaderCompact .imageUploaderDropzone {
+  padding: var(--spacing-md);
+}
+.imageUploaderIcon {
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-secondary);
+}
+.imageUploaderHint {
+  text-align: center;
+}
+.imageUploaderTitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+}
+.imageUploaderFormats {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+.imageUploaderActions {
+  margin-top: var(--spacing-sm);
+}
+.imageUploaderNote {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+/* ImageSelector - Enhanced */
+
+.image-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.imageSelectorSearch {
+  position: relative;
+}
+.imageSelectorSearchInput {
+  width: 100%;
+  padding: var(--spacing-sm);
+  padding-right: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--transition-fast);
+}
+.imageSelectorSearchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.imageSelectorClearBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: var(--color-bg-tertiary);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-text-secondary);
+}
+.imageSelectorClearBtn:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+.imageSelectorLoading,
+.imageSelectorError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+.imageSelectorError {
+  color: var(--color-danger);
+}
+.imageSelectorRetryBtn {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.imageSelectorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.imageSelectorItem {
+  position: relative;
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+.imageSelectorItem:hover {
+  background: var(--color-bg-secondary);
+}
+.imageSelectorItemSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.imageSelectorThumbnail {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imageSelectorThumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.imageSelectorPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+.imageSelectorName {
+  display: block;
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.imageSelectorCheck {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+.imageSelectorEmpty,
+.imageSelectorNoResults {
+  grid-column: 1 / -1;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.imageSelectorEmpty p {
+  margin: 0 0 var(--spacing-sm) 0;
+}
+.imageSelectorUploadBtn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.imageSelectorUploadBtn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.imageSelectorUploadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.imageSelectorUploadSection {
+  margin-bottom: var(--spacing-sm);
+}
+.imageSelectorActions {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+.imageSelectorUploadBtn,
+.imageSelectorPasteBtn {
+  flex: 1;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
+}
+.imageSelectorPasteBtn {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+.imageSelectorUploadBtn:hover:not(:disabled),
+.imageSelectorPasteBtn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.imageSelectorPasteBtn:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+}
+.imageSelectorUploadBtn:disabled,
+.imageSelectorPasteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.imageSelectorDeleteBtn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: rgba(220, 53, 69, 0.9);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imageSelectorItem:hover .imageSelectorDeleteBtn {
+  opacity: 1;
+}
+.imageSelectorDeleteBtn:hover {
+  background: var(--color-danger);
+}
+.imagePreviewModalContent {
+  max-width: 90vw;
+  max-height: 90vh;
+  position: relative;
+}
+.imagePreviewModalImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+}
+.imagePreviewModalClose {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: var(--color-bg-primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.imagePreviewModalInfo {
+  position: absolute;
+  bottom: -40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: var(--font-size-sm);
+}
+.imagePreviewModalContent {
+  max-width: 90%;
+  max-height: 90%;
+  position: relative;
+}
+.imagePreviewModalImage {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+.imagePreviewModalClose {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+.imagePreviewModalClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+.imagePreviewModalInfo {
+  position: absolute;
+  bottom: -40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: var(--font-size-sm);
+}

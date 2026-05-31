@@ -1,0 +1,633 @@
+@import "../../styles/variables.css";
+
+
+
+.blockConfig {
+  width: 280px;
+  height: 100%;
+  background: var(--color-bg-primary);
+  border-left: 1px solid var(--color-border);
+  overflow-y: auto;
+}
+.blockConfigHeader {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.blockConfigHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+.blockConfigType {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.blockConfigContent {
+  padding: var(--spacing-md);
+}
+.blockConfigFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.blockConfigActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+.blockConfigBtn {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+}
+.blockConfigBtnPrimary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+/* ParamEditor */
+
+.param-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+.paramEditorLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+/* ImageSelector */
+
+.image-selector__search {
+  margin-bottom: var(--spacing-sm);
+}
+.imageSelectorSearchInput {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+.imageSelectorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-sm);
+}
+.imageSelectorItem {
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+.imageSelectorItemSelected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+
+.blockConfig {
+  width: 300px;
+  height: 100%;
+  background: var(--color-bg-primary);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.blockConfigHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+.blockConfigHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+.blockConfigType {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+.blockConfigContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+.blockConfigSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+.blockConfigField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+.blockConfigFieldGroup {
+  display: flex;
+  gap: var(--spacing-md);
+}
+.blockConfigFieldGroup .blockConfigField {
+  flex: 1;
+}
+.blockConfigLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.blockConfigInput,
+.blockConfigSelect,
+.blockConfigTextarea {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-primary);
+  transition: border-color var(--transition-fast);
+}
+.blockConfigInput:focus,
+.blockConfigSelect:focus,
+.blockConfigTextarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+.blockConfigTextarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+.blockConfigHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+.blockConfigInfo {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+}
+.blockConfigBranches {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+.blockConfigModeSelector {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+.blockConfigModeBtn {
+  flex: 1;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.blockConfigModeBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.blockConfigModeBtn.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.blockConfigActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+.blockConfigBtn {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.blockConfigBtn:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+}
+.blockConfigBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.blockConfigBtnPrimary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.blockConfigBtnPrimary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+/* Block Config Sections with Icons */
+
+.block-config__section[data-testid="click-config"]::before {
+  content: "🖱️";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="wait-image-config"]::before {
+  content: "🖼️";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="wait-time-config"]::before {
+  content: "⏱️";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="input-text-config"]::before {
+  content: "⌨️";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="loop-config"]::before {
+  content: "🔁";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="loop-infinite-config"]::before {
+  content: "♾️";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+.blockConfigSection[data-testid="condition-config"]::before {
+  content: "❓";
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+/* Validation States */
+
+.block-config__input--invalid,
+.block-config__select--invalid,
+.block-config__textarea--invalid {
+  border-color: var(--color-danger);
+}
+.blockConfigError {
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+  margin-top: var(--spacing-xs);
+}
+/* Image Selector Container within BlockConfig */
+
+.block-config .image-selector {
+  max-height: 200px;
+  overflow: hidden;
+}
+.blockConfig .imageSelectorGrid {
+  max-height: 150px;
+}
+/* Empty State */
+
+.block-config__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.blockConfigEmptyIcon {
+  font-size: 48px;
+  margin-bottom: var(--spacing-md);
+}
+.blockConfigEmptyText {
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+/* Param Editor within BlockConfig */
+
+.block-config .param-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+
+.configPlaceholderHintBox {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  text-align: left;
+  border: 1px solid var(--color-border);
+}
+.configPlaceholderHintTitle {
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-sm);
+}
+.configPlaceholderHint {
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.configPlaceholderIcon {
+  font-size: 64px;
+  margin-bottom: var(--spacing-lg);
+  opacity: 0.4;
+  animation: float 3s ease-in-out infinite;
+}
+.blockConfigInputInvalid:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+.blockConfigValidationError {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+.blockConfig {
+  background: color-mix(in srgb, var(--color-bg-primary) 95%, transparent);
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+.blockConfigHeader {
+  background: color-mix(in srgb, var(--color-bg-secondary) 72%, var(--color-bg-primary) 28%);
+}
+.blockConfigInput,
+.blockConfigSelect,
+.blockConfigTextarea {
+  color: var(--color-text-primary);
+}
+.inputValidationIcon {
+  position: absolute;
+  right: var(--spacing-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--font-size-md);
+  pointer-events: none;
+}
+.inputValidationIconValid {
+  color: var(--color-success);
+}
+.inputValidationIconInvalid {
+  color: var(--color-danger);
+}
+.inputValidationMessage {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-danger);
+}
+.inputValidationValid .inputValidationMessage {
+  background: rgba(40, 167, 69, 0.1);
+  color: var(--color-success);
+}
+.blockConfig {
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  backdrop-filter: blur(12px);
+}
+.blockConfigHeader {
+  padding: 18px 18px 16px;
+}
+.blockConfigHeaderMain {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.blockConfigMeta {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+.blockConfigContent {
+  padding: 18px;
+}
+.blockConfigSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 75%, var(--color-bg-primary) 25%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+.blockConfigSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.blockConfigSummaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+.blockConfigSummaryCardLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+}
+.blockConfigSummaryCardValue {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.blockConfigSummaryLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+}
+.blockConfigSummaryValue {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.blockConfigChangesIndicator,
+.blockConfigValidationError {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+.blockConfigValidationSummary {
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+}
+.blockConfigValidationSummary strong {
+  flex: 0 0 auto;
+}
+.blockConfigValidationSummaryError {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-primary) 88%);
+  color: color-mix(in srgb, var(--color-danger) 82%, var(--color-text-primary) 18%);
+}
+.blockConfigValidationSummaryWarning {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-bg-primary) 86%);
+  color: color-mix(in srgb, var(--color-warning) 78%, var(--color-text-primary) 22%);
+}
+.blockConfigChangesIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: color-mix(in srgb, var(--color-warning) 80%, var(--color-text-primary) 20%);
+}
+.blockConfigValidationError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  color: color-mix(in srgb, var(--color-danger) 82%, var(--color-text-primary) 18%);
+}
+.blockConfigField,
+.blockConfigFieldGroup,
+.blockConfigBranches {
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: 14px;
+  padding: 12px;
+}
+.blockConfigFieldGroup {
+  align-items: stretch;
+}
+.blockConfigFieldGroup .blockConfigField {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.blockConfigBranches {
+  gap: 10px;
+}
+.blockConfigChangesIndicator {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-bg-primary) 86%);
+}
+.blockConfigValidationError {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-bg-primary) 88%);
+}
+.blockConfigInput,
+.blockConfigSelect,
+.blockConfigTextarea,
+.imageSelectorSearchInput,
+.executionLogSearchInput {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.blockConfig {
+  width: 100%;
+  border-left: none;
+  background: transparent;
+}
+.blockConfigHeader {
+  padding: 20px;
+  border-bottom-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 98%, transparent), color-mix(in srgb, var(--color-bg-secondary) 98%, transparent));
+}
+.blockConfigContent {
+  padding: 18px 20px 24px;
+}
+.blockConfigSummary,
+.blockConfigSummaryCard,
+.blockConfigSection {
+  border-radius: 18px;
+}
+.blockConfigSummary {
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.blockConfigSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.blockConfigSummaryCard {
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 96%, transparent), color-mix(in srgb, var(--color-bg-secondary) 100%, transparent));
+  box-shadow: var(--shadow-inset);
+}
+.blockConfigSummaryCardLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+.blockConfigSummaryCardValue {
+  display: block;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+.blockConfigSection {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.blockConfigModeBtn,
+.blockConfigBtn {
+  min-height: 40px;
+  border-radius: 14px;
+}
+.blockConfigBtnPrimary {
+  box-shadow: 0 14px 26px rgba(35, 123, 255, 0.2);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

@@ -1,0 +1,267 @@
+@import "../../styles/variables.css";
+
+.loadingIndicator {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.confirmDialogContent {
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  padding: var(--spacing-lg);
+  animation: slideUp 0.2s ease;
+}
+.confirmDialogHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+.confirmDialogIcon {
+  font-size: 24px;
+}
+.confirmDialogTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+.confirmDialogMessage {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+.confirmDialogActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: flex-end;
+}
+.confirmDialogBtn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.confirmDialogBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.confirmDialogBtnDanger {
+  background: var(--color-danger);
+  color: white;
+  border-color: var(--color-danger);
+}
+.confirmDialogBtnDanger:hover {
+  background: #c82333;
+}
+.loadingSpinnerLarge {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.loadingText {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  font-size: var(--font-size-sm);
+  animation: toastSlideIn 0.3s ease-out;
+  max-width: 350px;
+  border-left: 4px solid var(--color-primary);
+}
+.toastSuccess {
+  border-left-color: var(--color-success);
+}
+.toastSuccess .toastIcon {
+  color: var(--color-success);
+}
+.toastError {
+  border-left-color: var(--color-danger);
+}
+.toastError .toastIcon {
+  color: var(--color-danger);
+}
+.toastInfo {
+  border-left-color: var(--color-primary);
+}
+.toastWarning {
+  border-left-color: var(--color-warning, #ffc107);
+}
+.toastIcon {
+  font-size: 20px;
+}
+.toastMessage {
+  flex: 1;
+  font-weight: 500;
+}
+.toastClose {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+.toastClose:hover {
+  opacity: 1;
+}
+.toastExiting {
+  animation: toastSlideOut 0.3s ease-in forwards;
+}
+.skeletonText {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+}
+.skeletonTitle {
+  height: 20px;
+  width: 60%;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+}
+.skeletonImage {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: var(--radius-md);
+}
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast);
+  z-index: 1000;
+}
+.tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+.keyboardHintItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+.keyboardHintKey {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: var(--font-size-xs);
+  box-shadow: 0 1px 0 var(--color-border);
+}
+[data-theme="dark"] .toast {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.skipLink:focus {
+  top: var(--spacing-sm);
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 25%,
+    var(--color-bg-tertiary) 50%,
+    var(--color-bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.toastConfirmationActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-xs);
+}
+.toastConfirmationBtn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+.toastConfirmationBtnPrimary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.focusVisible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.skipToMain:focus {
+  top: var(--spacing-sm);
+}
+.toastExiting {
+  animation: toastPhase6-out var(--vad-transition-normal, 300ms) ease-in forwards;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}

@@ -1,0 +1,1603 @@
+@import "../../styles/variables.css";
+
+
+
+.flowCanvas {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg-secondary);
+  background-image: 
+    linear-gradient(var(--color-canvas-grid, rgba(0, 0, 0, 0.05)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-canvas-grid, rgba(0, 0, 0, 0.05)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.flowToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: linear-gradient(180deg, var(--color-bg-primary) 0%, var(--color-bg-elevated, var(--color-bg-primary)) 100%);
+  border-bottom: 1px solid var(--color-border);
+  z-index: var(--z-index-toolbar);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+.flowToolbarFlowName {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--color-border);
+}
+.flowToolbarGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+.flowToolbarGroupFile {
+  margin-right: var(--spacing-md);
+}
+.flowToolbarGroupEdit {
+  margin-right: var(--spacing-md);
+}
+.flowToolbarBtn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+.flowToolbarBtn:hover:not(:disabled) {
+  background: var(--color-bg-elevated, var(--color-bg-secondary));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.flowToolbarBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.flowToolbarBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.flowToolbarBtnPrimary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.flowToolbarBtnPrimary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.flowToolbarBtnDanger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.flowToolbarBtnDanger:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.1);
+}
+.flowToolbarBtnHelp {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  min-width: auto;
+}
+.flowToolbarGroupHelp {
+  margin-left: auto;
+}
+/* BlockNode */
+
+.block-node {
+  min-width: 150px;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: move;
+  user-select: none;
+  position: relative;
+}
+.blockNodeSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+.blockNodeExecuting {
+  border-color: var(--color-status-running);
+  animation: pulseBorder 1s ease-in-out infinite;
+}
+.blockNodeValidationError {
+  border-color: var(--color-danger, #dc3545);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.16), 0 0 12px rgba(220, 53, 69, 0.25);
+  animation: validationErrorGlow 1.5s ease-in-out infinite;
+  outline: 2px solid rgba(220, 53, 69, 0.4);
+  outline-offset: 1px;
+}
+.blockNodeValidationWarning {
+  border-color: var(--color-warning, #f59e0b);
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.10);
+  outline: none;
+}
+.blockNodeAction {
+  border-left: 4px solid var(--color-block-action);
+}
+.blockNodeControl {
+  border-left: 4px solid var(--color-block-control);
+}
+.blockNodeHeader {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-xs);
+}
+.blockNodeValidationBadge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  z-index: 10;
+}
+.blockNodeValidationBadgeError {
+  background: var(--color-danger, #dc3545);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.5), 0 0 16px rgba(220, 53, 69, 0.3);
+}
+.blockNodeValidationBadgeWarning {
+  background: var(--color-warning, #f59e0b);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+.blockNodeValidationMessage {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: var(--font-size-xs);
+  line-height: 1.35;
+}
+.blockNodeValidationMessageError {
+  background: rgba(220, 53, 69, 0.10);
+  color: var(--color-danger, #dc3545);
+  border-left: 3px solid var(--color-danger, #dc3545);
+  font-weight: 500;
+}
+.blockNodeValidationMessageWarning {
+  background: rgba(245, 158, 11, 0.07);
+  color: #a16207;
+  border-left: 2px solid var(--color-warning, #f59e0b);
+  opacity: 0.9;
+}
+/* BlockConnection */
+
+.block-connection {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+}
+.blockConnectionAnimated {
+  stroke-dasharray: 5, 5;
+  animation: dashFlow 0.5s linear infinite;
+}
+
+
+.flowCanvas {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg-secondary);
+  position: relative;
+}
+.flowCanvasHint {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(10px);
+}
+.flowCanvasHint::before {
+  content: "💡";
+}
+/* React Flow Overrides */
+
+.react-flow__node {
+  cursor: grab;
+}
+.reactFlowNode:active {
+  cursor: grabbing;
+}
+.reactFlowHandle {
+  width: 12px;
+  height: 12px;
+  background: var(--color-primary);
+  border: 2px solid var(--color-bg-primary);
+}
+.reactFlowHandleTop {
+  top: -6px;
+}
+.reactFlowHandleBottom {
+  bottom: -6px;
+}
+.reactFlowEdgePath {
+  stroke: var(--color-text-secondary);
+  stroke-width: 2;
+}
+.reactFlowEdge.selected .reactFlowEdgePath {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+}
+.reactFlowControls {
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.reactFlowControlsButton {
+  width: 28px;
+  height: 28px;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+.reactFlowControlsButton:hover {
+  background: var(--color-bg-secondary);
+}
+.reactFlowAttribution {
+  background: var(--color-bg-primary);
+  padding: 2px 4px;
+  font-size: 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+/* Enhanced BlockNode Styles */
+
+.block-node {
+  min-width: 150px;
+  max-width: 200px;
+  padding: 0;
+  background: var(--color-bg-primary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  cursor: move;
+  user-select: none;
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+  position: relative;
+}
+.blockNode:hover {
+  box-shadow: var(--shadow-md);
+}
+.blockNodeSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light), var(--shadow-md);
+}
+.blockNodeRecent {
+  animation: blockRecentPop 1.8s ease-out;
+}
+.blockNodeExecuting {
+  border-color: var(--color-status-running);
+  box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+}
+.blockNodeAction {
+  border-left: 4px solid var(--color-block-action);
+}
+.blockNodeControl {
+  border-left: 4px solid var(--color-block-control);
+}
+.blockNodeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm);
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.blockNodeIcon {
+  font-size: var(--font-size-md);
+}
+.blockNodeLabel {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+.blockNodeTypeBadge {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 78%, transparent);
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.blockNodeContent {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+.blockNodeConfig {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.blockNodeHandle {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.blockNode:hover .blockNodeHandle {
+  opacity: 1;
+}
+.blockNodeHandleTrue,
+.blockNodeHandleFalse {
+  width: 10px;
+  height: 10px;
+}
+.blockNodeHandleTrue {
+  background: var(--color-success);
+}
+.blockNodeHandleFalse {
+  background: var(--color-danger);
+}
+.blockNodeExecutingIndicator {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-status-running);
+  border-radius: 50%;
+  border: 2px solid var(--color-bg-primary);
+}
+.blockNodePulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  background: var(--color-status-running);
+  border-radius: 50%;
+  animation: pulse 1s ease-in-out infinite;
+}
+.blockNodeRecentIndicator {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 18%, var(--color-bg-primary) 82%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+}
+/* Enhanced BlockConnection Styles */
+
+.block-connection--animated {
+  stroke-dasharray: 8 4;
+  animation: dash-flow 0.5s linear infinite;
+}
+
+
+.contextMenu {
+  min-width: 180px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: var(--spacing-xs) 0;
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+.contextMenuList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.contextMenuItemWrapper {
+  position: relative;
+}
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  transition: background var(--transition-fast);
+}
+.contextMenuItem:hover:not(:disabled) {
+  background: var(--color-bg-secondary);
+}
+.contextMenuItemDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.contextMenuItemDanger {
+  color: var(--color-danger);
+}
+.contextMenuItemDanger:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.1);
+}
+.contextMenuItemHasSubmenu {
+  position: relative;
+}
+.contextMenuItemArrow {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.contextMenuItemIcon {
+  width: 20px;
+  text-align: center;
+  font-size: var(--font-size-md);
+}
+.contextMenuItemLabel {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Submenu */
+.context-menu__submenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 160px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  margin: 0;
+  padding: var(--spacing-xs) 0;
+  display: none;
+  animation: context-menu-fade-in 0.15s ease-out;
+}
+.contextMenuItemWrapper:hover > .contextMenuSubmenu {
+  display: block;
+}
+/* Divider */
+.context-menu__divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--spacing-xs) var(--spacing-md);
+  padding: 0;
+}
+/* Keyboard shortcuts hint */
+.context-menu__shortcut {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  padding-left: var(--spacing-md);
+}
+.blockNodeInvalid::after {
+  content: "⚠️";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 14px;
+}
+.flowCanvasDropActive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px dashed var(--color-primary);
+  pointer-events: none;
+  z-index: 1;
+}
+.blockNode:focus-within {
+  box-shadow: 0 0 0 3px var(--color-primary-light), var(--shadow-md);
+}
+.reactFlowEdgeConditionFalse {
+  stroke: var(--color-danger);
+}
+.flowToolbarFlowNameEditable:hover {
+  background: var(--color-bg-tertiary);
+}
+.flowToolbarFlowNameInput {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  min-width: 150px;
+}
+.flowToolbarFlowNameInput:focus {
+  outline: none;
+}
+.reactFlowHandle:hover {
+  transform: scale(1.3);
+}
+.reactFlowHandleTop {
+  cursor: crosshair;
+}
+.reactFlowHandleBottom {
+  cursor: crosshair;
+}
+.reactFlowMinimapMask {
+  fill: rgba(59, 130, 246, 0.1);
+  stroke: var(--color-primary);
+  stroke-width: 1;
+}
+.blockNodeTooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--color-bg-primary);
+}
+.blockNodeDisabledOverlay {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 14px;
+}
+.blockNodeError {
+  border-color: var(--color-danger);
+}
+.quickToolbarBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.quickToolbarBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.quickToolbarBtnActive {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.contextMenuItemBadge {
+  margin-left: auto;
+  padding: 2px 6px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+}
+.minimapControlsBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.minimapControlsBtn:hover {
+  background: var(--color-bg-secondary);
+}
+.connectionLabelTrue {
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+.connectionLabelFalse {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.operationProgressSpinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--spacing-md);
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+.operationProgressText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.historyStackItem {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.historyStackItem:hover {
+  background: var(--color-bg-secondary);
+}
+.historyStackItemCurrent {
+  background: var(--color-primary-light);
+  font-weight: 500;
+}
+.templateLibraryOpen {
+  right: 0;
+}
+.templateLibraryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.templateLibraryContent {
+  padding: var(--spacing-md);
+  overflow-y: auto;
+  height: calc(100% - 60px);
+}
+.templateItem {
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.templateItem:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.onboardingStep {
+  max-width: 500px;
+  padding: var(--spacing-lg);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.onboardingStepImage {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  margin-bottom: var(--spacing-md);
+}
+.onboardingStepTitle {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+.onboardingStepDescription {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+.onboardingStepActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+.quickAddMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: all var(--transition-fast);
+}
+.quickAddMenuItem:hover {
+  background: var(--color-primary-light);
+}
+.quickAddMenuShortcut {
+  margin-left: auto;
+  padding: 2px 4px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-family: monospace;
+}
+.flowStatsItem {
+  text-align: center;
+}
+.flowStatsValue {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.flowStatsLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.versionHistoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.versionHistoryItem {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.versionHistoryItem:hover {
+  background: var(--color-bg-secondary);
+}
+.versionHistoryItemCurrent {
+  background: var(--color-primary-light);
+}
+.smartSuggestionsTitle {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-text-secondary);
+}
+.smartSuggestionsItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+.smartSuggestionsItem:hover {
+  background: var(--color-primary-light);
+}
+.blockNode:hover .blockNodeTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+.blockNodeDisabled .blockNodeHeader,
+.blockNodeDisabled .blockNodeContent {
+  pointer-events: none;
+}
+.colorLegendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+.colorLegendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+}
+.flowCanvasPlacementArmed {
+  cursor: crosshair;
+}
+.flowCanvasPlacementArmed::after {
+  content: '单击白板放置元件';
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary) 20%, var(--color-bg-primary) 80%);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 50%, var(--color-border) 50%);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-md);
+  z-index: 6;
+  pointer-events: none;
+}
+.flowCanvasPlacementPreview {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+  z-index: 8;
+  pointer-events: none;
+}
+.flowCanvasPlacementCore {
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 24%, transparent);
+}
+.flowCanvasPlacementRing {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 65%, transparent);
+  animation: placementPulse 1.2s ease-out infinite;
+}
+.flowCanvasPlacementLabel {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-primary) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  color: var(--color-text-primary);
+  font-size: 10px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+}
+.blockNode {
+  overflow: hidden;
+}
+.blockNode:hover {
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.12);
+}
+.blockNodeHeader {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+[data-theme="dark"] .reactFlowControls {
+  border: 1px solid var(--color-border);
+}
+[data-theme="dark"] .blockNodeHeader {
+  background: rgba(255, 255, 255, 0.05);
+}
+[data-theme="dark"] .reactFlowHandle {
+  border-color: var(--color-bg-primary);
+}
+[data-theme="dark"] .reactFlowControlsButton:hover {
+  background: var(--color-bg-tertiary);
+}
+.flowToolbarBtnTheme:hover {
+  background: var(--color-primary-light);
+}
+.blockNode:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.flowToolbarBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.blockNode:hover .blockNodeDragHandle,
+.blockNodeSelected .blockNodeDragHandle {
+  opacity: 1;
+}
+.miniMapViewport {
+  position: absolute;
+  border: 2px solid var(--color-primary);
+  background: rgba(0, 160, 255, 0.1);
+  cursor: move;
+}
+.welcomeTourSpotlight {
+  position: absolute;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+.welcomeTourTooltip {
+  position: absolute;
+  max-width: 300px;
+  padding: var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 3001;
+}
+.welcomeTourTooltipTitle {
+  font-weight: 600;
+  margin-bottom: var(--spacing-sm);
+}
+.welcomeTourTooltipContent {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+.welcomeTourTooltipActions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+.welcomeTourTooltipProgress {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-md);
+}
+.welcomeTourTooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border);
+}
+.welcomeTourTooltipDotActive {
+  background: var(--color-primary);
+}
+.undoStackPreviewItem {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.undoStackPreviewItem:hover {
+  background: var(--color-bg-secondary);
+}
+.undoStackPreviewItemCurrent {
+  background: var(--color-primary-light);
+  font-weight: 500;
+}
+.flowValidationItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-xs);
+  animation: slideIn 0.2s ease;
+}
+.flowValidationItemError {
+  border-left: 3px solid var(--color-danger);
+}
+.flowValidationItemWarning {
+  border-left: 3px solid var(--color-warning);
+}
+.quickAddMenuSearch {
+  padding: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-xs);
+}
+.quickAddMenuSearchInput {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+.quickAddMenuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.quickAddMenuItem:hover {
+  background: var(--color-bg-secondary);
+}
+.quickAddMenuItemSelected {
+  background: var(--color-primary-light);
+}
+.autoLayoutBtn:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+}
+.nodeSearchModal {
+  width: 90%;
+  max-width: 500px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.nodeSearchModalInput {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-md);
+  background: transparent;
+}
+.nodeSearchModalInput:focus {
+  outline: none;
+}
+.nodeSearchModalResults {
+  max-height: 300px;
+  overflow-y: auto;
+}
+.nodeSearchModalResult {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.nodeSearchModalResult:hover {
+  background: var(--color-bg-secondary);
+}
+.nodeSearchModalResultSelected {
+  background: var(--color-primary-light);
+}
+.nodeSearchModalEmpty {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.blockNodeBreakpoint::before {
+  content: '🔴';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 12px;
+}
+.blockNodeBreakpointDisabled::before {
+  opacity: 0.4;
+}
+.variableWatchPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.variableWatchPanelTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.variableWatchPanelContent {
+  padding: var(--spacing-sm);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.variableWatchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-xs);
+}
+.variableWatchItemName {
+  font-weight: 500;
+  color: var(--color-primary);
+}
+.variableWatchItemValue {
+  font-family: monospace;
+  color: var(--color-text-secondary);
+}
+.flowAnnotationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+}
+.flowAnnotationAuthor {
+  font-weight: 500;
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.exportPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.exportPreviewCode {
+  padding: var(--spacing-lg);
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+  overflow: auto;
+  max-height: 400px;
+}
+.exportPreviewActions {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+}
+.exportPreviewBtn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.exportPreviewBtnPrimary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.exportPreviewFormatSelector {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+.exportPreviewFormatBtn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-primary);
+  cursor: pointer;
+  font-size: var(--font-size-xs);
+}
+.exportPreviewFormatBtnActive {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+.blockNode:hover .blockNodeConnectionHint {
+  opacity: 1;
+}
+.blockNodeConnectionHintInput {
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.blockNodeConnectionHintOutput {
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.blockNodeDropTarget {
+  border: 2px dashed var(--color-primary);
+  background: var(--color-primary-light);
+  animation: pulseDrop 0.5s ease-in-out infinite;
+}
+.flowStatisticsTitle {
+  font-weight: 600;
+  margin-bottom: var(--spacing-xs);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+.flowStatisticsItem {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--spacing-xs) 0;
+}
+.flowStatisticsValue {
+  font-weight: 500;
+  font-family: monospace;
+}
+.reactFlowEdgePathSmart:hover {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+}
+.reactFlowEdgePathSelected {
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 3px var(--color-primary));
+}
+.blockTemplatesHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.blockTemplatesTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.blockTemplatesList {
+  padding: var(--spacing-sm);
+  max-height: 300px;
+  overflow-y: auto;
+}
+.blockTemplatesItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: var(--spacing-xs);
+  border: 1px solid transparent;
+}
+.blockTemplatesItem:hover {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
+}
+.blockTemplatesItemIcon {
+  font-size: var(--font-size-lg);
+}
+.blockTemplatesItemInfo {
+  flex: 1;
+}
+.blockTemplatesItemName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.blockTemplatesItemDesc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.connectionTypeIndicatorDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.connectionTypeIndicatorDotTrue {
+  background: var(--color-success);
+}
+.connectionTypeIndicatorDotFalse {
+  background: var(--color-danger);
+}
+.connectionTypeIndicatorDotDefault {
+  background: var(--color-primary);
+}
+.blockNodeExecuting .blockExecutionPreview {
+  opacity: 1;
+}
+.blockExecutionPreviewSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: var(--spacing-sm);
+}
+.versionHistoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.versionHistoryTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+.versionHistoryList {
+  max-height: calc(80vh - 120px);
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+.versionHistoryItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border: 1px solid transparent;
+}
+.versionHistoryItem:hover {
+  background: var(--color-bg-secondary);
+}
+.versionHistoryItemCurrent {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+.versionHistoryItemIcon {
+  font-size: var(--font-size-lg);
+}
+.versionHistoryItemInfo {
+  flex: 1;
+}
+.versionHistoryItemName {
+  font-weight: 500;
+  margin-bottom: var(--spacing-xs);
+}
+.versionHistoryItemMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.versionHistoryItemActions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+.blockSuggestionsTitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--spacing-xs);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+.blockSuggestionsItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.blockSuggestionsItem:hover {
+  background: var(--color-bg-secondary);
+}
+.blockSuggestionsItemIcon {
+  font-size: var(--font-size-md);
+}
+.blockSuggestionsItemText {
+  font-size: var(--font-size-sm);
+}
+.blockSuggestionsItemReason {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.dependencyGraphHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.dependencyGraphCanvas {
+  width: 100%;
+  height: calc(100% - 60px);
+}
+.flowCanvasHint {
+  border-radius: 999px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+.flowCanvasDropActive::before {
+  border-width: 3px;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+.blockNode {
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-primary) 94%, transparent) 0%, var(--color-bg-primary) 100%);
+}
+.blockNodeSelected {
+  transform: translateY(-2px);
+}
+.blockNodeContent {
+  padding: 10px 12px 12px;
+}
+.blockNodeConfig {
+  line-height: 1.45;
+}
+.flowToolbarFlowName {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary-soft) 100%, transparent), color-mix(in srgb, var(--color-accent-soft) 90%, transparent));
+  border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-border) 78%);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+.flowToolbarGroup {
+  gap: 8px;
+}
+.flowToolbarGroupHelp {
+  margin-left: auto;
+}
+.flowToolbarBtn {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 60%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 92%, transparent);
+  box-shadow: var(--shadow-inset);
+  font-weight: 600;
+}
+.flowToolbarBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-bg-primary) 88%, var(--color-primary-soft) 12%);
+  border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border) 64%);
+}
+.flowToolbarBtnPrimary {
+  box-shadow: 0 14px 26px rgba(35, 123, 255, 0.22);
+}
+.flowToolbarBtnTheme,
+.flowToolbarBtnHelp {
+  min-width: 40px;
+  justify-content: center;
+}
+.flowCanvas {
+  position: relative;
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--color-primary-soft) 100%, transparent) 0%, transparent 32%),
+    linear-gradient(var(--color-canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-canvas-grid) 1px, transparent 1px),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 78%, transparent), color-mix(in srgb, var(--color-bg-primary) 96%, transparent));
+  background-size: auto, 20px 20px, 20px 20px, auto;
+}
+.flowCanvasHint {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: color-mix(in srgb, var(--color-bg-panel) 96%, transparent);
+  color: var(--color-text-secondary);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-sm);
+}
+.reactFlowControls,
+.reactFlowMinimap {
+  border-radius: 18px !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.blockNode {
+  min-width: 210px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg-primary) 96%, transparent);
+  box-shadow: var(--shadow-sm);
+  overflow: visible;
+}
+.blockNodeHeader {
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg, color-mix(in srgb, white 50%, transparent), transparent);
+}
+.blockNodeIcon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.blockNodeLabel {
+  font-size: 13px;
+}
+.blockNodeTypeBadge {
+  font-weight: 700;
+}
+.blockNodeContent {
+  padding: 10px 14px 14px;
+  border-top-color: color-mix(in srgb, var(--color-border) 68%, transparent);
+}
+.blockNodeConfig {
+  display: block;
+  line-height: 1.5;
+}
+.blockNodeTooltip {
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  white-space: normal;
+  line-height: 1.5;
+  background: color-mix(in srgb, var(--color-bg-panel) 98%, transparent);
+  backdrop-filter: blur(16px);
+}
+.blockNodeEntryBadge,
+.blockNodeValidationBadge,
+.blockNodeRecentIndicator,
+.blockNodeExecutingIndicator {
+  box-shadow: var(--shadow-sm);
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+@keyframes pulseBorder {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(40, 167, 69, 0.2);
+  }
+}
+
+@keyframes validationErrorGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.16), 0 0 12px rgba(220, 53, 69, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.25), 0 0 20px rgba(220, 53, 69, 0.35);
+  }
+}
+
+@keyframes blockRecentPop {
+  0% {
+    transform: translateY(-8px) scale(0.96);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 45%, transparent);
+  }
+  35% {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-primary) 12%, transparent);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: none;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes placementPulse {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseDrop {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 160, 255, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(0, 160, 255, 0); }
+}
+
+@keyframes placementPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+}
