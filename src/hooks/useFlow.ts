@@ -360,6 +360,10 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   // Track if we've initialized
   const initializedRef = useRef(false);
 
+  // Fix 2 & 4: ref for stable callbacks without edges state dep
+  const edgesRef = useRef(edges);
+  edgesRef.current = edges;
+
   // Load flow list
   const loadFlowList = useCallback(async () => {
     try {
@@ -662,10 +666,12 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         connection.target,
         connection.sourceHandle || undefined
       );
-      setEdges((eds) => {
-        const nextEdges = addEdge(connectionToEdge(createdConnection), eds);
-        setNodes((nds) => synchronizeNodeSemantics(nds, nextEdges, flow.entryBlock));
-        return nextEdges;
+      const newEdge = connectionToEdge(createdConnection);
+      // Fix 4: avoid nested setState — React 18 batches these into a single render
+      setEdges((eds) => addEdge(newEdge, eds));
+      setNodes((nds) => {
+        const nextEdges = addEdge(newEdge, edgesRef.current);
+        return synchronizeNodeSemantics(nds, nextEdges, flow.entryBlock);
       });
       setIsDirty(true);
       await refreshUndoRedoForFlow(flow.id);
@@ -678,11 +684,11 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
 
   // Delete a connection
   const deleteConnection = useCallback(async (connectionId: string): Promise<void> => {
-    // Optimistically update UI
-    setEdges((eds) => {
-      const nextEdges = eds.filter((edge) => edge.id !== connectionId);
-      setNodes((nds) => synchronizeNodeSemantics(nds, nextEdges, flow?.entryBlock));
-      return nextEdges;
+    // Optimistically update UI — Fix 4: avoid nested setState
+    setEdges((eds) => eds.filter((edge) => edge.id !== connectionId));
+    setNodes((nds) => {
+      const nextEdges = edgesRef.current.filter((edge) => edge.id !== connectionId);
+      return synchronizeNodeSemantics(nds, nextEdges, flow?.entryBlock);
     });
     setIsDirty(true);
 
@@ -766,8 +772,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
   // Handle nodes change from ReactFlow
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      const nextNodes = applyNodeChanges(changes, nodes);
-      setNodes(nextNodes);
+      setNodes((prevNodes) => applyNodeChanges(changes, prevNodes));
       
       // Handle position changes for persistence
       changes.forEach((change) => {
@@ -777,7 +782,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         }
       });
     },
-    [nodes, updateNodePosition]
+    [updateNodePosition]
   );
 
   // Handle edges change from ReactFlow

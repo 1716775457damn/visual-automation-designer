@@ -200,7 +200,13 @@ export const FlowCanvas = memo(function FlowCanvas({
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuContext | null>(null);
   const [isDropActive, setIsDropActive] = useState(false);
+  const isDropActiveRef = useRef(false);
   const [placementPreview, setPlacementPreview] = useState<CanvasPoint | null>(null);
+
+  // Throttling refs for onPaneMouseMove (Fix 3)
+  const rafRef = useRef<number | null>(null);
+  const mousePosRef = useRef({ x: 0, y: 0 });
+  const pendingPlacementRef = useRef(pendingPlacement);
 
   // Clipboard state for copy/paste
   const [clipboard, setClipboard] = useState<ClipboardState | null>(null);
@@ -351,18 +357,20 @@ export const FlowCanvas = memo(function FlowCanvas({
     handlePlacementClick(event.clientX, event.clientY);
   }, [handlePlacementClick, pendingPlacement]);
 
-  // Handle drag over - memoized
+  // Handle drag over - memoized (Fix 1: use ref to avoid deps on isDropActive)
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    if (!isDropActive) {
+    if (!isDropActiveRef.current) {
+      isDropActiveRef.current = true;
       setIsDropActive(true);
     }
-  }, [isDropActive]);
+  }, []);
 
   const onDragLeave = useCallback((event: React.DragEvent) => {
     if (event.currentTarget === event.target) {
       setIsDropActive(false);
+      isDropActiveRef.current = false;
     }
   }, []);
 
@@ -399,6 +407,7 @@ export const FlowCanvas = memo(function FlowCanvas({
     (event: React.DragEvent) => {
       event.preventDefault();
       setIsDropActive(false);
+      isDropActiveRef.current = false;
 
       const payload = parseDropPayload(event);
       const blockType = payload?.blockType ?? '';
@@ -507,30 +516,42 @@ export const FlowCanvas = memo(function FlowCanvas({
     [reactFlowInstance]
   );
 
+  // Fix 3: onPaneMouseMove throttled with requestAnimationFrame to avoid 60+ re-renders/sec
   const onPaneMouseMove = useCallback(
     (event: React.MouseEvent) => {
-      if (!pendingPlacement || !reactFlowInstance || !reactFlowWrapper.current) {
+      mousePosRef.current = { x: event.clientX, y: event.clientY };
+
+      if (!pendingPlacementRef.current || !reactFlowInstance || !reactFlowWrapper.current) {
+        if (rafRef.current !== null) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = null;
+        }
         setPlacementPreview(null);
         return;
       }
 
-      const position = toFlowPosition(reactFlowInstance, {
-        x: event.clientX,
-        y: event.clientY,
-      });
+      if (rafRef.current !== null) return;
 
-      setPlacementPreview({
-        x: Math.round(position.x / 20) * 20,
-        y: Math.round(position.y / 20) * 20,
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        const position = toFlowPosition(reactFlowInstance, {
+          x: mousePosRef.current.x,
+          y: mousePosRef.current.y,
+        });
+        setPlacementPreview({
+          x: Math.round(position.x / 20) * 20,
+          y: Math.round(position.y / 20) * 20,
+        });
       });
     },
-    [pendingPlacement, reactFlowInstance]
+    [reactFlowInstance]
   );
 
   useEffect(() => {
     if (!pendingPlacement) {
       setPlacementPreview(null);
     }
+    pendingPlacementRef.current = pendingPlacement;
   }, [pendingPlacement]);
 
   // Close context menu
