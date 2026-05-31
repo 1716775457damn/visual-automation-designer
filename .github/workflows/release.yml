@@ -80,9 +80,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Visual Automation Designer v__VERSION__'
+          releaseName: 'Visual Automation Designer ${{ github.ref_name }}'
           releaseBody: |
-            ## v__VERSION__
+            ## ${{ github.ref_name }}
 
             ### 架构拆分
             - **前端**: App.tsx (37KB → AppShell+AppProviders), useFlow.ts (24KB → 4 hooks), FlowCanvas.tsx (22KB → 3 files), BlockConfig.tsx (20KB → 3 components)
