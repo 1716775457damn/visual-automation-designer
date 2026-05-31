@@ -412,4 +412,115 @@ mod tests {
         let warnings = validator.get_warnings(&flow);
         assert!(warnings.iter().any(|e| e.code == "NO_ENTRY"));
     }
+
+    #[test]
+    fn should_error_on_empty_flow_name() {
+        let validator = FlowValidator::new();
+        let flow = Flow::new("   ".to_string());
+        let errors = validator.validate(&flow);
+        assert!(errors.iter().any(|e| e.code == "EMPTY_NAME"));
+    }
+
+    #[test]
+    fn should_accept_non_empty_flow_name() {
+        let validator = FlowValidator::new();
+        let flow = Flow::new("Valid Name".to_string());
+        let errors = validator.validate(&flow);
+        assert!(!errors.iter().any(|e| e.code == "EMPTY_NAME"));
+    }
+
+    #[test]
+    fn should_error_on_invalid_entry_point() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+        add_click_block(&mut flow, 10, 20);
+
+        let unknown_id = BlockId::new();
+        flow.entry_block = Some(unknown_id);
+
+        let errors = validator.validate(&flow);
+        assert!(errors.iter().any(|e| e.code == "INVALID_ENTRY_POINT"));
+    }
+
+    #[test]
+    fn should_warn_on_orphan_block() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let block_a = add_click_block(&mut flow, 10, 20);
+        let block_b = add_wait_block(&mut flow, 1000);
+        // block_c has no connections at all — orphan
+        let _block_c = add_click_block(&mut flow, 30, 40);
+
+        // Only connect A and B, leave C isolated
+        flow.add_connection(Connection::new(block_a, block_b));
+
+        let warnings = validator.get_warnings(&flow);
+        assert!(warnings.iter().any(|e| e.code == "ORPHAN_BLOCK"));
+    }
+
+    #[test]
+    fn should_not_warn_orphan_for_single_block() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+        add_click_block(&mut flow, 10, 20);
+
+        // Single block without connections should not be flagged as orphan
+        let warnings = validator.get_warnings(&flow);
+        assert!(!warnings.iter().any(|e| e.code == "ORPHAN_BLOCK"));
+    }
+
+    #[test]
+    fn should_detect_no_cycle_in_acyclic_graph() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let block1 = add_click_block(&mut flow, 10, 20);
+        let block2 = add_wait_block(&mut flow, 1000);
+        let block3 = add_click_block(&mut flow, 30, 40);
+
+        flow.add_connection(Connection::new(block1, block2.clone()));
+        flow.add_connection(Connection::new(block2, block3));
+
+        let errors = validator.get_errors(&flow);
+        assert!(!errors.iter().any(|e| e.code == "CYCLE_DETECTED"));
+    }
+
+    #[test]
+    fn should_report_valid_flow_as_valid() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let block1 = add_click_block(&mut flow, 10, 20);
+        let block2 = add_wait_block(&mut flow, 1000);
+
+        flow.add_connection(Connection::new(block1.clone(), block2));
+        flow.entry_block = Some(block1);
+
+        assert!(validator.is_valid(&flow));
+    }
+
+    #[test]
+    fn should_filter_warnings_only() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+        add_click_block(&mut flow, 10, 20);
+
+        let warnings = validator.get_warnings(&flow);
+        // All returned should be warnings
+        assert!(warnings.iter().all(|e| e.severity == ValidationSeverity::Warning));
+    }
+
+    #[test]
+    fn should_filter_errors_only() {
+        let validator = FlowValidator::new();
+        let mut flow = create_test_flow();
+
+        let block1 = add_click_block(&mut flow, 10, 20);
+        // Self-loop is an error
+        flow.add_connection(Connection::new(block1.clone(), block1));
+
+        let errors = validator.get_errors(&flow);
+        assert!(errors.iter().all(|e| e.severity == ValidationSeverity::Error));
+    }
 }
