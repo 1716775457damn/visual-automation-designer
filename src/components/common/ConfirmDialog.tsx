@@ -78,21 +78,21 @@ export function ConfirmDialog({
     <div className="confirm-dialog" onClick={onCancel} role="dialog" aria-modal="true">
       <div
         ref={dialogRef}
-        className="confirm-dialog__content"
+        className={commonStyles.confirmDialogContent}
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
-        <div className="confirm-dialog__header">
-          <span className="confirm-dialog__icon">{getIcon()}</span>
-          <h3 className="confirm-dialog__title">{title}</h3>
+        <div className={commonStyles.confirmDialogHeader}>
+          <span className={commonStyles.confirmDialogIcon}>{getIcon()}</span>
+          <h3 className={commonStyles.confirmDialogTitle}>{title}</h3>
         </div>
-        <p className="confirm-dialog__message">{message}</p>
-        <div className="confirm-dialog__actions">
-          <button className="confirm-dialog__btn" onClick={onCancel}>
+        <p className={commonStyles.confirmDialogMessage}>{message}</p>
+        <div className={commonStyles.confirmDialogActions}>
+          <button className={commonStyles.confirmDialogBtn} onClick={onCancel}>
             {cancelText}
           </button>
           <button
-            className={`confirm-dialog__btn confirm-dialog__btn--${variant}`}
+            className={`${commonStyles.confirmDialogBtn} ${commonStyles[`confirmDialogBtn${variant.charAt(0).toUpperCase() + variant.slice(1)}`]}`}
             onClick={onConfirm}
             ref={confirmBtnRef}
           >

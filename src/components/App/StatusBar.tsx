@@ -1,5 +1,6 @@
 import type { ValidationErrorResponse } from '../../tauri';
 import { ExecutionBar } from '../ExecutionStatus';
+import styles from './App.module.css';
 
 export interface StatusBarProps {
   executionStatus: 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
@@ -49,7 +50,7 @@ export function StatusBar({
   ].filter(Boolean).join(' · ');
 
   return (
-    <div className="app__status" role="status" aria-live="polite" aria-label="状态栏">
+    <div className={styles.appStatus} role="status" aria-live="polite" aria-label="状态栏">
       <div className="app__status-cluster app__status-cluster--primary">
         <ExecutionBar
           status={executionStatus}
@@ -66,7 +67,7 @@ export function StatusBar({
         {flowName && <span className="app__status-item app__status-item--flow">📋 {flowName}</span>}
         {placementLabel && <span className="app__status-item app__status-item--placement">📍 放置中: {placementLabel}</span>}
         {flowName && !loading && (
-          <span className={`app__status-item app__status-item--autosave ${isDirty ? 'app__status-item--dirty' : 'app__status-item--clean'}`}>
+          <span className={`app__status-item ${styles.appStatusItemAutosave} ${isDirty ? styles.appStatusItemDirty : styles.appStatusItemClean}`}>
             {saveStatusLabel}
           </span>
         )}
@@ -75,7 +76,7 @@ export function StatusBar({
         {!flowError && validationMessage && (
           (primaryFlowValidationError?.blockId || primaryFlowValidationWarning?.blockId) && onFocusNode ? (
             <button
-              className={`${validationClassName} app__status-item--clickable`}
+              className={`${validationClassName} ${styles.appStatusItemClickable}`}
               onClick={() => {
                 const blockId = primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId;
                 if (blockId) onFocusNode(blockId);

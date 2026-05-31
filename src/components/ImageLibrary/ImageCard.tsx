@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import styles from './ImageLibrary.module.css';
 
 export interface ImageCardProps {
   /** Image ID */
@@ -106,13 +107,13 @@ export function ImageCard({
   return (
     <>
       <div
-        className={`image-card ${selected ? 'image-card--selected' : ''} ${showActionsOnHover ? 'image-card--hover-actions' : ''}`}
+        className={`${styles.imageCard} ${selected ? styles.imageCardSelected : ''} ${showActionsOnHover ? styles.imageCardHoverActions : ''}`}
         onClick={() => onSelect?.(id)}
         onDoubleClick={handleDoubleClick}
         data-testid={`image-card-${id}`}
       >
         {/* Thumbnail */}
-        <div className="image-card__thumbnail">
+        <div className={styles.imageCardThumbnail}>
           {thumbnail ? (
             <img 
               src={thumbnail} 
@@ -123,7 +124,7 @@ export function ImageCard({
               }}
             />
           ) : (
-            <div className="image-card__placeholder">
+            <div className={styles.imageCardPlaceholder}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
@@ -134,11 +135,11 @@ export function ImageCard({
         </div>
 
         {/* Info */}
-        <div className="image-card__info">
+        <div className={styles.imageCardInfo}>
           {isEditing ? (
             <input
               type="text"
-              className="image-card__name-input"
+              className={styles.imageCardNameInput}
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onBlur={handleRenameSubmit}
@@ -148,20 +149,20 @@ export function ImageCard({
               data-testid={`rename-input-${id}`}
             />
           ) : (
-            <span className="image-card__name" title={name}>{name}</span>
+            <span className={styles.imageCardName} title={name}>{name}</span>
           )}
           
           {(width && height) && (
-            <span className="image-card__dimensions">{width}×{height}</span>
+            <span className={styles.imageCardDimensions}>{width}×{height}</span>
           )}
           
           {format && (
-            <span className="image-card__format">{format.toUpperCase()}</span>
+            <span className={styles.imageCardFormat}>{format.toUpperCase()}</span>
           )}
         </div>
 
         {/* Actions */}
-        <div className="image-card__actions">
+        <div className={styles.imageCardActions}>
           <button
             className="image-card__btn image-card__btn--rename"
             onClick={handleStartRename}
@@ -174,7 +175,7 @@ export function ImageCard({
             </svg>
           </button>
           <button
-            className="image-card__btn image-card__btn--delete"
+            className={`${styles.imageCardBtn} ${styles.imageCardBtnDelete}`}
             onClick={handleDeleteClick}
             title="删除"
             data-testid={`btn-delete-${id}`}
@@ -190,19 +191,19 @@ export function ImageCard({
       {/* UX优化67: 图片预览模态框 */}
       {showPreview && thumbnail && (
         <div className="image-preview-modal" onClick={() => setShowPreview(false)}>
-          <div className="image-preview-modal__content" onClick={(e) => e.stopPropagation()}>
+          <div className={styles.imagePreviewModalContent} onClick={(e) => e.stopPropagation()}>
             <img 
               src={thumbnail} 
               alt={name} 
-              className="image-preview-modal__image"
+              className={styles.imagePreviewModalImage}
             />
             <button 
-              className="image-preview-modal__close"
+              className={styles.imagePreviewModalClose}
               onClick={() => setShowPreview(false)}
             >
               ×
             </button>
-            <div className="image-preview-modal__info">
+            <div className={styles.imagePreviewModalInfo}>
               {name} • {width}×{height} • {format?.toUpperCase()}
             </div>
           </div>

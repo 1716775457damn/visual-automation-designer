@@ -6,6 +6,7 @@
  */
 
 import { memo, useEffect, useRef, useCallback } from 'react';
+import styles from './FlowEditor.module.css';
 
 /**
  * Context menu item definition
@@ -119,7 +120,7 @@ function ContextMenuComponent({
   return (
     <div
       ref={menuRef}
-      className={`context-menu ${testId}`}
+      className={`${styles.contextMenu} ${testId}`}
       data-testid={testId}
       style={{
         position: 'fixed',
@@ -128,30 +129,30 @@ function ContextMenuComponent({
         zIndex: 1000,
       }}
     >
-      <ul className="context-menu__list">
+      <ul className={styles.contextMenuList}>
         {items.map((item, index) => (
-          <li key={index} className="context-menu__item-wrapper">
+          <li key={index} className={styles.contextMenuItemWrapper}>
             <button
-              className={`context-menu__item ${item.disabled ? 'context-menu__item--disabled' : ''} ${item.danger ? 'context-menu__item--danger' : ''} ${item.submenu ? 'context-menu__item--has-submenu' : ''}`}
+              className={`${styles.contextMenuItem} ${item.disabled ? styles.contextMenuItemDisabled : ''} ${item.danger ? styles.contextMenuItemDanger : ''} ${item.submenu ? styles.contextMenuItemHasSubmenu : ''}`}
               onClick={() => handleItemClick(item)}
               disabled={item.disabled}
               data-testid={`context-menu-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             >
-              {item.icon && <span className="context-menu__item-icon">{item.icon}</span>}
-              <span className="context-menu__item-label">{item.label}</span>
-              {item.submenu && <span className="context-menu__item-arrow">▶</span>}
+              {item.icon && <span className={styles.contextMenuItemIcon}>{item.icon}</span>}
+              <span className={styles.contextMenuItemLabel}>{item.label}</span>
+              {item.submenu && <span className={styles.contextMenuItemArrow}>▶</span>}
             </button>
             {item.submenu && (
-              <ul className="context-menu__submenu">
+              <ul className={styles.contextMenuSubmenu}>
                 {item.submenu.map((subItem, subIndex) => (
-                  <li key={subIndex} className="context-menu__item-wrapper">
+                  <li key={subIndex} className={styles.contextMenuItemWrapper}>
                     <button
-                      className={`context-menu__item ${subItem.disabled ? 'context-menu__item--disabled' : ''} ${subItem.danger ? 'context-menu__item--danger' : ''}`}
+                      className={`${styles.contextMenuItem} ${subItem.disabled ? styles.contextMenuItemDisabled : ''} ${subItem.danger ? styles.contextMenuItemDanger : ''}`}
                       onClick={() => handleItemClick(subItem)}
                       disabled={subItem.disabled}
                     >
-                      {subItem.icon && <span className="context-menu__item-icon">{subItem.icon}</span>}
-                      <span className="context-menu__item-label">{subItem.label}</span>
+                      {subItem.icon && <span className={styles.contextMenuItemIcon}>{subItem.icon}</span>}
+                      <span className={styles.contextMenuItemLabel}>{subItem.label}</span>
                     </button>
                   </li>
                 ))}

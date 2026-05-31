@@ -13,10 +13,10 @@ export function NewFlowDialog({ isOpen, value, onChange, onCancel, onConfirm }: 
 
   return (
     <div className="confirm-dialog" onClick={onCancel} role="dialog" aria-modal="true">
-      <div className="confirm-dialog__content" onClick={(e) => e.stopPropagation()}>
-        <div className="confirm-dialog__header">
-          <span className="confirm-dialog__icon">📋</span>
-          <h3 className="confirm-dialog__title">新建流程</h3>
+      <div className={commonStyles.confirmDialogContent} onClick={(e) => e.stopPropagation()}>
+        <div className={commonStyles.confirmDialogHeader}>
+          <span className={commonStyles.confirmDialogIcon}>📋</span>
+          <h3 className={commonStyles.confirmDialogTitle}>新建流程</h3>
         </div>
         <div className="app__dialog-body">
           <label className="app__dialog-label" htmlFor="new-flow-name">
@@ -24,7 +24,7 @@ export function NewFlowDialog({ isOpen, value, onChange, onCancel, onConfirm }: 
           </label>
           <input
             id="new-flow-name"
-            className="app__dialog-input"
+            className={styles.appDialogInput}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
@@ -36,8 +36,8 @@ export function NewFlowDialog({ isOpen, value, onChange, onCancel, onConfirm }: 
             autoFocus
           />
         </div>
-        <div className="confirm-dialog__actions">
-          <button className="confirm-dialog__btn" onClick={onCancel} type="button">
+        <div className={commonStyles.confirmDialogActions}>
+          <button className={commonStyles.confirmDialogBtn} onClick={onCancel} type="button">
             取消
           </button>
           <button className="confirm-dialog__btn confirm-dialog__btn--info" onClick={onConfirm} type="button">

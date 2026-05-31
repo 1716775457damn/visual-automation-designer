@@ -101,11 +101,11 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   };
 
   return (
-    <div className={`toast toast--${toast.type}`} role="status" aria-live="polite">
-      <span className="toast__icon">{getIcon()}</span>
-      <span className="toast__message">{toast.message}</span>
+    <div className={`${commonStyles.toast} ${commonStyles[`toast${toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}`]}`} role="status" aria-live="polite">
+      <span className={commonStyles.toastIcon}>{getIcon()}</span>
+      <span className={commonStyles.toastMessage}>{toast.message}</span>
       <button
-        className="toast__close"
+        className={commonStyles.toastClose}
         onClick={() => onRemove(toast.id)}
         type="button"
         aria-label="关闭"

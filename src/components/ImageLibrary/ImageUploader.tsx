@@ -7,6 +7,7 @@
 
 import React, { useCallback, useState } from 'react';
 import type { ImageMetadata } from '../../types/image';
+import styles from './ImageLibrary.module.css';
 
 export interface ImageUploaderProps {
   /** 上传成功回调 */
@@ -89,7 +90,7 @@ export function ImageUploader({
 
   return (
     <div
-      className={`image-uploader ${isDragging ? 'image-uploader--dragging' : ''} ${disabled ? 'image-uploader--disabled' : ''} ${compact ? 'image-uploader--compact' : ''} ${className}`}
+      className={`image-uploader ${isDragging ? styles.imageUploaderDragging : ''} ${disabled ? styles.imageUploaderDisabled : ''} ${compact ? styles.imageUploaderCompact : ''} ${className}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -97,25 +98,25 @@ export function ImageUploader({
       onClick={handleClick}
       data-testid="image-uploader"
     >
-      <div className="image-uploader__dropzone">
-        <div className="image-uploader__icon">
+      <div className={styles.imageUploaderDropzone}>
+        <div className={styles.imageUploaderIcon}>
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="17,8 12,3 7,8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </div>
-        <div className="image-uploader__hint">
-          <p className="image-uploader__title">
+        <div className={styles.imageUploaderHint}>
+          <p className={styles.imageUploaderTitle}>
             {compact ? '点击或拖拽上传' : '拖拽图片到此处'}
           </p>
           {!compact && (
-            <p className="image-uploader__formats">支持 PNG、JPG、BMP 格式</p>
+            <p className={styles.imageUploaderFormats}>支持 PNG、JPG、BMP 格式</p>
           )}
         </div>
         {!compact && (
-          <div className="image-uploader__actions">
-            <p className="image-uploader__note">
+          <div className={styles.imageUploaderActions}>
+            <p className={styles.imageUploaderNote}>
               提示：将复制图片到应用数据目录
             </p>
           </div>

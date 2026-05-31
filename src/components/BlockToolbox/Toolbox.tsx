@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { ActionBlocks } from './ActionBlocks';
 import { ControlBlocks } from './ControlBlocks';
+import styles from './BlockToolbox.module.css';
 
 export interface ToolboxProps {
   onBlockSelect?: (type: string, category: string) => void;
@@ -25,24 +26,24 @@ export function Toolbox({ onBlockSelect, onArmPlacement, pendingPlacementLabel, 
   const [showControls, setShowControls] = useState(true);
 
   return (
-    <div className="toolbox" data-testid="toolbox">
-      <div className="toolbox__header">
+    <div className={styles.toolbox} data-testid="toolbox">
+      <div className={styles.toolboxHeader}>
         <h3>🧩 积木块</h3>
-        <span className="toolbox__subtitle">拖拽或点击添加到白板</span>
+        <span className={styles.toolboxSubtitle}>拖拽或点击添加到白板</span>
       </div>
       
       {/* UX优化21: 添加搜索框 */}
-      <div className="toolbox__search">
+      <div className={styles.toolboxSearch}>
         <input
           type="text"
           placeholder="🔍 搜索积木块..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="toolbox__search-input"
+          className={styles.toolboxSearchInput}
         />
         {searchQuery && (
           <button
-            className="toolbox__search-clear"
+            className={styles.toolboxSearchClear}
             onClick={() => setSearchQuery('')}
           >
             ×
@@ -50,15 +51,15 @@ export function Toolbox({ onBlockSelect, onArmPlacement, pendingPlacementLabel, 
         )}
       </div>
       
-      <div className="toolbox__content">
+      <div className={styles.toolboxContent}>
         {/* 动作积木块 */}
-        <div className="toolbox__section">
+        <div className={styles.toolboxSection}>
           <div 
-            className="toolbox__section-header"
+            className={styles.toolboxSectionHeader}
             onClick={() => setShowActions(!showActions)}
           >
-            <h4 className="toolbox__section-title">⚡ 动作</h4>
-            <span className="toolbox__section-toggle">
+            <h4 className={styles.toolboxSectionTitle}>⚡ 动作</h4>
+            <span className={styles.toolboxSectionToggle}>
               {showActions ? '▼' : '▶'}
             </span>
           </div>
@@ -72,13 +73,13 @@ export function Toolbox({ onBlockSelect, onArmPlacement, pendingPlacementLabel, 
         </div>
         
         {/* 控制积木块 */}
-        <div className="toolbox__section">
+        <div className={styles.toolboxSection}>
           <div 
-            className="toolbox__section-header"
+            className={styles.toolboxSectionHeader}
             onClick={() => setShowControls(!showControls)}
           >
-            <h4 className="toolbox__section-title">🔄 控制</h4>
-            <span className="toolbox__section-toggle">
+            <h4 className={styles.toolboxSectionTitle}>🔄 控制</h4>
+            <span className={styles.toolboxSectionToggle}>
               {showControls ? '▼' : '▶'}
             </span>
           </div>
@@ -93,11 +94,11 @@ export function Toolbox({ onBlockSelect, onArmPlacement, pendingPlacementLabel, 
       </div>
       
       {/* UX优化22: 添加提示信息 */}
-      <div className="toolbox__footer">
-        <p className="toolbox__tip">💡 提示：右键画布可快速添加</p>
-        <p className="toolbox__tip toolbox__tip--accent">单击会优先添加到当前视口中心</p>
+      <div className={styles.toolboxFooter}>
+        <p className={styles.toolboxTip}>💡 提示：右键画布可快速添加</p>
+        <p className={`${styles.toolboxTip} ${styles.toolboxTipAccent}`}>单击会优先添加到当前视口中心</p>
         {pendingPlacementLabel && (
-          <button className="toolbox__placement-banner" type="button" onClick={onCancelPlacement}>
+          <button className={styles.toolboxPlacementBanner} type="button" onClick={onCancelPlacement}>
             当前放置: {pendingPlacementLabel} · 点击取消
           </button>
         )}

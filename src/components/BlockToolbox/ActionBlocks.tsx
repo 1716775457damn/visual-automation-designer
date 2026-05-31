@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import styles from './BlockToolbox.module.css';
 
 export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text';
 
@@ -52,7 +53,7 @@ export function ActionBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Act
 
   if (filteredBlocks.length === 0) {
     return (
-      <div className="action-blocks__empty">
+      <div className={styles.actionBlocksEmpty}>
         没有匹配的动作积木块
       </div>
     );
@@ -77,11 +78,11 @@ export function ActionBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Act
   };
 
   return (
-    <div className="action-blocks" data-testid="action-blocks" role="listbox" aria-label="动作积木块列表">
+    <div className={styles.actionBlocks} data-testid="action-blocks" role="listbox" aria-label="动作积木块列表">
       {filteredBlocks.map((block) => (
         <div
           key={block.type}
-          className={`action-blocks__item ${draggingType === block.type ? 'action-blocks__item--dragging' : ''}`}
+          className={`${styles.actionBlocksItem} ${draggingType === block.type ? 'action-blocks__item--dragging' : ''}`}
           role="option"
           aria-label={`${block.label}：${block.description}`}
           tabIndex={0}
@@ -101,18 +102,18 @@ export function ActionBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Act
           data-testid={`action-block-${block.type}`}
           title={block.description}
         >
-          <span className="action-blocks__icon">{block.icon}</span>
-          <div className="action-blocks__text">
-            <span className="action-blocks__label">{block.label}</span>
-            <span className="action-blocks__description">{block.description}</span>
+          <span className={styles.actionBlocksIcon}>{block.icon}</span>
+          <div className={styles.actionBlocksText}>
+            <span className={styles.actionBlocksLabel}>{block.label}</span>
+            <span className={styles.actionBlocksDescription}>{block.description}</span>
           </div>
           {block.shortcut && (
-            <span className="action-blocks__shortcut" title={`快捷键: ${block.shortcut}`}>
+            <span className={styles.actionBlocksShortcut} title={`快捷键: ${block.shortcut}`}>
               {block.shortcut}
             </span>
           )}
           <button
-            className="action-blocks__place-btn"
+            className={styles.actionBlocksPlaceBtn}
             type="button"
             title="在白板上指定位置放置"
             aria-label={`在白板上指定位置放置 ${block.label}`}

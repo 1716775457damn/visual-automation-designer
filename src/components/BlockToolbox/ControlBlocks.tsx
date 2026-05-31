@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react';
+import styles from './BlockToolbox.module.css';
 
 export type ControlType = 'loop' | 'loop_infinite' | 'condition';
 
@@ -51,7 +52,7 @@ export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Co
 
   if (filteredBlocks.length === 0) {
     return (
-      <div className="control-blocks__empty">
+      <div className={styles.controlBlocksEmpty}>
         没有匹配的控制积木块
       </div>
     );
@@ -76,11 +77,11 @@ export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Co
   };
 
   return (
-    <div className="control-blocks" data-testid="control-blocks" role="listbox" aria-label="控制积木块列表">
+    <div className={styles.controlBlocks} data-testid="control-blocks" role="listbox" aria-label="控制积木块列表">
       {filteredBlocks.map((block) => (
         <div
           key={block.type}
-          className={`control-blocks__item ${draggingType === block.type ? 'control-blocks__item--dragging' : ''}`}
+          className={`${styles.controlBlocksItem} ${draggingType === block.type ? 'control-blocks__item--dragging' : ''}`}
           role="option"
           aria-label={`${block.label}：${block.description}`}
           tabIndex={0}
@@ -100,18 +101,18 @@ export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Co
           data-testid={`control-block-${block.type}`}
           title={block.description}
         >
-          <span className="control-blocks__icon">{block.icon}</span>
-          <div className="control-blocks__text">
-            <span className="control-blocks__label">{block.label}</span>
-            <span className="control-blocks__description">{block.description}</span>
+          <span className={styles.controlBlocksIcon}>{block.icon}</span>
+          <div className={styles.controlBlocksText}>
+            <span className={styles.controlBlocksLabel}>{block.label}</span>
+            <span className={styles.controlBlocksDescription}>{block.description}</span>
           </div>
           {block.shortcut && (
-            <span className="control-blocks__shortcut" title={`快捷键: ${block.shortcut}`}>
+            <span className={styles.controlBlocksShortcut} title={`快捷键: ${block.shortcut}`}>
               {block.shortcut}
             </span>
           )}
           <button
-            className="control-blocks__place-btn"
+            className={styles.controlBlocksPlaceBtn}
             type="button"
             title="在白板上指定位置放置"
             aria-label={`在白板上指定位置放置 ${block.label}`}

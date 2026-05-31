@@ -91,7 +91,7 @@ export function ParamEditor({
     <div className="param-editor" data-testid="param-editor">
       {schema.map((param) => (
         <div key={param.key} className="param-editor__field">
-          <label className="param-editor__label">{param.label}</label>
+          <label className={styles.paramEditorLabel}>{param.label}</label>
           {renderField(param)}
         </div>
       ))}

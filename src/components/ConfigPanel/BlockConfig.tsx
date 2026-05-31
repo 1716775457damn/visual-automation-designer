@@ -18,6 +18,7 @@ import {
   InputTextConfigUI,
 } from './ActionBlockConfig';
 import {
+import styles from './ConfigPanel.module.css';
   LoopConfigUI,
   LoopInfiniteConfigUI,
   ConditionConfigUI,
@@ -74,8 +75,8 @@ function BlockSpecificConfig({ blockType, config, onChange }: BlockSpecificConfi
       return <ConditionConfigUI config={config} onChange={onChange} />;
     default:
       return (
-        <div className="block-config__section">
-          <p className="block-config__info">未知积木块类型: {blockType}</p>
+        <div className={styles.blockConfigSection}>
+          <p className={styles.blockConfigInfo}>未知积木块类型: {blockType}</p>
         </div>
       );
   }
@@ -212,60 +213,60 @@ export function BlockConfig({
   }, [blockType, isValid]);
 
   return (
-    <div className="block-config" data-testid={`block-config-${blockId}`}>
-      <div className="block-config__header">
-        <div className="block-config__header-main">
+    <div className={styles.blockConfig} data-testid={`block-config-${blockId}`}>
+      <div className={styles.blockConfigHeader}>
+        <div className={styles.blockConfigHeaderMain}>
           <h3>配置积木块</h3>
-          <span className="block-config__meta">ID: {blockId.slice(0, 8)}</span>
+          <span className={styles.blockConfigMeta}>ID: {blockId.slice(0, 8)}</span>
         </div>
-        <span className="block-config__type">{getBlockTypeName(blockType)}</span>
+        <span className={styles.blockConfigType}>{getBlockTypeName(blockType)}</span>
       </div>
 
       {externalValidationMessage && (
         <div
-          className={`block-config__validation-summary block-config__validation-summary--${externalValidationSeverity ?? 'warning'}`}
+          className={`${styles.blockConfigValidationSummary} ${styles[`blockConfigValidationSummary${externalValidationSeverity ?? 'warning'.charAt(0).toUpperCase() + externalValidationSeverity ?? 'warning'.slice(1)}`]}`}
         >
           <strong>{externalValidationSeverity === 'error' ? '结构错误：' : '结构警告：'}</strong>
           <span>{externalValidationMessage}</span>
         </div>
       )}
 
-      {hasChanges && <div className="block-config__changes-indicator">有未保存的更改</div>}
+      {hasChanges && <div className={styles.blockConfigChangesIndicator}>有未保存的更改</div>}
 
-      <div className="block-config__content">
-        <div className="block-config__summary">
-          <span className="block-config__summary-label">当前类型</span>
-          <span className="block-config__summary-value">{getBlockTypeName(blockType)}积木块</span>
+      <div className={styles.blockConfigContent}>
+        <div className={styles.blockConfigSummary}>
+          <span className={styles.blockConfigSummaryLabel}>当前类型</span>
+          <span className={styles.blockConfigSummaryValue}>{getBlockTypeName(blockType)}积木块</span>
         </div>
-        <div className="block-config__summary-grid">
-          <div className="block-config__summary-card">
-            <span className="block-config__summary-card-label">状态</span>
-            <span className="block-config__summary-card-value">{hasChanges ? '待保存' : '已同步'}</span>
+        <div className={styles.blockConfigSummaryGrid}>
+          <div className={styles.blockConfigSummaryCard}>
+            <span className={styles.blockConfigSummaryCardLabel}>状态</span>
+            <span className={styles.blockConfigSummaryCardValue}>{hasChanges ? '待保存' : '已同步'}</span>
           </div>
-          <div className="block-config__summary-card">
-            <span className="block-config__summary-card-label">校验</span>
-            <span className="block-config__summary-card-value">{isValid ? '通过' : '待完善'}</span>
+          <div className={styles.blockConfigSummaryCard}>
+            <span className={styles.blockConfigSummaryCardLabel}>校验</span>
+            <span className={styles.blockConfigSummaryCardValue}>{isValid ? '通过' : '待完善'}</span>
           </div>
         </div>
         <BlockSpecificConfig blockType={blockType} config={localConfig} onChange={handleConfigChange} />
       </div>
 
-      <div className="block-config__actions">
+      <div className={styles.blockConfigActions}>
         <button
-          className="block-config__btn block-config__btn--primary"
+          className={`${styles.blockConfigBtn} ${styles.blockConfigBtnPrimary}`}
           onClick={handleSave}
           disabled={!isValid}
           data-testid="btn-save-config"
         >
           ✓ 保存
         </button>
-        <button className="block-config__btn" onClick={handleCancel} data-testid="btn-cancel-config">
+        <button className={styles.blockConfigBtn} onClick={handleCancel} data-testid="btn-cancel-config">
           ✕ 取消
         </button>
       </div>
 
       {!isValid && validationMessage && (
-        <div className="block-config__validation-error">{validationMessage}</div>
+        <div className={styles.blockConfigValidationError}>{validationMessage}</div>
       )}
     </div>
   );

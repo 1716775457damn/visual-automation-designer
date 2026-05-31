@@ -8,6 +8,7 @@
 
 import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
+import styles from './FlowEditor.module.css';
 
 // Block types
 export type BlockCategory = 'action' | 'control';
@@ -203,21 +204,21 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       {/* UX优化141: 连接提示 */}
       {showConnectionHint === 'input' && (
-        <div className="block-node__connection-hint block-node__connection-hint--input">
+        <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintInput}`}>
           连接到上一节点
         </div>
       )}
 
       {/* UX优化62: 入口点标记 */}
       {isEntryPoint && (
-        <div className="block-node__entry-badge" title="起点">
+        <div className={styles.blockNodeEntryBadge} title="起点">
           🚀
         </div>
       )}
 
       {validationSeverity && (
         <div
-          className={`block-node__validation-badge block-node__validation-badge--${validationSeverity}`}
+          className={`${styles.blockNodeValidationBadge} ${styles[`blockNodeValidationBadge${validationSeverity.charAt(0).toUpperCase() + validationSeverity.slice(1)}`]}`}
           title={validationMessage ?? ''}
           aria-label={validationSeverity === 'error' ? '节点存在错误' : '节点存在警告'}
         >
@@ -227,25 +228,25 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       {/* UX优化63: 禁用状态覆盖层 */}
       {disabled && (
-        <div className="block-node__disabled-overlay" title="已禁用">
+        <div className={styles.blockNodeDisabledOverlay} title="已禁用">
           🚫
         </div>
       )}
 
-      <div className="block-node__header" style={{ backgroundColor: `${blockColor}20` }}>
-        <span className="block-node__icon">{getBlockIcon()}</span>
-        <span className="block-node__label">{label}</span>
-        <span className="block-node__type-badge">{blockCategory === 'action' ? '动作' : '控制'}</span>
+      <div className={styles.blockNodeHeader} style={{ backgroundColor: `${blockColor}20` }}>
+        <span className={styles.blockNodeIcon}>{getBlockIcon()}</span>
+        <span className={styles.blockNodeLabel}>{label}</span>
+        <span className={styles.blockNodeTypeBadge}>{blockCategory === 'action' ? '动作' : '控制'}</span>
       </div>
 
       {configSummary && (
-        <div className="block-node__content">
-          <span className="block-node__config">{configSummary}</span>
+        <div className={styles.blockNodeContent}>
+          <span className={styles.blockNodeConfig}>{configSummary}</span>
         </div>
       )}
 
       {validationMessage && (
-        <div className={`block-node__validation-message block-node__validation-message--${validationSeverity ?? 'warning'}`}>
+        <div className={`${styles.blockNodeValidationMessage} ${styles[`blockNodeValidationMessage${validationSeverity ?? 'warning'.charAt(0).toUpperCase() + validationSeverity ?? 'warning'.slice(1)}`]}`}>
           <strong className="block-node__validation-label">
             {validationSeverity === 'error' ? '错误：' : '警告：'}
           </strong>
@@ -255,7 +256,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       {/* UX优化61: 悬停工具提示 */}
       {showTooltip && (
-        <div className="block-node__tooltip">
+        <div className={styles.blockNodeTooltip}>
           {getFullDescription().split('\n').map((line, i) => (
             <div key={i}>{line}</div>
           ))}
@@ -273,7 +274,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       {/* UX优化141: 连接提示 */}
       {showConnectionHint === 'output' && (
-        <div className="block-node__connection-hint block-node__connection-hint--output">
+        <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintOutput}`}>
           {outputHintMessage}
         </div>
       )}
@@ -286,7 +287,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
             position={Position.Bottom}
             id="true"
             style={{ left: '30%' }}
-            className="block-node__handle block-node__handle--true"
+            className={`${styles.blockNodeHandle} ${styles.blockNodeHandleTrue}`}
             onMouseEnter={() => setShowConnectionHint('condition-true')}
             onMouseLeave={() => setShowConnectionHint(null)}
           />
@@ -295,7 +296,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
             position={Position.Bottom}
             id="false"
             style={{ left: '70%' }}
-            className="block-node__handle block-node__handle--false"
+            className={`${styles.blockNodeHandle} ${styles.blockNodeHandleFalse}`}
             onMouseEnter={() => setShowConnectionHint('condition-false')}
             onMouseLeave={() => setShowConnectionHint(null)}
           />
@@ -303,34 +304,34 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       )}
 
       {showConnectionHint === 'condition-true' && (
-        <div className="block-node__connection-hint block-node__connection-hint--output">
+        <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintOutput}`}>
           真分支：仅连接 1 个直接节点
         </div>
       )}
 
       {showConnectionHint === 'condition-false' && (
-        <div className="block-node__connection-hint block-node__connection-hint--output">
+        <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintOutput}`}>
           假分支：仅连接 1 个直接节点
         </div>
       )}
 
       {/* Executing indicator */}
       {executing && (
-        <div className="block-node__executing-indicator">
-          <span className="block-node__pulse" />
+        <div className={styles.blockNodeExecutingIndicator}>
+          <span className={styles.blockNodePulse} />
         </div>
       )}
 
       {recent && (
-        <div className="block-node__recent-indicator" aria-hidden="true">
+        <div className={styles.blockNodeRecentIndicator} aria-hidden="true">
           ✨
         </div>
       )}
 
       {/* UX优化155: 执行预览覆盖层 */}
       {executing && (
-        <div className="block-execution-preview">
-          <div className="block-execution-preview__spinner" />
+        <div className={styles.blockExecutionPreview}>
+          <div className={styles.blockExecutionPreviewSpinner} />
           <span>执行中...</span>
         </div>
       )}

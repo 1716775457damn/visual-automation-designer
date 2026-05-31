@@ -5,6 +5,7 @@
 
 import type { ClickMode } from '../../types/block';
 import { ImageSelector } from './ImageSelector';
+import styles from './ConfigPanel.module.css';
 
 interface ConfigUIProps {
   config: Record<string, unknown>;
@@ -40,19 +41,19 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
   };
 
   return (
-    <div className="block-config__section" data-testid="click-config">
-      <div className="block-config__field">
-        <label className="block-config__label">点击模式</label>
-        <div className="block-config__mode-selector">
+    <div className={styles.blockConfigSection} data-testid="click-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>点击模式</label>
+        <div className={styles.blockConfigModeSelector}>
           <button
-            className={`block-config__mode-btn ${mode.mode === 'coordinates' ? 'active' : ''}`}
+            className={`${styles.blockConfigModeBtn} ${mode.mode === 'coordinates' ? styles.active : ''}`}
             onClick={() => handleModeChange('coordinates')}
             data-testid="mode-coordinates"
           >
             坐标模式
           </button>
           <button
-            className={`block-config__mode-btn ${mode.mode === 'image' ? 'active' : ''}`}
+            className={`${styles.blockConfigModeBtn} ${mode.mode === 'image' ? styles.active : ''}`}
             onClick={() => handleModeChange('image')}
             data-testid="mode-image"
           >
@@ -62,13 +63,13 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
       </div>
 
       {mode.mode === 'coordinates' && (
-        <div className="block-config__field-group">
-          <div className="block-config__field">
-            <label className="block-config__label" htmlFor="click-x">X 坐标</label>
+        <div className={styles.blockConfigFieldGroup}>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="click-x">X 坐标</label>
             <input
               id="click-x"
               type="number"
-              className="block-config__input"
+              className={styles.blockConfigInput}
               value={(mode as { mode: 'coordinates'; x: number; y: number }).x}
               onChange={(e) => handleCoordinateChange('x', Number(e.target.value))}
               min={0}
@@ -76,12 +77,12 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
               aria-required="true"
             />
           </div>
-          <div className="block-config__field">
-            <label className="block-config__label" htmlFor="click-y">Y 坐标</label>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="click-y">Y 坐标</label>
             <input
               id="click-y"
               type="number"
-              className="block-config__input"
+              className={styles.blockConfigInput}
               value={(mode as { mode: 'coordinates'; x: number; y: number }).y}
               onChange={(e) => handleCoordinateChange('y', Number(e.target.value))}
               min={0}
@@ -93,8 +94,8 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
       )}
 
       {mode.mode === 'image' && (
-        <div className="block-config__field">
-          <label className="block-config__label">选择图片</label>
+        <div className={styles.blockConfigField}>
+          <label className={styles.blockConfigLabel}>选择图片</label>
           <ImageSelector
             selectedId={(mode as { mode: 'image'; imageId: string }).imageId}
             onSelect={handleImageSelect}
@@ -104,12 +105,12 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
         </div>
       )}
 
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="click-count">点击次数</label>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="click-count">点击次数</label>
         <input
           id="click-count"
           type="number"
-          className="block-config__input"
+          className={styles.blockConfigInput}
           value={count}
           onChange={(e) => onChange({ ...config, count: Number(e.target.value) })}
           min={1}
@@ -129,9 +130,9 @@ export function WaitImageConfigUI({ config, onChange }: ConfigUIProps) {
   const timeoutMs = (config.timeoutMs as number) ?? 5000;
 
   return (
-    <div className="block-config__section" data-testid="wait-image-config">
-      <div className="block-config__field">
-        <label className="block-config__label">等待图片</label>
+    <div className={styles.blockConfigSection} data-testid="wait-image-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>等待图片</label>
         <ImageSelector
           selectedId={imageId}
           onSelect={(newImageId: string) => onChange({ ...config, imageId: newImageId })}
@@ -139,19 +140,19 @@ export function WaitImageConfigUI({ config, onChange }: ConfigUIProps) {
           emptyMessage="请选择或上传要等待的图片"
         />
       </div>
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="waitimage-timeout">超时时间 (毫秒)</label>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="waitimage-timeout">超时时间 (毫秒)</label>
         <input
           id="waitimage-timeout"
           type="number"
-          className="block-config__input"
+          className={styles.blockConfigInput}
           value={timeoutMs}
           onChange={(e) => onChange({ ...config, timeoutMs: Number(e.target.value) })}
           min={100}
           step={100}
           data-testid="input-timeout"
         />
-        <span className="block-config__hint">默认 5000 毫秒</span>
+        <span className={styles.blockConfigHint}>默认 5000 毫秒</span>
       </div>
     </div>
   );
@@ -163,20 +164,20 @@ export function WaitTimeConfigUI({ config, onChange }: ConfigUIProps) {
   const durationMs = (config.durationMs as number) ?? 1000;
 
   return (
-    <div className="block-config__section" data-testid="wait-time-config">
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="waittime-duration">等待时间 (毫秒)</label>
+    <div className={styles.blockConfigSection} data-testid="wait-time-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="waittime-duration">等待时间 (毫秒)</label>
         <input
           id="waittime-duration"
           type="number"
-          className="block-config__input"
+          className={styles.blockConfigInput}
           value={durationMs}
           onChange={(e) => onChange({ ...config, durationMs: Number(e.target.value) })}
           min={0}
           step={100}
           data-testid="input-duration"
         />
-        <span className="block-config__hint">1000 毫秒 = 1 秒</span>
+        <span className={styles.blockConfigHint}>1000 毫秒 = 1 秒</span>
       </div>
     </div>
   );
@@ -189,12 +190,12 @@ export function InputTextConfigUI({ config, onChange }: ConfigUIProps) {
   const intervalMs = (config.intervalMs as number) ?? 50;
 
   return (
-    <div className="block-config__section" data-testid="input-text-config">
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="inputtext-text">输入文本</label>
+    <div className={styles.blockConfigSection} data-testid="input-text-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="inputtext-text">输入文本</label>
         <textarea
           id="inputtext-text"
-          className="block-config__textarea"
+          className={styles.blockConfigTextarea}
           value={text}
           onChange={(e) => onChange({ ...config, text: e.target.value })}
           placeholder="输入要模拟输入的文本内容"
@@ -203,12 +204,12 @@ export function InputTextConfigUI({ config, onChange }: ConfigUIProps) {
           aria-required="true"
         />
       </div>
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="inputtext-interval">输入间隔 (毫秒)</label>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="inputtext-interval">输入间隔 (毫秒)</label>
         <input
           id="inputtext-interval"
           type="number"
-          className="block-config__input"
+          className={styles.blockConfigInput}
           value={intervalMs}
           onChange={(e) => onChange({ ...config, intervalMs: Number(e.target.value) })}
           min={0}
@@ -216,7 +217,7 @@ export function InputTextConfigUI({ config, onChange }: ConfigUIProps) {
           step={10}
           data-testid="input-interval"
         />
-        <span className="block-config__hint">字符之间的输入间隔，默认 50 毫秒</span>
+        <span className={styles.blockConfigHint}>字符之间的输入间隔，默认 50 毫秒</span>
       </div>
     </div>
   );

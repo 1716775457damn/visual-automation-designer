@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { classifyDiagnosticKind, classifyDiagnosticSource, type DiagnosticEventSource } from './diagnostics';
+import styles from './ExecutionStatus.module.css';
 
 export interface LogEntry {
   id: string;
@@ -117,7 +118,7 @@ export function ExecutionLog({
 
   return (
     <div
-      className="execution-log"
+      className={styles.executionLog}
       style={{ maxHeight }}
       data-testid="execution-log"
       role="log"
@@ -125,7 +126,7 @@ export function ExecutionLog({
       aria-live="polite"
     >
       {/* Header */}
-      <div className="execution-log__header">
+      <div className={styles.executionLogHeader}>
         <h4>📋 执行日志</h4>
         <div className="execution-log__header-actions">
           {!collapsed && onClear && (
@@ -139,7 +140,7 @@ export function ExecutionLog({
               清空
             </button>
           )}
-          <span className="execution-log__count" aria-label={`${entries.length} 条记录`}>
+          <span className={styles.executionLogCount} aria-label={`${entries.length} 条记录`}>
             {entries.length} 条
           </span>
         </div>
@@ -148,33 +149,33 @@ export function ExecutionLog({
       {!collapsed && (
         <>
       {/* UX优化82: 筛选器 */}
-      <div className="execution-log__filters">
+      <div className={styles.executionLogFilters}>
         {(['all', 'info', 'success', 'error', 'warning'] as const).map((type) => (
           <button
             key={type}
-            className={`execution-log__filter-btn ${filter === type ? 'execution-log__filter-btn--active' : ''}`}
+            className={`${styles.executionLogFilterBtn} ${filter === type ? styles.executionLogFilterBtnActive : ''}`}
             onClick={() => setFilter(type)}
             data-testid={`filter-${type}`}
           >
             {type === 'all' ? '📊' : LOG_TYPE_ICONS[type]} 
             {type === 'all' ? '全部' : type === 'info' ? '信息' : type === 'success' ? '成功' : type === 'error' ? '错误' : '警告'}
-            <span className="execution-log__filter-count">{counts[type]}</span>
+            <span className={styles.executionLogFilterCount}>{counts[type]}</span>
           </button>
         ))}
       </div>
 
       {/* UX优化83: 搜索框 */}
-      <div className="execution-log__search">
+      <div className={styles.executionLogSearch}>
         <input
           type="text"
           placeholder="🔍 搜索日志..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="execution-log__search-input"
+          className={styles.executionLogSearchInput}
         />
         {searchQuery && (
           <button
-            className="execution-log__search-clear"
+            className={styles.executionLogSearchClear}
             onClick={() => setSearchQuery('')}
           >
             ×
@@ -184,36 +185,36 @@ export function ExecutionLog({
 
       {/* Content */}
       <div 
-        className="execution-log__content" 
+        className={styles.executionLogContent} 
         ref={contentRef}
         tabIndex={0}
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >
         {isEmpty ? (
-          <div className="execution-log__empty" role="status">
+          <div className={styles.executionLogEmpty} role="status">
             {searchQuery || filter !== 'all' ? '没有匹配的日志' : '暂无日志'}
           </div>
         ) : (
           filteredEntries.map((entry) => (
             <div
               key={entry.id}
-              className={`execution-log__entry execution-log__entry--${entry.type}`}
+              className={`${styles.executionLogEntry} ${styles[`executionLogEntry${entry.type.charAt(0).toUpperCase() + entry.type.slice(1)}`]}`}
               data-testid={`log-entry-${entry.id}`}
               role="listitem"
             >
               {/* UX优化81: 类型图标 */}
-              <span className="execution-log__icon" aria-hidden="true">
+              <span className={styles.executionLogIcon} aria-hidden="true">
                 {LOG_TYPE_ICONS[entry.type]}
               </span>
-              <span className="execution-log__time" aria-label={`时间: ${formatTime(entry.timestamp)}`}>
+              <span className={styles.executionLogTime} aria-label={`时间: ${formatTime(entry.timestamp)}`}>
                 {formatTime(entry.timestamp)}
               </span>
-              <span className="execution-log__message">
+              <span className={styles.executionLogMessage}>
                 {entry.message}
               </span>
               {entry.blockId && (
-                <span className="execution-log__block-id" aria-label={`积木块ID: ${entry.blockId}`}>
+                <span className={styles.executionLogBlockId} aria-label={`积木块ID: ${entry.blockId}`}>
                   [{entry.blockId.slice(0, 8)}]
                 </span>
               )}
@@ -224,7 +225,7 @@ export function ExecutionLog({
 
       {/* UX优化84: 自动滚动提示 */}
       {isPaused && entries.length > 0 && (
-        <div className="execution-log__pause-hint">
+        <div className={styles.executionLogPauseHint}>
           ⏸️ 自动滚动已暂停
         </div>
       )}

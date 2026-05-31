@@ -33,6 +33,7 @@ import { BlockNode as CustomBlockNode } from './BlockNode';
 import { ContextMenu, ContextMenuItem, ContextMenuContext } from './ContextMenu';
 import { useDragDrop } from './useDragDrop';
 import { useCanvasShortcuts } from './useCanvasShortcuts';
+import styles from './FlowEditor.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────
 
@@ -402,7 +403,7 @@ export const FlowCanvas = memo(function FlowCanvas({
   // ── Render ──────────────────────────────────────────────────────
   return (
     <div
-      className={`flow-canvas ${isDropActive ? 'flow-canvas--drop-active' : ''} ${pendingPlacement ? 'flow-canvas--placement-armed' : ''}`}
+      className={`${styles.flowCanvas} ${isDropActive ? styles.flowCanvasDropActive : ''} ${pendingPlacement ? styles.flowCanvasPlacementArmed : ''}`}
       ref={reactFlowWrapper}
       data-testid="flow-canvas"
       role="application"
@@ -452,7 +453,7 @@ export const FlowCanvas = memo(function FlowCanvas({
           />
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
           <Panel position="top-left">
-            <div className="flow-canvas__hint">{getPlacementHintMessage(pendingPlacement)}</div>
+            <div className={styles.flowCanvasHint}>{getPlacementHintMessage(pendingPlacement)}</div>
           </Panel>
         </ReactFlow>
       </ReactFlowProvider>
@@ -468,13 +469,13 @@ export const FlowCanvas = memo(function FlowCanvas({
 
       {pendingPlacement && placementPreview && (
         <div
-          className="flow-canvas__placement-preview"
+          className={styles.flowCanvasPlacementPreview}
           style={{ left: `${placementPreview.x}px`, top: `${placementPreview.y}px` }}
           aria-hidden="true"
         >
-          <div className="flow-canvas__placement-core" />
-          <div className="flow-canvas__placement-ring" />
-          <div className="flow-canvas__placement-label">放置</div>
+          <div className={styles.flowCanvasPlacementCore} />
+          <div className={styles.flowCanvasPlacementRing} />
+          <div className={styles.flowCanvasPlacementLabel}>放置</div>
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 import { classifyDiagnosticKind } from './diagnostics';
+import styles from './ExecutionStatus.module.css';
 
 export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
 
@@ -72,30 +73,30 @@ export function ExecutionBar({
 
   return (
     <div
-      className={`execution-bar execution-bar--${status}`}
+      className={`${styles.executionBar} ${styles[`executionBar${status.charAt(0).toUpperCase() + status.slice(1)}`]}`}
       data-testid="execution-bar"
       role="status"
       aria-live="polite"
       aria-label={`执行状态: ${STATUS_LABELS[status]}`}
     >
       {/* Status Indicator - UX优化: 使用emoji */}
-      <div className="execution-bar__status">
+      <div className={styles.executionBarStatus}>
         <span 
-          className="execution-bar__indicator" 
+          className={styles.executionBarIndicator} 
           aria-hidden="true"
         >
           {STATUS_EMOJIS[status]}
         </span>
-        <span className="execution-bar__label">
+        <span className={styles.executionBarLabel}>
           {STATUS_LABELS[status]}
         </span>
       </div>
 
       {/* Progress Bar (only when running or paused) */}
       {showProgress && (
-        <div className="execution-bar__progress">
+        <div className={styles.executionBarProgress}>
           <div 
-            className="execution-bar__progress-bar"
+            className={styles.executionBarProgressBar}
             role="progressbar"
             aria-valuenow={progress}
             aria-valuemin={0}
@@ -103,11 +104,11 @@ export function ExecutionBar({
             aria-label={`执行进度: ${progress}%`}
           >
             <div
-              className="execution-bar__progress-fill"
+              className={styles.executionBarProgressFill}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <span className="execution-bar__progress-text">
+          <span className={styles.executionBarProgressText}>
             {completedBlocks}/{totalBlocks} ({progress}%)
           </span>
         </div>
@@ -116,15 +117,15 @@ export function ExecutionBar({
       {/* UX优化147: 进度环显示 (当有进度时) */}
       {showProgress && totalBlocks > 0 && (
         <div className="execution-progress-ring" aria-hidden="true">
-          <svg className="execution-progress-ring__svg" width={48} height={48}>
+          <svg className={styles.executionProgressRingSvg} width={48} height={48}>
             <circle
-              className="execution-progress-ring__background"
+              className={styles.executionProgressRingBackground}
               cx={24}
               cy={24}
               r={radius}
             />
             <circle
-              className="execution-progress-ring__progress"
+              className={styles.executionProgressRingProgress}
               cx={24}
               cy={24}
               r={radius}
@@ -132,7 +133,7 @@ export function ExecutionBar({
               strokeDashoffset={strokeDashoffset}
             />
           </svg>
-          <span className="execution-progress-ring__text">{progress}%</span>
+          <span className={styles.executionProgressRingText}>{progress}%</span>
         </div>
       )}
 
@@ -146,7 +147,7 @@ export function ExecutionBar({
       {/* Error Message - UX优化: 更明显的错误提示 */}
       {(status === 'error' || status === 'validation_blocked' || status === 'stopped') && errorMessage && (
         <div 
-          className="execution-bar__error" 
+          className={styles.executionBarError} 
           data-testid="execution-error"
           role="alert"
         >

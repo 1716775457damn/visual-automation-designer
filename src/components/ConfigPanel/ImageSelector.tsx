@@ -8,6 +8,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useImageLibrary } from '../../hooks/useImageLibrary';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import styles from './ConfigPanel.module.css';
 
 export interface ImageSelectorProps {
   /** Currently selected image ID */
@@ -137,18 +138,18 @@ export function ImageSelector({
   return (
     <div className={`image-selector ${className}`} data-testid="image-selector">
       {/* Search input */}
-      <div className="image-selector__search">
+      <div className={styles.imageSelectorSearch}>
         <input
           type="text"
           placeholder={searchPlaceholder}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="image-selector__search-input"
+          className={styles.imageSelectorSearchInput}
           data-testid="image-search-input"
         />
         {searchQuery && (
           <button
-            className="image-selector__clear-btn"
+            className={styles.imageSelectorClearBtn}
             onClick={() => setSearchQuery('')}
             data-testid="clear-search-btn"
           >
@@ -159,9 +160,9 @@ export function ImageSelector({
 
       {/* Upload and Paste buttons - always visible at top */}
       {showUploadButton && (
-        <div className="image-selector__actions">
+        <div className={styles.imageSelectorActions}>
           <button
-            className="image-selector__upload-btn"
+            className={styles.imageSelectorUploadBtn}
             onClick={handleUpload}
             disabled={isUploading || loading}
             data-testid="btn-upload-image"
@@ -170,7 +171,7 @@ export function ImageSelector({
           </button>
           {showPasteButton && (
             <button
-              className="image-selector__paste-btn"
+              className={styles.imageSelectorPasteBtn}
               onClick={handlePaste}
               disabled={isPasting || loading}
               data-testid="btn-paste-image"
@@ -184,16 +185,16 @@ export function ImageSelector({
 
       {/* Loading state */}
       {loading && (
-        <div className="image-selector__loading" data-testid="image-selector-loading">
+        <div className={styles.imageSelectorLoading} data-testid="image-selector-loading">
           <span>加载中...</span>
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div className="image-selector__error" data-testid="image-selector-error">
+        <div className={styles.imageSelectorError} data-testid="image-selector-error">
           <span>加载失败</span>
-          <button onClick={refreshImages} className="image-selector__retry-btn">
+          <button onClick={refreshImages} className={styles.imageSelectorRetryBtn}>
             重试
           </button>
         </div>
@@ -201,16 +202,16 @@ export function ImageSelector({
 
       {/* Image grid */}
       {!loading && !error && (
-        <div className="image-selector__grid" data-testid="image-selector-grid">
+        <div className={styles.imageSelectorGrid} data-testid="image-selector-grid">
           {filteredImages.map((image) => (
             <div
               key={image.id}
-              className={`image-selector__item ${selectedId === image.id ? 'image-selector__item--selected' : ''}`}
+              className={`${styles.imageSelectorItem} ${selectedId === image.id ? styles.imageSelectorItemSelected : ''}`}
               onClick={() => handleImageClick(image.id)}
               data-testid={`image-option-${image.id}`}
               title={image.name}
             >
-              <div className="image-selector__thumbnail">
+              <div className={styles.imageSelectorThumbnail}>
                 {image.filePath ? (
                   <img
                     src={image.filePath}
@@ -220,7 +221,7 @@ export function ImageSelector({
                     }}
                   />
                 ) : (
-                  <div className="image-selector__placeholder">
+                  <div className={styles.imageSelectorPlaceholder}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                       <circle cx="8.5" cy="8.5" r="1.5" />
@@ -229,12 +230,12 @@ export function ImageSelector({
                   </div>
                 )}
               </div>
-              <span className="image-selector__name">{image.name}</span>
+              <span className={styles.imageSelectorName}>{image.name}</span>
 
               {/* Delete button */}
               {showDeleteButton && (
                 <button
-                  className="image-selector__delete-btn"
+                  className={styles.imageSelectorDeleteBtn}
                   onClick={(e) => handleDeleteClick(e, image.id, image.name)}
                   disabled={deletingId === image.id}
                   title="删除图片"
@@ -245,7 +246,7 @@ export function ImageSelector({
               )}
 
               {selectedId === image.id && (
-                <div className="image-selector__check" data-testid={`selected-check-${image.id}`}>
+                <div className={styles.imageSelectorCheck} data-testid={`selected-check-${image.id}`}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                     <polyline points="20,6 9,17 4,12" />
                   </svg>
@@ -256,14 +257,14 @@ export function ImageSelector({
 
           {/* Empty state */}
           {images.length === 0 && !showUploadButton && (
-            <div className="image-selector__empty" data-testid="image-selector-empty">
+            <div className={styles.imageSelectorEmpty} data-testid="image-selector-empty">
               <p>{emptyMessage}</p>
             </div>
           )}
 
           {/* No search results */}
           {images.length > 0 && filteredImages.length === 0 && (
-            <div className="image-selector__no-results" data-testid="image-selector-no-results">
+            <div className={styles.imageSelectorNoResults} data-testid="image-selector-no-results">
               没有找到匹配 "{searchQuery}" 的图片
             </div>
           )}

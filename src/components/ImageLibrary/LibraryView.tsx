@@ -10,6 +10,7 @@ import { ImageCard } from './ImageCard';
 import { ImageUploader } from './ImageUploader';
 import { useImageLibrary } from '../../hooks/useImageLibrary';
 import type { ImageMetadata } from '../../types/image';
+import styles from './ImageLibrary.module.css';
 
 export interface LibraryViewProps {
   /** Optional callback when an image is selected */
@@ -98,32 +99,32 @@ export function LibraryView({
   };
 
   return (
-    <div className="library-view" data-testid="library-view">
-      <div className="library-view__header">
+    <div className={styles.libraryView} data-testid="library-view">
+      <div className={styles.libraryViewHeader}>
         <h2>图片库</h2>
-        <span className="library-view__count">
+        <span className={styles.libraryViewCount}>
           {images.length} 张图片
         </span>
       </div>
 
       {/* Search input */}
       {externalSearchFilter === undefined && (
-        <div className="library-view__search">
+        <div className={styles.libraryViewSearch}>
           <input
             type="text"
             placeholder="搜索图片..."
             value={internalSearchFilter}
             onChange={(e) => setInternalSearchFilter(e.target.value)}
-            className="library-view__search-input"
+            className={styles.libraryViewSearchInput}
             data-testid="library-search-input"
           />
         </div>
       )}
 
       {/* Upload section */}
-      <div className="library-view__upload">
+      <div className={styles.libraryViewUpload}>
         <button
-          className="library-view__upload-btn"
+          className={styles.libraryViewUploadBtn}
           onClick={handleUpload}
           disabled={loading || isUploading}
           data-testid="btn-add-image"
@@ -133,19 +134,19 @@ export function LibraryView({
       </div>
 
       {/* Content area */}
-      <div className="library-view__content">
+      <div className={styles.libraryViewContent}>
         {/* Loading state */}
         {loading && (
-          <div className="library-view__loading" data-testid="library-loading">
+          <div className={styles.libraryViewLoading} data-testid="library-loading">
             <span>加载中...</span>
           </div>
         )}
 
         {/* Error state */}
         {error && (
-          <div className="library-view__error" data-testid="library-error">
+          <div className={styles.libraryViewError} data-testid="library-error">
             <span>错误: {error.message}</span>
-            <button onClick={refreshImages} className="library-view__retry-btn">
+            <button onClick={refreshImages} className={styles.libraryViewRetryBtn}>
               重试
             </button>
           </div>
@@ -153,7 +154,7 @@ export function LibraryView({
 
         {/* Empty state */}
         {!loading && !error && images.length === 0 && (
-          <div className="library-view__empty" data-testid="library-empty">
+          <div className={styles.libraryViewEmpty} data-testid="library-empty">
             <ImageUploader
               onUploadSuccess={(metadata) => {
                 setSelectedImageId(metadata.id);
@@ -165,7 +166,7 @@ export function LibraryView({
 
         {/* Image grid */}
         {!loading && !error && images.length > 0 && (
-          <div className="library-view__grid" data-testid="library-grid">
+          <div className={styles.libraryViewGrid} data-testid="library-grid">
             {filteredImages.map((image) => (
               <ImageCard
                 key={image.id}
@@ -182,7 +183,7 @@ export function LibraryView({
               />
             ))}
             {filteredImages.length === 0 && searchFilter && (
-              <div className="library-view__no-results" data-testid="library-no-results">
+              <div className={styles.libraryViewNoResults} data-testid="library-no-results">
                 没有找到匹配 "{searchFilter}" 的图片
               </div>
             )}

@@ -8,6 +8,7 @@
 
 import { memo } from 'react';
 import {
+import styles from './FlowEditor.module.css';
   EdgeProps,
   getSmoothStepPath,
   BaseEdge,
@@ -103,7 +104,7 @@ function AnimatedBlockConnectionComponent({
       />
       {/* Animated overlay */}
       <path
-        className="block-connection--animated"
+        className={styles.blockConnectionAnimated}
         d={edgePath}
         fill="none"
         stroke="var(--color-primary, #00a0ff)"

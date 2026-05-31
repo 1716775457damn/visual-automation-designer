@@ -6,6 +6,7 @@
  */
 
 import type { ThemeMode } from '../../hooks';
+import styles from './FlowEditor.module.css';
 
 export interface FlowToolbarProps {
   canUndo?: boolean;
@@ -70,19 +71,19 @@ export function FlowToolbar({
   };
 
   return (
-    <div className="flow-toolbar" data-testid="flow-toolbar" role="toolbar" aria-label="流程编辑工具栏">
+    <div className={styles.flowToolbar} data-testid="flow-toolbar" role="toolbar" aria-label="流程编辑工具栏">
       {/* Flow Name Display - UX优化1: 显示当前流程名称 */}
       {flowName && (
-        <div className="flow-toolbar__flow-name" title={flowName}>
+        <div className={styles.flowToolbarFlowName} title={flowName}>
           📁 {flowName}
         </div>
       )}
       
       {/* File Operations Group */}
-      <div className="flow-toolbar__group flow-toolbar__group--file" role="group" aria-label="文件操作">
+      <div className={`${styles.flowToolbarGroup} ${styles.flowToolbarGroupFile}`} role="group" aria-label="文件操作">
         {/* UX优化2: 添加新建按钮 */}
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onNew}
           title="新建流程 (Ctrl+N)"
           data-testid="btn-new"
@@ -92,7 +93,7 @@ export function FlowToolbar({
           ➕ 新建
         </button>
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onSave}
           disabled={!hasFlow}
           title="保存 (Ctrl+S)"
@@ -103,7 +104,7 @@ export function FlowToolbar({
           💾 保存
         </button>
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onLoad}
           title="打开 (Ctrl+O)"
           data-testid="btn-load"
@@ -115,9 +116,9 @@ export function FlowToolbar({
       </div>
 
       {/* Edit Operations Group */}
-      <div className="flow-toolbar__group flow-toolbar__group--edit" role="group" aria-label="编辑操作">
+      <div className={`${styles.flowToolbarGroup} ${styles.flowToolbarGroupEdit}`} role="group" aria-label="编辑操作">
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onUndo}
           disabled={!canUndo}
           title="撤销 (Ctrl+Z)"
@@ -129,7 +130,7 @@ export function FlowToolbar({
           ↩️ 撤销
         </button>
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onRedo}
           disabled={!canRedo}
           title="重做 (Ctrl+Y)"
@@ -147,7 +148,7 @@ export function FlowToolbar({
         {!isExecuting ? (
           // Execute button (shown when not executing)
           <button
-            className="flow-toolbar__btn flow-toolbar__btn--primary"
+            className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnPrimary}`}
             onClick={onExecute}
             disabled={!hasFlow}
             title={hasFlow ? "执行 (F5)" : "请先创建或加载流程"}
@@ -161,7 +162,7 @@ export function FlowToolbar({
           // Pause/Resume and Stop buttons (shown when executing)
           <>
             <button
-              className={`flow-toolbar__btn ${isPaused ? 'flow-toolbar__btn--primary' : ''}`}
+              className={`${styles.flowToolbarBtn} ${isPaused ? styles.flowToolbarBtnPrimary : ''}`}
               onClick={onPause}
               title={isPaused ? '继续 (F5)' : '暂停'}
               data-testid="btn-pause"
@@ -172,7 +173,7 @@ export function FlowToolbar({
               {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
             </button>
             <button
-              className="flow-toolbar__btn flow-toolbar__btn--danger"
+              className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnDanger}`}
               onClick={onStop}
               title="停止 (Shift+F5)"
               data-testid="btn-stop"
@@ -186,7 +187,7 @@ export function FlowToolbar({
 
         {/* Step button - always visible, disabled during running (not paused) execution */}
         <button
-          className="flow-toolbar__btn"
+          className={styles.flowToolbarBtn}
           onClick={onStep}
           disabled={!hasFlow || (isExecuting && !isPaused)}
           title="单步执行 (F10)"
@@ -200,10 +201,10 @@ export function FlowToolbar({
       </div>
 
       {/* Help Group - UX优化41: 增强快捷键帮助 */}
-      <div className="flow-toolbar__group flow-toolbar__group--help" role="group" aria-label="帮助">
+      <div className={`${styles.flowToolbarGroup} ${styles.flowToolbarGroupHelp}`} role="group" aria-label="帮助">
         {/* UX优化103: 主题切换按钮 */}
         <button
-          className="flow-toolbar__btn flow-toolbar__btn--theme"
+          className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnTheme}`}
           onClick={onToggleTheme}
           title={getThemeTitle()}
           data-testid="btn-theme"
@@ -213,7 +214,7 @@ export function FlowToolbar({
           {getThemeIcon()}
         </button>
         <button
-          className="flow-toolbar__btn flow-toolbar__btn--help"
+          className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnHelp}`}
           onClick={onHelp}
           title="查看快捷键"
           data-testid="btn-help"

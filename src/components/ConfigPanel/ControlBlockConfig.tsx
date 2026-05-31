@@ -5,6 +5,7 @@
 
 import type { ConditionOp } from '../../types/block';
 import { ImageSelector } from './ImageSelector';
+import styles from './ConfigPanel.module.css';
 
 interface ConfigUIProps {
   config: Record<string, unknown>;
@@ -17,13 +18,13 @@ export function LoopConfigUI({ config, onChange }: ConfigUIProps) {
   const count = (config.count as number) ?? 1;
 
   return (
-    <div className="block-config__section" data-testid="loop-config">
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="loop-count">循环次数</label>
+    <div className={styles.blockConfigSection} data-testid="loop-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="loop-count">循环次数</label>
         <input
           id="loop-count"
           type="number"
-          className="block-config__input"
+          className={styles.blockConfigInput}
           value={count}
           onChange={(e) => onChange({ ...config, count: Number(e.target.value) })}
           min={1}
@@ -31,7 +32,7 @@ export function LoopConfigUI({ config, onChange }: ConfigUIProps) {
           aria-required="true"
         />
       </div>
-      <p className="block-config__info">
+      <p className={styles.blockConfigInfo}>
         将子积木块拖入此循环块内部来定义循环内容
       </p>
     </div>
@@ -42,11 +43,11 @@ export function LoopConfigUI({ config, onChange }: ConfigUIProps) {
 
 export function LoopInfiniteConfigUI() {
   return (
-    <div className="block-config__section" data-testid="loop-infinite-config">
-      <p className="block-config__info">
+    <div className={styles.blockConfigSection} data-testid="loop-infinite-config">
+      <p className={styles.blockConfigInfo}>
         无限循环将持续执行内部积木块，直到用户手动停止。
       </p>
-      <p className="block-config__info">
+      <p className={styles.blockConfigInfo}>
         将子积木块拖入此循环块内部来定义循环内容。
       </p>
     </div>
@@ -60,12 +61,12 @@ export function ConditionConfigUI({ config, onChange }: ConfigUIProps) {
   const condition = (config.condition as ConditionOp) || 'image_exists';
 
   return (
-    <div className="block-config__section" data-testid="condition-config">
-      <div className="block-config__field">
-        <label className="block-config__label" htmlFor="condition-op">判断条件</label>
+    <div className={styles.blockConfigSection} data-testid="condition-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="condition-op">判断条件</label>
         <select
           id="condition-op"
-          className="block-config__select"
+          className={styles.blockConfigSelect}
           value={condition}
           onChange={(e) => onChange({ ...config, condition: e.target.value as ConditionOp })}
           data-testid="select-condition"
@@ -76,8 +77,8 @@ export function ConditionConfigUI({ config, onChange }: ConfigUIProps) {
         </select>
       </div>
 
-      <div className="block-config__field">
-        <label className="block-config__label">检测图片</label>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>检测图片</label>
         <ImageSelector
           selectedId={imageId}
           onSelect={(newImageId: string) => onChange({ ...config, imageId: newImageId })}
@@ -86,12 +87,12 @@ export function ConditionConfigUI({ config, onChange }: ConfigUIProps) {
         />
       </div>
 
-      <div className="block-config__branches">
-        <p className="block-config__info">
+      <div className={styles.blockConfigBranches}>
+        <p className={styles.blockConfigInfo}>
           <strong>真分支：</strong>
           当条件满足时，执行连接到「真」端口的积木块
         </p>
-        <p className="block-config__info">
+        <p className={styles.blockConfigInfo}>
           <strong>假分支：</strong>
           当条件不满足时，执行连接到「假」端口的积木块
         </p>
