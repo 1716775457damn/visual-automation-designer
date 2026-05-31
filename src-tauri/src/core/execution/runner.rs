@@ -564,4 +564,82 @@ mod tests {
         let inner_result = result.unwrap();
         assert_eq!(inner_result.unwrap(), 100);
     }
+
+    #[test]
+    fn should_report_is_active_for_paused() {
+        assert!(ExecutionStatus::Paused.is_active());
+    }
+
+    #[test]
+    fn should_report_is_active_for_running() {
+        assert!(ExecutionStatus::Running.is_active());
+    }
+
+    #[test]
+    fn should_report_not_active_for_idle() {
+        assert!(!ExecutionStatus::Idle.is_active());
+    }
+
+    #[test]
+    fn should_report_not_active_for_completed() {
+        assert!(!ExecutionStatus::Completed.is_active());
+    }
+
+    #[test]
+    fn should_report_not_active_for_error() {
+        assert!(!ExecutionStatus::Error.is_active());
+    }
+
+    #[test]
+    fn should_report_not_active_for_stopped() {
+        assert!(!ExecutionStatus::Stopped.is_active());
+    }
+
+    #[test]
+    fn should_update_and_clear_current_block() {
+        let mut ctx = ExecutionContext::new();
+        let block_id = BlockId::new();
+        ctx.set_current_block(Some(block_id.clone()));
+        assert_eq!(ctx.current_block(), Some(&block_id));
+        ctx.set_current_block(None);
+        assert!(ctx.current_block().is_none());
+    }
+
+    #[test]
+    fn should_log_events_in_context() {
+        let mut ctx = ExecutionContext::new();
+        let block_id = BlockId::new();
+        ctx.log_event(ExecutionEvent::block_started(block_id.clone()));
+        ctx.log_event(ExecutionEvent::block_completed(block_id, true));
+        assert_eq!(ctx.execution_log().len(), 2);
+    }
+
+    #[test]
+    fn should_handle_string_panic_in_safe_execute() {
+        let result: Result<i32> =
+            safe_execute(|| panic!("string literal panic"), "String panic op");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("String panic op"));
+    }
+
+    #[test]
+    fn should_handle_empty_string_panic_in_safe_execute() {
+        let result: Result<i32> =
+            safe_execute(|| panic!(""), "Empty panic op");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Empty panic op"));
+    }
+
+    #[test]
+    fn should_reset_context() {
+        let mut ctx = ExecutionContext::new();
+        ctx.set_current_block(Some(BlockId::new()));
+        ctx.log_event(ExecutionEvent::started());
+        ctx.reset();
+        assert!(ctx.current_block().is_none());
+        assert!(ctx.execution_log().is_empty());
+        assert_eq!(ctx.blocks_executed(), 0);
+    }
 }
