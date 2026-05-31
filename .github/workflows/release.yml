@@ -22,8 +22,12 @@ jobs:
             tauri_args: '--target x86_64-pc-windows-msvc'
 
           - platform: macos-latest
+            rust_target: x86_64-apple-darwin
+            tauri_args: '--target x86_64-apple-darwin'
+
+          - platform: macos-latest
             rust_target: aarch64-apple-darwin
-            tauri_args: ''
+            tauri_args: '--target aarch64-apple-darwin'
 
           - platform: ubuntu-latest
             rust_target: x86_64-unknown-linux-gnu
@@ -45,11 +49,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_target }}
-
-      - name: Install macOS Rust targets
-        if: matrix.platform == 'macos-latest'
-        run: |
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Cache Rust
         uses: Swatinem/rust-cache@v2
@@ -82,7 +81,31 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Visual Automation Designer v__VERSION__'
-          releaseBody: 'See the assets to download and install this version.'
+          releaseBody: |
+            ## v__VERSION__
+
+            ### 架构拆分
+            - **前端**: App.tsx (37KB → AppShell+AppProviders), useFlow.ts (24KB → 4 hooks), FlowCanvas.tsx (22KB → 3 files), BlockConfig.tsx (20KB → 3 components)
+            - **后端**: executor.rs (41KB → 4 modules), validator.rs (28KB → 3 modules)
+
+            ### P0 性能修复
+            - 修复 onDragOver 重渲染循环，handleNodesChange 连锁重建
+            - onPaneMouseMove 添加 rAF 节流，addConnection 改用 useReducer
+
+            ### 设计 Token 体系
+            - --vad- 前缀 CSS 变量：colors/spacing/typography/shadows/radii/transitions
+            - 暗色/亮色双主题
+
+            ### 无障碍 (WCAG AA)
+            - 全部核心组件 ARIA 标签 + 键盘导航 + 焦点管理
+
+            ### UI 微交互
+            - 节点 hover 发光、拖拽连线动画、Toast 出入场 + reduced-motion 保护
+
+            ### 多平台
+            - Windows: nsis + msi
+            - macOS: Intel + Apple Silicon 独立 dmg
+            - Linux: AppImage + deb
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.tauri_args }}
