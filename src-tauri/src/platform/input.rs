@@ -410,4 +410,106 @@ mod tests {
         assert!(matches!(controller.parse_key("a"), Ok(Key::Unicode('a'))));
         assert!(matches!(controller.parse_key("F1"), Ok(Key::F1)));
     }
+
+    #[test]
+    fn should_parse_arrow_keys() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.parse_key("up").ok(), Some(Key::UpArrow));
+        assert_eq!(controller.parse_key("down").ok(), Some(Key::DownArrow));
+        assert_eq!(controller.parse_key("left").ok(), Some(Key::LeftArrow));
+        assert_eq!(controller.parse_key("right").ok(), Some(Key::RightArrow));
+        assert_eq!(controller.parse_key("arrow_up").ok(), Some(Key::UpArrow));
+        assert_eq!(controller.parse_key("arrow_down").ok(), Some(Key::DownArrow));
+    }
+
+    #[test]
+    fn should_parse_navigation_keys() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.parse_key("home").ok(), Some(Key::Home));
+        assert_eq!(controller.parse_key("end").ok(), Some(Key::End));
+        assert_eq!(controller.parse_key("pageup").ok(), Some(Key::PageUp));
+        assert_eq!(controller.parse_key("pagedown").ok(), Some(Key::PageDown));
+        assert_eq!(controller.parse_key("page_up").ok(), Some(Key::PageUp));
+        assert_eq!(controller.parse_key("page_down").ok(), Some(Key::PageDown));
+    }
+
+    #[test]
+    fn should_parse_modifier_keys() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.parse_key("backspace").ok(), Some(Key::Backspace));
+        assert_eq!(controller.parse_key("delete").ok(), Some(Key::Delete));
+        assert_eq!(controller.parse_key("del").ok(), Some(Key::Delete));
+        assert_eq!(controller.parse_key("esc").ok(), Some(Key::Escape));
+        assert_eq!(controller.parse_key("return").ok(), Some(Key::Return));
+    }
+
+    #[test]
+    fn should_parse_function_keys_f1_to_f12() {
+        let controller = InputController::new().unwrap();
+        for (name, expected) in [
+            ("f1", Key::F1), ("f2", Key::F2), ("f3", Key::F3),
+            ("f4", Key::F4), ("f5", Key::F5), ("f6", Key::F6),
+            ("f7", Key::F7), ("f8", Key::F8), ("f9", Key::F9),
+            ("f10", Key::F10), ("f11", Key::F11), ("f12", Key::F12),
+        ] {
+            assert_eq!(
+                controller.parse_key(name).ok(),
+                Some(expected),
+                "failed for key: {name}"
+            );
+        }
+    }
+
+    #[test]
+    fn should_error_on_unknown_key() {
+        let controller = InputController::new().unwrap();
+        assert!(controller.parse_key("unknown_key").is_err());
+        assert!(controller.parse_key("").is_err());
+        assert!(controller.parse_key("ctrl+alt").is_err());
+    }
+
+    #[test]
+    fn should_parse_single_character_keys() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.parse_key("z").ok(), Some(Key::Unicode('z')));
+        assert_eq!(controller.parse_key("X").ok(), Some(Key::Unicode('x'))); // lowercased
+        assert_eq!(controller.parse_key("9").ok(), Some(Key::Unicode('9')));
+        assert_eq!(controller.parse_key("!").ok(), Some(Key::Unicode('!')));
+    }
+
+    #[test]
+    fn should_create_with_custom_intervals() {
+        let controller = InputController::with_intervals(100, 20).unwrap();
+        assert_eq!(controller.click_interval_ms, 100);
+        assert_eq!(controller.key_interval_ms, 20);
+    }
+
+    #[test]
+    fn should_have_default_intervals() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.click_interval_ms, 50);
+        assert_eq!(controller.key_interval_ms, 10);
+    }
+
+    #[test]
+    fn should_convert_all_mouse_buttons() {
+        let variants = [MouseButton::Left, MouseButton::Right, MouseButton::Middle];
+        for &variant in &variants {
+            let button: Button = variant.into();
+            match variant {
+                MouseButton::Left => assert_eq!(button, Button::Left),
+                MouseButton::Right => assert_eq!(button, Button::Right),
+                MouseButton::Middle => assert_eq!(button, Button::Middle),
+            }
+        }
+    }
+
+    #[test]
+    fn should_convert_all_key_modifiers() {
+        let controller = InputController::new().unwrap();
+        assert_eq!(controller.modifier_to_key(KeyModifier::Shift), Key::Shift);
+        assert_eq!(controller.modifier_to_key(KeyModifier::Ctrl), Key::Control);
+        assert_eq!(controller.modifier_to_key(KeyModifier::Alt), Key::Alt);
+        assert_eq!(controller.modifier_to_key(KeyModifier::Meta), Key::Meta);
+    }
 }
