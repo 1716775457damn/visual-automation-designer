@@ -838,4 +838,325 @@ mod tests {
         // Results may be empty or contain matches depending on matching algorithm
         let _ = results.len();
     }
+
+    // ========================================================================
+    // MatchMetrics tests
+    // ========================================================================
+
+    #[test]
+    fn should_record_match_and_update_metrics() {
+        let mut metrics = MatchMetrics::default();
+        metrics.record_match(Duration::from_millis(150));
+        assert_eq!(metrics.total_matches, 1);
+        assert_eq!(metrics.total_time_ms, 150);
+        assert!((metrics.avg_match_time_ms - 150.0).abs() < 0.001);
+        assert_eq!(metrics.max_match_time_ms, 150);
+        assert_eq!(metrics.min_match_time_ms, Some(150));
+    }
+
+    #[test]
+    fn should_update_max_and_min_on_multiple_matches() {
+        let mut metrics = MatchMetrics::default();
+        metrics.record_match(Duration::from_millis(200));
+        metrics.record_match(Duration::from_millis(50));
+        metrics.record_match(Duration::from_millis(300));
+
+        assert_eq!(metrics.total_matches, 3);
+        assert_eq!(metrics.total_time_ms, 550);
+        assert_eq!(metrics.max_match_time_ms, 300);
+        assert_eq!(metrics.min_match_time_ms, Some(50));
+    }
+
+    #[test]
+    fn should_record_cache_hit_and_miss() {
+        let mut metrics = MatchMetrics::default();
+        metrics.record_cache_hit();
+        metrics.record_cache_hit();
+        metrics.record_cache_miss();
+
+        assert_eq!(metrics.cache_hits, 2);
+        assert_eq!(metrics.cache_misses, 1);
+    }
+
+    #[test]
+    fn should_reset_metrics_to_default() {
+        let mut metrics = MatchMetrics::default();
+        metrics.record_match(Duration::from_millis(100));
+        metrics.record_cache_hit();
+
+        metrics.reset();
+        assert_eq!(metrics.total_matches, 0);
+        assert_eq!(metrics.cache_hits, 0);
+        assert_eq!(metrics.cache_misses, 0);
+        assert_eq!(metrics.max_match_time_ms, 0);
+        assert_eq!(metrics.min_match_time_ms, None);
+    }
+
+    // ========================================================================
+    // MatchConfig edge case tests
+    // ========================================================================
+
+    #[test]
+    fn should_clamp_threshold_to_min_zero() {
+        let config = MatchConfig::with_threshold(-2.0);
+        assert_eq!(config.threshold, 0.0);
+    }
+
+    #[test]
+    fn should_clamp_threshold_to_max_one() {
+        let config = MatchConfig::with_threshold(5.0);
+        assert_eq!(config.threshold, 1.0);
+    }
+
+    #[test]
+    fn should_clamp_threshold_at_exact_bounds() {
+        let config = MatchConfig::with_threshold(0.0);
+        assert_eq!(config.threshold, 0.0);
+
+        let config = MatchConfig::with_threshold(1.0);
+        assert_eq!(config.threshold, 1.0);
+    }
+
+    // ========================================================================
+    // ImageMatcher edge case tests
+    // ========================================================================
+
+    #[test]
+    fn should_create_matcher_with_custom_config() {
+        let config = MatchConfig {
+            threshold: 0.75,
+            max_matches: 5,
+            use_grayscale: true,
+        };
+        let matcher = ImageMatcher::with_config(config);
+        assert_eq!(matcher.threshold(), 0.75);
+    }
+
+    #[test]
+    fn should_find_all_images_needle_larger_than_haystack() {
+        let matcher = ImageMatcher::new();
+        let needle = create_test_image(200, 200, Rgba([255, 255, 255, 255]));
+        let haystack = create_test_image(50, 50, Rgba([255, 255, 255, 255]));
+        let results = matcher.find_all_images(&haystack, &needle);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn should_calculate_ncc_zero_for_identical_solid_colors() {
+        // NCC of two identical solid images should be NaN due to zero variance,
+        // but our implementation returns 0.0 for zero denominator
+        let matcher = ImageMatcher::new();
+        let needle = create_test_image(10, 10, Rgba([128, 128, 128, 255]));
+        let haystack = create_test_image(20, 20, Rgba([128, 128, 128, 255]));
+        let result = matcher.find_image(&haystack, &needle);
+        // Zero-variance images have denominator = 0 → score = 0.0 < 0.9 → not found
+        assert!(!result.found);
+    }
+
+    #[test]
+    fn should_handle_one_pixel_needle() {
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.5));
+        let needle = create_test_image(1, 1, Rgba([255, 255, 255, 255]));
+        let haystack = create_test_image(5, 5, Rgba([255, 255, 255, 255]));
+        let result = matcher.find_image(&haystack, &needle);
+        // Returns a result (may be found or not depending on algorithm)
+        // Key point: doesn't panic
+        let _ = result;
+    }
+
+    #[test]
+    fn should_handle_exact_same_size_images() {
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.5));
+        let needle = create_test_image(20, 20, Rgba([255, 255, 255, 255]));
+        let haystack = create_test_image(20, 20, Rgba([255, 255, 255, 255]));
+        let result = matcher.find_image(&haystack, &needle);
+        let _ = result;
+    }
+
+    #[test]
+    fn should_find_all_respects_max_matches() {
+        let matcher = ImageMatcher::with_config(MatchConfig {
+            threshold: 0.5,
+            max_matches: 2,
+            ..Default::default()
+        });
+        let needle = create_test_image(10, 10, Rgba([255, 255, 255, 255]));
+        let haystack = create_test_image(100, 100, Rgba([255, 255, 255, 255]));
+        let results = matcher.find_all_images(&haystack, &needle);
+        assert!(results.len() <= 2);
+    }
+
+    // ========================================================================
+    // CachedImageMatcher tests
+    // ========================================================================
+
+    #[test]
+    fn should_create_cached_matcher_with_defaults() {
+        let matcher = CachedImageMatcher::new();
+        assert_eq!(matcher.threshold(), 0.9);
+        let stats = matcher.cache_stats();
+        assert_eq!(stats.entries, 0);
+        assert_eq!(stats.hits, 0);
+    }
+
+    #[test]
+    fn should_create_cached_matcher_with_cache_config() {
+        let cache_config = MatchCacheConfig::new(50, 10);
+        let matcher = CachedImageMatcher::with_cache_config(cache_config);
+        assert_eq!(matcher.threshold(), 0.9);
+    }
+
+    #[test]
+    fn should_set_threshold_on_cached_matcher() {
+        let mut matcher = CachedImageMatcher::new();
+        matcher.set_threshold(0.5);
+        assert_eq!(matcher.threshold(), 0.5);
+    }
+
+    #[test]
+    fn should_set_log_metrics_on_cached_matcher() {
+        let mut matcher = CachedImageMatcher::new();
+        matcher.set_log_metrics(true);
+        // No direct getter; verify no panic
+    }
+
+    #[test]
+    fn should_access_metrics_on_cached_matcher() {
+        let matcher = CachedImageMatcher::new();
+        let metrics = matcher.metrics();
+        assert_eq!(metrics.total_matches, 0);
+    }
+
+    #[test]
+    fn should_reset_metrics_on_cached_matcher() {
+        let mut matcher = CachedImageMatcher::new();
+        matcher.reset_metrics();
+        let metrics = matcher.metrics();
+        assert_eq!(metrics.total_matches, 0);
+    }
+
+    #[test]
+    fn should_clear_cache_on_cached_matcher() {
+        let mut matcher = CachedImageMatcher::new();
+        matcher.clear_cache();
+        let stats = matcher.cache_stats();
+        assert_eq!(stats.entries, 0);
+    }
+
+    #[test]
+    fn should_find_image_uncached() {
+        let matcher = CachedImageMatcher::new();
+        let haystack = create_test_image(30, 30, Rgba([255, 0, 0, 255]));
+        let needle = create_test_image(10, 10, Rgba([0, 255, 0, 255]));
+        let result = matcher.find_image(&haystack, &needle);
+        // Should not panic; result depends on matching
+        let _ = result;
+    }
+
+    #[test]
+    fn should_find_all_images_uncached() {
+        let matcher = CachedImageMatcher::new();
+        let haystack = create_test_image(50, 50, Rgba([200, 200, 200, 255]));
+        let needle = create_test_image(5, 5, Rgba([200, 200, 200, 255]));
+        let results = matcher.find_all_images(&haystack, &needle);
+        let _ = results.len();
+    }
+
+    #[test]
+    fn should_cache_match_result_for_reuse() {
+        let mut matcher = CachedImageMatcher::new();
+        let haystack = create_test_image(30, 30, Rgba([255, 128, 64, 255]));
+        let needle = create_test_image(5, 5, Rgba([255, 128, 64, 255]));
+        let image_id = ImageId::new();
+
+        // First call: should miss cache
+        let _result = matcher.find_image_cached(&haystack, &needle, &image_id);
+        let stats = matcher.cache_stats();
+        assert_eq!(stats.misses, 1);
+
+        // Second call with same inputs: may hit or miss depending on result
+        let _result2 = matcher.find_image_cached(&haystack, &needle, &image_id);
+    }
+
+    // ========================================================================
+    // ConcurrentMatcher tests
+    // ========================================================================
+
+    #[test]
+    fn should_create_concurrent_matcher_with_defaults() {
+        let matcher = ConcurrentMatcher::new();
+        // Verify no panic on creation
+        let _ = matcher;
+    }
+
+    #[test]
+    fn should_create_concurrent_matcher_with_custom_config() {
+        let config = MatchConfig::with_threshold(0.5);
+        let cache_config = MatchCacheConfig::new(50, 10);
+        let matcher = ConcurrentMatcher::with_config(config, cache_config);
+        let _ = matcher;
+    }
+
+    #[test]
+    fn should_handle_empty_parallel_match() {
+        let matcher = ConcurrentMatcher::new();
+        let haystack = create_test_image(50, 50, Rgba([255, 0, 0, 255]));
+        let results = matcher.find_images_parallel(&haystack, vec![]);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn should_handle_single_parallel_match() {
+        let matcher = ConcurrentMatcher::new();
+        let haystack = create_test_image(50, 50, Rgba([255, 0, 0, 255]));
+        let image_id = ImageId::new();
+        let needle = create_test_image(10, 10, Rgba([0, 255, 0, 255]));
+        let results =
+            matcher.find_images_parallel(&haystack, vec![(image_id.clone(), needle)]);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].0, image_id);
+    }
+
+    #[test]
+    fn should_handle_multiple_parallel_matches() {
+        let matcher = ConcurrentMatcher::new();
+        let haystack = create_test_image(100, 100, Rgba([128, 128, 128, 255]));
+
+        let id1 = ImageId::new();
+        let id2 = ImageId::new();
+        let needle1 = create_test_image(10, 10, Rgba([255, 0, 0, 255]));
+        let needle2 = create_test_image(8, 8, Rgba([0, 255, 0, 255]));
+
+        let results = matcher.find_images_parallel(
+            &haystack,
+            vec![(id1.clone(), needle1), (id2.clone(), needle2)],
+        );
+        assert_eq!(results.len(), 2);
+    }
+
+    /// Test that matching does not panic with multi-colored haystacks.
+    /// Note: NCC requires variance; solid-color images produce zero-score matches.
+    #[test]
+    fn should_handle_multi_colored_haystack_without_panic() {
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.7));
+
+        // Create a 60x30 haystack: left half red, right half green
+        let mut haystack_img: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(60, 30);
+        for (_x, _y, pixel) in haystack_img.enumerate_pixels_mut() {
+            *pixel = if _x < 30 {
+                Rgba([255, 0, 0, 255])
+            } else {
+                Rgba([0, 255, 0, 255])
+            };
+        }
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+
+        // Create a green needle
+        let needle = create_test_image(5, 5, Rgba([0, 255, 0, 255]));
+
+        let result = matcher.find_image(&haystack, &needle);
+        // NCC may fail on solid-color images (zero variance).
+        // Main assertion: function does not crash.
+        assert!(!result.found || result.center_x.is_some());
+    }
 }

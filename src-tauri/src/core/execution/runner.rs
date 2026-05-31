@@ -511,6 +511,7 @@ impl Executor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::BlockResult;
 
     #[test]
     fn test_execution_status_default() {

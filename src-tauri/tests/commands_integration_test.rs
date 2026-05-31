@@ -169,7 +169,7 @@ fn test_flow_validation() {
     let errors = validator.validate(&flow);
     // Empty flow is valid (just no blocks to execute)
     // The validation passes if there are no errors
-    assert!(errors.iter().all(|e| e.severity != visual_automation_designer_lib::core::flow::validator::ValidationSeverity::Error));
+    assert!(errors.iter().all(|e| e.severity != visual_automation_designer_lib::core::flow::ValidationSeverity::Error));
     
     // Now add a block and set as entry
     let mut flow = Flow::new("Flow With Block".to_string());
@@ -184,7 +184,7 @@ fn test_flow_validation() {
     
     // Now should be valid
     let errors = validator.validate(&flow);
-    assert!(validator.is_valid(&flow) || errors.iter().all(|e| e.severity != visual_automation_designer_lib::core::flow::validator::ValidationSeverity::Error));
+    assert!(validator.is_valid(&flow) || errors.iter().all(|e| e.severity != visual_automation_designer_lib::core::flow::ValidationSeverity::Error));
 }
 
 // ============================================================================
@@ -443,7 +443,7 @@ fn test_complete_workflow() {
     let validator = FlowValidator::new();
     let errors = validator.validate(&loaded);
     assert!(validator.is_valid(&loaded) || errors.iter().all(|e| 
-        e.severity != visual_automation_designer_lib::core::flow::validator::ValidationSeverity::Error
+        e.severity != visual_automation_designer_lib::core::flow::ValidationSeverity::Error
     ));
 }
 
