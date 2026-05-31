@@ -1,8 +1,8 @@
 /**
- * useTheme - 主题管理钩子
- * 支持亮色/暗色/自动主题切换
+ * useTheme — 主题管理钩子 (Phase 2: Class-based Design Token System)
  *
- * UX优化103: 主题切换功能
+ * 将主题状态持久化到 localStorage，通过 <html> 的 class (theme-dark / theme-light)
+ * 驱动 --vad-* CSS 变量体系，同时保留 data-theme 属性兼容旧版 variables.css。
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -24,75 +24,75 @@ export interface UseThemeReturn {
 
 const THEME_STORAGE_KEY = 'vad-theme-mode';
 
-/**
- * 获取系统主题偏好
- */
 function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (typeof window === 'undefined') return 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 }
 
-/**
- * 获取存储的主题模式
- */
 function getStoredMode(): ThemeMode {
-  if (typeof window === 'undefined') return 'auto';
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'auto') {
-    return stored;
+  if (typeof window === 'undefined') return 'dark';
+  try {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'light' || stored === 'dark' || stored === 'auto') {
+      return stored;
+    }
+  } catch {
+    // localStorage unavailable (incognito / SSR), fall through
   }
-  return 'auto';
+  return 'dark';
 }
 
-/**
- * 主题管理钩子
- */
+function applyThemeClass(theme: 'light' | 'dark'): void {
+  const root = document.documentElement;
+
+  // Phase 2: class-based tokens (.theme-dark / .theme-light)
+  root.classList.toggle('theme-dark', theme === 'dark');
+  root.classList.toggle('theme-light', theme === 'light');
+
+  // Backward compat: keep data-theme for legacy variables.css
+  root.setAttribute('data-theme', theme);
+}
+
 export function useTheme(): UseThemeReturn {
   const [mode, setModeState] = useState<ThemeMode>(getStoredMode);
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
 
-  // 计算实际主题
-  const theme = mode === 'auto' ? systemTheme : mode;
+  const theme: 'light' | 'dark' = mode === 'auto' ? systemTheme : mode;
   const isDark = theme === 'dark';
 
-  // 监听系统主题变化
+  // Listen for OS-level theme changes (auto mode)
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
-    const handleChange = (e: MediaQueryListEvent) => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
       setSystemTheme(e.matches ? 'dark' : 'light');
     };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
-  // 应用主题到 DOM
+  // Apply theme classes & data-theme to <html>
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    applyThemeClass(theme);
   }, [theme]);
 
-  // 设置主题模式
   const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode);
-    localStorage.setItem(THEME_STORAGE_KEY, newMode);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, newMode);
+    } catch {
+      // Ignore write failures
+    }
   }, []);
 
-  // 切换主题 (light -> dark -> auto -> light)
   const toggleTheme = useCallback(() => {
-    const modes: ThemeMode[] = ['light', 'dark', 'auto'];
-    const currentIndex = modes.indexOf(mode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    setMode(modes[nextIndex]);
+    const next: ThemeMode =
+      mode === 'dark' ? 'light' : mode === 'light' ? 'auto' : 'dark';
+    setMode(next);
   }, [mode, setMode]);
 
-  return {
-    theme,
-    mode,
-    setMode,
-    toggleTheme,
-    isDark,
-  };
+  return { theme, mode, setMode, toggleTheme, isDark };
 }
 
 export default useTheme;

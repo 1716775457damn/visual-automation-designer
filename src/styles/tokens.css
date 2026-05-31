@@ -1,0 +1,197 @@
+/**
+ * Design Token System — Phase 2
+ * CSS Custom Properties with --vad- prefix
+ * Dual theme: .theme-dark (default) / .theme-light
+ */
+
+/* ==========================================================================
+   Default Theme: Dark (蓝紫基调 Glassmorphism)
+   ========================================================================== */
+
+:root {
+  /* --- Colors: Primary & Accent --- */
+  --vad-color-primary: #7c3aed;
+  --vad-color-primary-hover: #8b5cf6;
+  --vad-color-primary-active: #6d28d9;
+  --vad-color-primary-soft: rgba(124, 58, 237, 0.15);
+  --vad-color-primary-muted: rgba(124, 58, 237, 0.08);
+
+  --vad-color-accent: #06b6d4;
+  --vad-color-accent-hover: #22d3ee;
+  --vad-color-accent-soft: rgba(6, 182, 212, 0.15);
+  --vad-color-accent-muted: rgba(6, 182, 212, 0.08);
+
+  /* --- Colors: Semantic --- */
+  --vad-color-success: #10b981;
+  --vad-color-success-soft: rgba(16, 185, 129, 0.15);
+  --vad-color-warning: #f59e0b;
+  --vad-color-warning-soft: rgba(245, 158, 11, 0.15);
+  --vad-color-error: #ef4444;
+  --vad-color-error-soft: rgba(239, 68, 68, 0.15);
+  --vad-color-info: #3b82f6;
+  --vad-color-info-soft: rgba(59, 130, 246, 0.15);
+
+  /* --- Colors: Surface & Background --- */
+  --vad-color-bg: #020617;
+  --vad-color-surface: rgba(15, 23, 42, 0.55);
+  --vad-color-surface-elevated: rgba(30, 41, 59, 0.65);
+  --vad-color-surface-overlay: rgba(15, 23, 42, 0.8);
+
+  /* --- Colors: Text --- */
+  --vad-color-text-primary: #f8fafc;
+  --vad-color-text-secondary: #cbd5e1;
+  --vad-color-text-muted: #64748b;
+  --vad-color-text-on-primary: #ffffff;
+
+  /* --- Colors: Border --- */
+  --vad-color-border: rgba(255, 255, 255, 0.08);
+  --vad-color-border-strong: rgba(255, 255, 255, 0.14);
+  --vad-color-border-focus: var(--vad-color-primary);
+
+  /* --- Glassmorphism --- */
+  --vad-glass-bg: rgba(15, 23, 42, 0.6);
+  --vad-glass-bg-strong: rgba(15, 23, 42, 0.8);
+  --vad-glass-border: rgba(255, 255, 255, 0.08);
+  --vad-glass-backdrop: blur(16px) saturate(180%);
+  --vad-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* --- Spacing (4px base scale) --- */
+  --vad-spacing-xs: 4px;
+  --vad-spacing-sm: 8px;
+  --vad-spacing-md: 16px;
+  --vad-spacing-lg: 24px;
+  --vad-spacing-xl: 32px;
+  --vad-spacing-2xl: 48px;
+  --vad-spacing-3xl: 64px;
+
+  /* --- Typography: Font Family --- */
+  --vad-font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --vad-font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas,
+    'SF Mono', monospace;
+
+  /* --- Typography: Font Size --- */
+  --vad-font-size-xs: 12px;
+  --vad-font-size-sm: 14px;
+  --vad-font-size-md: 16px;
+  --vad-font-size-lg: 18px;
+  --vad-font-size-xl: 24px;
+  --vad-font-size-2xl: 32px;
+  --vad-font-size-3xl: 48px;
+
+  /* --- Typography: Font Weight --- */
+  --vad-font-weight-normal: 400;
+  --vad-font-weight-medium: 500;
+  --vad-font-weight-semibold: 600;
+  --vad-font-weight-bold: 700;
+
+  /* --- Typography: Line Height --- */
+  --vad-line-height-tight: 1.25;
+  --vad-line-height-normal: 1.5;
+  --vad-line-height-relaxed: 1.75;
+
+  /* --- Typography: Letter Spacing --- */
+  --vad-letter-spacing-tight: -0.02em;
+  --vad-letter-spacing-normal: 0;
+  --vad-letter-spacing-wide: 0.04em;
+
+  /* --- Shadows --- */
+  --vad-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --vad-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --vad-shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25);
+  --vad-shadow-glow: 0 0 24px rgba(124, 58, 237, 0.35),
+    0 0 48px rgba(124, 58, 237, 0.12);
+
+  /* --- Radii --- */
+  --vad-radius-sm: 4px;
+  --vad-radius-md: 8px;
+  --vad-radius-lg: 12px;
+  --vad-radius-xl: 16px;
+  --vad-radius-full: 9999px;
+
+  /* --- Transitions --- */
+  --vad-transition-fast: 150ms;
+  --vad-transition-normal: 300ms;
+  --vad-transition-slow: 500ms;
+  --vad-easing-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vad-easing-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* --- Z-Index --- */
+  --vad-z-base: 0;
+  --vad-z-dropdown: 100;
+  --vad-z-sticky: 200;
+  --vad-z-overlay: 300;
+  --vad-z-modal: 400;
+  --vad-z-toast: 500;
+}
+
+/* ==========================================================================
+   Light Theme
+   ========================================================================== */
+
+.theme-light {
+  /* --- Colors: Primary & Accent --- */
+  --vad-color-primary: #6366f1;
+  --vad-color-primary-hover: #4f46e5;
+  --vad-color-primary-active: #4338ca;
+  --vad-color-primary-soft: rgba(99, 102, 241, 0.1);
+  --vad-color-primary-muted: rgba(99, 102, 241, 0.06);
+
+  --vad-color-accent: #0891b2;
+  --vad-color-accent-hover: #06b6d4;
+  --vad-color-accent-soft: rgba(8, 145, 178, 0.1);
+  --vad-color-accent-muted: rgba(8, 145, 178, 0.06);
+
+  /* --- Colors: Semantic --- */
+  --vad-color-success: #059669;
+  --vad-color-success-soft: rgba(5, 150, 105, 0.1);
+  --vad-color-warning: #d97706;
+  --vad-color-warning-soft: rgba(217, 119, 6, 0.1);
+  --vad-color-error: #dc2626;
+  --vad-color-error-soft: rgba(220, 38, 38, 0.1);
+  --vad-color-info: #2563eb;
+  --vad-color-info-soft: rgba(37, 99, 235, 0.1);
+
+  /* --- Colors: Surface & Background --- */
+  --vad-color-bg: #f8fafc;
+  --vad-color-surface: rgba(255, 255, 255, 0.6);
+  --vad-color-surface-elevated: rgba(255, 255, 255, 0.85);
+  --vad-color-surface-overlay: rgba(255, 255, 255, 0.9);
+
+  /* --- Colors: Text --- */
+  --vad-color-text-primary: #0f172a;
+  --vad-color-text-secondary: #475569;
+  --vad-color-text-muted: #94a3b8;
+  --vad-color-text-on-primary: #ffffff;
+
+  /* --- Colors: Border --- */
+  --vad-color-border: rgba(15, 23, 42, 0.08);
+  --vad-color-border-strong: rgba(15, 23, 42, 0.14);
+  --vad-color-border-focus: var(--vad-color-primary);
+
+  /* --- Glassmorphism --- */
+  --vad-glass-bg: rgba(255, 255, 255, 0.55);
+  --vad-glass-bg-strong: rgba(255, 255, 255, 0.8);
+  --vad-glass-border: rgba(15, 23, 42, 0.08);
+  --vad-glass-backdrop: blur(16px) saturate(180%);
+  --vad-glass-shadow: 0 8px 32px rgba(15, 23, 42, 0.06);
+
+  /* --- Shadows --- */
+  --vad-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  --vad-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+  --vad-shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.12),
+    0 4px 12px rgba(15, 23, 42, 0.06);
+  --vad-shadow-glow: 0 0 24px rgba(99, 102, 241, 0.2),
+    0 0 48px rgba(99, 102, 241, 0.08);
+}
+
+/* ==========================================================================
+   Theme Dark Explicit Override
+   (Useful when a parent has .theme-light but child needs dark)
+   ========================================================================== */
+
+.theme-dark {
+  /* Inherits :root defaults — explicit class ensures cascade priority */
+}
