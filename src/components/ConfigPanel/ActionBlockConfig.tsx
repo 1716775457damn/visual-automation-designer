@@ -64,25 +64,29 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
       {mode.mode === 'coordinates' && (
         <div className="block-config__field-group">
           <div className="block-config__field">
-            <label className="block-config__label">X 坐标</label>
+            <label className="block-config__label" htmlFor="click-x">X 坐标</label>
             <input
+              id="click-x"
               type="number"
               className="block-config__input"
               value={(mode as { mode: 'coordinates'; x: number; y: number }).x}
               onChange={(e) => handleCoordinateChange('x', Number(e.target.value))}
               min={0}
               data-testid="input-x"
+              aria-required="true"
             />
           </div>
           <div className="block-config__field">
-            <label className="block-config__label">Y 坐标</label>
+            <label className="block-config__label" htmlFor="click-y">Y 坐标</label>
             <input
+              id="click-y"
               type="number"
               className="block-config__input"
               value={(mode as { mode: 'coordinates'; x: number; y: number }).y}
               onChange={(e) => handleCoordinateChange('y', Number(e.target.value))}
               min={0}
               data-testid="input-y"
+              aria-required="true"
             />
           </div>
         </div>
@@ -101,8 +105,9 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
       )}
 
       <div className="block-config__field">
-        <label className="block-config__label">点击次数</label>
+        <label className="block-config__label" htmlFor="click-count">点击次数</label>
         <input
+          id="click-count"
           type="number"
           className="block-config__input"
           value={count}
@@ -110,6 +115,7 @@ export function ClickConfigUI({ config, onChange }: ConfigUIProps) {
           min={1}
           max={3}
           data-testid="input-count"
+          aria-required="true"
         />
       </div>
     </div>
@@ -134,8 +140,9 @@ export function WaitImageConfigUI({ config, onChange }: ConfigUIProps) {
         />
       </div>
       <div className="block-config__field">
-        <label className="block-config__label">超时时间 (毫秒)</label>
+        <label className="block-config__label" htmlFor="waitimage-timeout">超时时间 (毫秒)</label>
         <input
+          id="waitimage-timeout"
           type="number"
           className="block-config__input"
           value={timeoutMs}
@@ -158,8 +165,9 @@ export function WaitTimeConfigUI({ config, onChange }: ConfigUIProps) {
   return (
     <div className="block-config__section" data-testid="wait-time-config">
       <div className="block-config__field">
-        <label className="block-config__label">等待时间 (毫秒)</label>
+        <label className="block-config__label" htmlFor="waittime-duration">等待时间 (毫秒)</label>
         <input
+          id="waittime-duration"
           type="number"
           className="block-config__input"
           value={durationMs}
@@ -183,19 +191,22 @@ export function InputTextConfigUI({ config, onChange }: ConfigUIProps) {
   return (
     <div className="block-config__section" data-testid="input-text-config">
       <div className="block-config__field">
-        <label className="block-config__label">输入文本</label>
+        <label className="block-config__label" htmlFor="inputtext-text">输入文本</label>
         <textarea
+          id="inputtext-text"
           className="block-config__textarea"
           value={text}
           onChange={(e) => onChange({ ...config, text: e.target.value })}
           placeholder="输入要模拟输入的文本内容"
           rows={3}
           data-testid="input-text"
+          aria-required="true"
         />
       </div>
       <div className="block-config__field">
-        <label className="block-config__label">输入间隔 (毫秒)</label>
+        <label className="block-config__label" htmlFor="inputtext-interval">输入间隔 (毫秒)</label>
         <input
+          id="inputtext-interval"
           type="number"
           className="block-config__input"
           value={intervalMs}

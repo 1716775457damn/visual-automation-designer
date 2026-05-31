@@ -49,7 +49,7 @@ export function StatusBar({
   ].filter(Boolean).join(' · ');
 
   return (
-    <div className="app__status">
+    <div className="app__status" role="status" aria-live="polite" aria-label="状态栏">
       <div className="app__status-cluster app__status-cluster--primary">
         <ExecutionBar
           status={executionStatus}

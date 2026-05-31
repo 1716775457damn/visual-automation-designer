@@ -167,6 +167,7 @@ export function FlowToolbar({
               data-testid="btn-pause"
               type="button"
               aria-label={isPaused ? '继续执行' : '暂停执行'}
+              aria-pressed={isPaused}
             >
               {isPaused ? '▶️ 继续' : '⏸️ 暂停'}
             </button>

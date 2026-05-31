@@ -19,14 +19,16 @@ export function LoopConfigUI({ config, onChange }: ConfigUIProps) {
   return (
     <div className="block-config__section" data-testid="loop-config">
       <div className="block-config__field">
-        <label className="block-config__label">循环次数</label>
+        <label className="block-config__label" htmlFor="loop-count">循环次数</label>
         <input
+          id="loop-count"
           type="number"
           className="block-config__input"
           value={count}
           onChange={(e) => onChange({ ...config, count: Number(e.target.value) })}
           min={1}
           data-testid="input-loop-count"
+          aria-required="true"
         />
       </div>
       <p className="block-config__info">
@@ -60,12 +62,14 @@ export function ConditionConfigUI({ config, onChange }: ConfigUIProps) {
   return (
     <div className="block-config__section" data-testid="condition-config">
       <div className="block-config__field">
-        <label className="block-config__label">判断条件</label>
+        <label className="block-config__label" htmlFor="condition-op">判断条件</label>
         <select
+          id="condition-op"
           className="block-config__select"
           value={condition}
           onChange={(e) => onChange({ ...config, condition: e.target.value as ConditionOp })}
           data-testid="select-condition"
+          aria-required="true"
         >
           <option value="image_exists">图片存在</option>
           <option value="image_not_exists">图片不存在</option>

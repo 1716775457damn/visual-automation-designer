@@ -27,10 +27,15 @@ export function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<Element | null>(null);
 
   // Focus trap and escape key handling
   useEffect(() => {
     if (!isOpen) return;
+
+    // Store the currently focused element for focus restoration
+    triggerRef.current = document.activeElement;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -40,11 +45,18 @@ export function ConfirmDialog({
 
     document.addEventListener('keydown', handleKeyDown);
     
-    // Focus the dialog when it opens
-    dialogRef.current?.focus();
+    // Auto-focus the confirm button when dialog opens
+    const timer = setTimeout(() => {
+      confirmBtnRef.current?.focus();
+    }, 50);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(timer);
+      // Return focus to the element that triggered the dialog
+      if (triggerRef.current instanceof HTMLElement) {
+        triggerRef.current.focus();
+      }
     };
   }, [isOpen, onCancel]);
 
@@ -82,6 +94,7 @@ export function ConfirmDialog({
           <button
             className={`confirm-dialog__btn confirm-dialog__btn--${variant}`}
             onClick={onConfirm}
+            ref={confirmBtnRef}
           >
             {confirmText}
           </button>

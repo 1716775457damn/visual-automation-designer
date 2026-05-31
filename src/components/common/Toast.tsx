@@ -101,7 +101,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   };
 
   return (
-    <div className={`toast toast--${toast.type}`} role="alert">
+    <div className={`toast toast--${toast.type}`} role="status" aria-live="polite">
       <span className="toast__icon">{getIcon()}</span>
       <span className="toast__message">{toast.message}</span>
       <button

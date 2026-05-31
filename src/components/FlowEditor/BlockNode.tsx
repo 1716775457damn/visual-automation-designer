@@ -164,6 +164,20 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
     return '连接到下一节点';
   })();
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      // Let ReactFlow handle selection via click simulation
+      (e.currentTarget as HTMLElement).click();
+    } else if (e.key === 'Escape') {
+      e.currentTarget.blur();
+    }
+    // Delete/Backspace handled by FlowCanvas global hotkeys
+  };
+
+  const categoryLabel = blockCategory === 'action' ? '动作' : '控制';
+  const ariaLabel = `${categoryLabel}节点：${label}，类型：${blockType}`;
+
   return (
     <div
       className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''} ${validationSeverity ? `block-node--validation-${validationSeverity}` : ''}`}
@@ -173,6 +187,10 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       style={{ borderLeftColor: blockColor }}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
+      role="button"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      onKeyDown={handleKeyDown}
     >
       {/* Input handle */}
       <Handle

@@ -57,12 +57,33 @@ export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Co
     );
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent, block: ControlBlockItem) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect?.(block.type);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const items = e.currentTarget.parentElement?.querySelectorAll('[role="option"]');
+      if (!items) return;
+      const currentIndex = Array.from(items).indexOf(e.currentTarget);
+      const nextIndex = e.key === 'ArrowDown'
+        ? Math.min(currentIndex + 1, items.length - 1)
+        : Math.max(currentIndex - 1, 0);
+      (items[nextIndex] as HTMLElement).focus();
+    } else if (e.key === 'Escape') {
+      (e.currentTarget as HTMLElement).blur();
+    }
+  };
+
   return (
-    <div className="control-blocks" data-testid="control-blocks">
+    <div className="control-blocks" data-testid="control-blocks" role="listbox" aria-label="控制积木块列表">
       {filteredBlocks.map((block) => (
         <div
           key={block.type}
           className={`control-blocks__item ${draggingType === block.type ? 'control-blocks__item--dragging' : ''}`}
+          role="option"
+          aria-label={`${block.label}：${block.description}`}
+          tabIndex={0}
           draggable
           onDragStart={(e) => {
             setDraggingType(block.type);
@@ -74,6 +95,7 @@ export function ControlBlocks({ onSelect, onArmPlacement, searchQuery = '' }: Co
           onDragEnd={() => {
             setDraggingType(null);
           }}
+          onKeyDown={(e) => handleKeyDown(e, block)}
           onClick={() => onSelect?.(block.type)}
           data-testid={`control-block-${block.type}`}
           title={block.description}
