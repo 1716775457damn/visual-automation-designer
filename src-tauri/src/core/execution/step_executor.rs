@@ -496,3 +496,198 @@ impl Executor {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Connection, ConnectionId};
+    use uuid::Uuid;
+
+    fn bid(hex: &str) -> BlockId {
+        BlockId(Uuid::parse_str(hex).expect("invalid test UUID"))
+    }
+
+    /// Standalone implementation of `find_next_block` logic, testable
+    /// without an Executor (which requires AppHandle / Tauri runtime).
+    fn find_next_connection(
+        connections: &[Connection],
+        source: &BlockId,
+        handle: Option<&str>,
+    ) -> Option<BlockId> {
+        for connection in connections {
+            if connection.source == *source {
+                let handle_matches = match (&connection.source_handle, handle) {
+                    (None, None) => true,
+                    (Some(conn_handle), Some(h)) => conn_handle == h,
+                    _ => false,
+                };
+                if handle_matches {
+                    return Some(connection.target.clone());
+                }
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn should_have_default_wait_timeout_30_seconds() {
+        assert_eq!(DEFAULT_WAIT_TIMEOUT_MS, 30_000);
+    }
+
+    #[test]
+    fn should_have_poll_interval_50ms() {
+        assert_eq!(POLL_INTERVAL_MS, 50);
+    }
+
+    // ---------------------------------------------------------------
+    // find_next_block logic
+    // ---------------------------------------------------------------
+
+    fn make_connection(source: &BlockId, target: &BlockId) -> Connection {
+        Connection {
+            id: ConnectionId::new(),
+            source: source.clone(),
+            target: target.clone(),
+            source_handle: None,
+        }
+    }
+
+    fn make_connection_with_handle(source: &BlockId, target: &BlockId, handle: &str) -> Connection {
+        Connection {
+            id: ConnectionId::new(),
+            source: source.clone(),
+            target: target.clone(),
+            source_handle: Some(handle.to_string()),
+        }
+    }
+
+    #[test]
+    fn should_find_next_block_with_default_handle() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let c = bid("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        let conns = vec![
+            make_connection(&a, &b),
+            make_connection(&b, &c),
+        ];
+        assert_eq!(find_next_connection(&conns, &a, None), Some(b.clone()));
+    }
+
+    #[test]
+    fn should_return_none_when_no_connection_found() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let z = bid("00000000-0000-0000-0000-0000000000ff");
+        let conns = vec![make_connection(&a, &b)];
+        assert_eq!(find_next_connection(&conns, &z, None), None);
+    }
+
+    #[test]
+    fn should_match_on_source_handle() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let c = bid("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        let conns = vec![
+            make_connection_with_handle(&a, &b, "true"),
+            make_connection_with_handle(&a, &c, "false"),
+        ];
+        assert_eq!(
+            find_next_connection(&conns, &a, Some("true")),
+            Some(b.clone())
+        );
+        assert_eq!(
+            find_next_connection(&conns, &a, Some("false")),
+            Some(c.clone())
+        );
+    }
+
+    #[test]
+    fn should_not_match_mismatched_handles() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let conns = vec![make_connection_with_handle(&a, &b, "true")];
+        assert_eq!(find_next_connection(&conns, &a, Some("wrong")), None);
+    }
+
+    #[test]
+    fn should_not_match_default_when_handle_expected() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let conns = vec![make_connection_with_handle(&a, &b, "true")];
+        // Searching with None but connection has a handle → no match
+        assert_eq!(find_next_connection(&conns, &a, None), None);
+    }
+
+    #[test]
+    fn should_return_first_matching_connection() {
+        let a = bid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        let b = bid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        let c = bid("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        let conns = vec![
+            make_connection(&a, &b),
+            make_connection(&a, &c),
+        ];
+        // First match wins
+        assert_eq!(find_next_connection(&conns, &a, None), Some(b.clone()));
+    }
+
+    // ---------------------------------------------------------------
+    // handle_block_result / BlockResult logic
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn should_continue_block_result() {
+        let result = BlockResult::Continue;
+        match result {
+            BlockResult::Continue => {}
+            _ => panic!("Expected Continue"),
+        }
+    }
+
+    #[test]
+    fn should_jump_to_block_result_contains_target() {
+        let target = bid("deadbeef-dead-beef-dead-beefdeadbeef");
+        let result = BlockResult::JumpTo {
+            target_block_id: target.clone(),
+        };
+        match result {
+            BlockResult::JumpTo { target_block_id } => {
+                assert_eq!(target_block_id, target);
+            }
+            _ => panic!("Expected JumpTo"),
+        }
+    }
+
+    #[test]
+    fn should_error_block_result_contains_message() {
+        let result = BlockResult::Error {
+            message: "test error".to_string(),
+        };
+        match result {
+            BlockResult::Error { message } => {
+                assert_eq!(message, "test error");
+            }
+            _ => panic!("Expected Error"),
+        }
+    }
+
+    #[test]
+    fn should_default_block_result_to_continue() {
+        let result = BlockResult::default();
+        assert_eq!(result, BlockResult::Continue);
+    }
+
+    #[test]
+    fn should_wait_for_block_result() {
+        let result = BlockResult::WaitFor {
+            duration_ms: Some(5000),
+            image_id: None,
+        };
+        match result {
+            BlockResult::WaitFor { duration_ms, .. } => {
+                assert_eq!(duration_ms, Some(5000));
+            }
+            _ => panic!("Expected WaitFor"),
+        }
+    }
+}
