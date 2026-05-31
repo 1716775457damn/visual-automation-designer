@@ -7,10 +7,13 @@
 //!
 //! Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6
 
-mod executor;
+mod runner;
+mod step_executor;
+mod image_match;
+mod input_sim;
 mod context;
 mod events;
 
-pub use executor::{ExecutionController, Executor};
+pub use runner::{ExecutionController, Executor};
 pub use context::ExecutionContext;
 pub use events::{ExecutionEvent, ExecutionStatus};

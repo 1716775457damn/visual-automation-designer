@@ -12,7 +12,7 @@ use tauri::{AppHandle, Manager, State};
 use serde::Deserialize;
 
 use crate::core::flow::{FlowManager, FlowValidator};
-use crate::core::flow::validator::ValidationSeverity;
+use crate::core::flow::ValidationSeverity;
 use crate::core::{DefaultOperationApplier, FlowOperation, History, OperationApplier};
 use crate::error::{AppError, Result};
 use crate::models::block::{BlockConfig, BlockId, BlockNode, BlockPosition, BlockType};
