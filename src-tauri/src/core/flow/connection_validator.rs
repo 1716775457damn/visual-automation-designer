@@ -183,3 +183,268 @@ fn validate_control_block_structure(
 
     errors
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::flow::ValidationSeverity;
+    use crate::models::block::{BlockConfig, BlockId, BlockNode, BlockPosition, BlockType, ConditionOp, ControlType, ActionType};
+
+    fn make_test_flow() -> Flow {
+        Flow::new("test".to_string())
+    }
+
+    fn make_action_block(config: BlockConfig) -> BlockNode {
+        BlockNode::new(
+            BlockType::Action { action: ActionType::Click },
+            BlockPosition::new(0.0, 0.0),
+            config,
+        )
+    }
+
+    fn make_connection(
+        source: BlockId,
+        target: BlockId,
+        handle: Option<String>,
+    ) -> Connection {
+        Connection {
+            id: crate::models::flow::ConnectionId::new(),
+            source,
+            target,
+            source_handle: handle,
+        }
+    }
+
+    // ========================================================================
+    // validate_connections tests
+    // ========================================================================
+
+    #[test]
+    fn should_error_on_missing_source_block() {
+        let mut flow = make_test_flow();
+        let valid_block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let valid_id = valid_block.id.clone();
+        flow.add_block(valid_block);
+
+        let unknown_id = BlockId::new();
+        let conn = make_connection(unknown_id.clone(), valid_id, None);
+        flow.connections.push(conn);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "INVALID_CONNECTION_SOURCE"));
+    }
+
+    #[test]
+    fn should_error_on_missing_target_block() {
+        let mut flow = make_test_flow();
+        let valid_block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let valid_id = valid_block.id.clone();
+        flow.add_block(valid_block);
+
+        let unknown_id = BlockId::new();
+        let conn = make_connection(valid_id, unknown_id, None);
+        flow.connections.push(conn);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "INVALID_CONNECTION_TARGET"));
+    }
+
+    #[test]
+    fn should_error_on_self_loop() {
+        let mut flow = make_test_flow();
+        let block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let block_id = block.id.clone();
+        flow.add_block(block);
+
+        let conn = make_connection(block_id.clone(), block_id, None);
+        flow.connections.push(conn);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "SELF_LOOP"));
+    }
+
+    #[test]
+    fn should_warn_on_duplicate_connection() {
+        let mut flow = make_test_flow();
+        let block_a = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let block_b = make_action_block(BlockConfig::WaitTime { duration_ms: 200 });
+        let id_a = block_a.id.clone();
+        let id_b = block_b.id.clone();
+        flow.add_block(block_a);
+        flow.add_block(block_b);
+
+        flow.connections.push(make_connection(id_a.clone(), id_b.clone(), None));
+        flow.connections.push(make_connection(id_a, id_b, None));
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "DUPLICATE_CONNECTION"));
+    }
+
+    #[test]
+    fn should_accept_valid_connections() {
+        let mut flow = make_test_flow();
+        let block_a = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let block_b = make_action_block(BlockConfig::WaitTime { duration_ms: 200 });
+        let id_a = block_a.id.clone();
+        let id_b = block_b.id.clone();
+        flow.add_block(block_a);
+        flow.add_block(block_b);
+
+        flow.connections.push(make_connection(id_a, id_b, None));
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(!errors.iter().any(|e| e.severity == ValidationSeverity::Error));
+    }
+
+    // ========================================================================
+    // validate_control_block_structure tests
+    // ========================================================================
+
+    #[test]
+    fn should_error_on_condition_default_outgoing() {
+        let mut flow = make_test_flow();
+
+        let cond_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Condition },
+            BlockPosition::new(0.0, 0.0),
+            BlockConfig::Condition {
+                image_id: None,
+                condition: ConditionOp::ImageExists,
+                true_branch: vec![],
+                false_branch: vec![],
+            },
+        );
+        let cond_id = cond_block.id.clone();
+        flow.add_block(cond_block);
+
+        let target = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let target_id = target.id.clone();
+        flow.add_block(target);
+
+        flow.connections
+            .push(make_connection(cond_id, target_id, None));
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "CONDITION_DEFAULT_OUTGOING_UNSUPPORTED"));
+    }
+
+    #[test]
+    fn should_error_on_condition_branch_subchain() {
+        let mut flow = make_test_flow();
+
+        let branch_block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let branch_id = branch_block.id.clone();
+        flow.add_block(branch_block);
+
+        let extra_target = make_action_block(BlockConfig::WaitTime { duration_ms: 200 });
+        let extra_id = extra_target.id.clone();
+        flow.add_block(extra_target);
+
+        flow.connections
+            .push(make_connection(branch_id.clone(), extra_id, None));
+
+        let cond_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Condition },
+            BlockPosition::new(0.0, 0.0),
+            BlockConfig::Condition {
+                image_id: None,
+                condition: ConditionOp::ImageExists,
+                true_branch: vec![branch_id],
+                false_branch: vec![],
+            },
+        );
+        flow.add_block(cond_block);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED"));
+    }
+
+    #[test]
+    fn should_error_on_loop_subchain() {
+        let mut flow = make_test_flow();
+
+        let child_block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let child_id = child_block.id.clone();
+        flow.add_block(child_block);
+
+        let outside_block = make_action_block(BlockConfig::WaitTime { duration_ms: 200 });
+        let outside_id = outside_block.id.clone();
+        flow.add_block(outside_block);
+
+        flow.connections
+            .push(make_connection(child_id.clone(), outside_id, None));
+
+        let loop_block = BlockNode {
+            children: vec![child_id],
+            ..BlockNode::new(
+                BlockType::Control { control: ControlType::Loop },
+                BlockPosition::new(0.0, 0.0),
+                BlockConfig::Loop { count: 3 },
+            )
+        };
+        flow.add_block(loop_block);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(errors.iter().any(|e| e.code == "LOOP_SUBCHAIN_UNSUPPORTED"));
+    }
+
+    #[test]
+    fn should_accept_condition_with_only_branch_connections() {
+        let mut flow = make_test_flow();
+
+        let true_target = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let true_id = true_target.id.clone();
+        flow.add_block(true_target);
+
+        let false_target = make_action_block(BlockConfig::WaitTime { duration_ms: 200 });
+        let false_id = false_target.id.clone();
+        flow.add_block(false_target);
+
+        let cond_block = BlockNode::new(
+            BlockType::Control { control: ControlType::Condition },
+            BlockPosition::new(0.0, 0.0),
+            BlockConfig::Condition {
+                image_id: None,
+                condition: ConditionOp::ImageExists,
+                true_branch: vec![true_id],
+                false_branch: vec![false_id],
+            },
+        );
+        flow.add_block(cond_block);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(!errors.iter().any(|e| e.severity == ValidationSeverity::Error));
+    }
+
+    #[test]
+    fn should_accept_loop_with_direct_children_only() {
+        let mut flow = make_test_flow();
+
+        let child_block = make_action_block(BlockConfig::WaitTime { duration_ms: 100 });
+        let child_id = child_block.id.clone();
+        flow.add_block(child_block);
+
+        let loop_block = BlockNode {
+            children: vec![child_id],
+            ..BlockNode::new(
+                BlockType::Control { control: ControlType::Loop },
+                BlockPosition::new(0.0, 0.0),
+                BlockConfig::Loop { count: 3 },
+            )
+        };
+        flow.add_block(loop_block);
+
+        let validator = FlowValidator::new();
+        let errors = validate_connections(&validator, &flow);
+        assert!(!errors.iter().any(|e| e.severity == ValidationSeverity::Error));
+    }
+}
