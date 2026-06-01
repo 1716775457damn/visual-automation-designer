@@ -249,10 +249,14 @@ impl Executor {
 
             // Check timeout
             if start.elapsed().as_millis() as u64 > timeout {
+                let image_name = self.image_library
+                    .get(image_id)
+                    .map(|m| m.name.as_str())
+                    .unwrap_or("unknown");
                 return Ok(BlockResult::Error {
                     message: format!(
-                        "WaitImage timeout: image {} not found within {}ms",
-                        image_id, timeout
+                        "WaitImage timeout: image {} (name: {}) not found within {}ms",
+                        image_id, image_name, timeout
                     ),
                 });
             }

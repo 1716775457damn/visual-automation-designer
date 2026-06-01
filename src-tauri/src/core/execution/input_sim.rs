@@ -62,10 +62,14 @@ impl Executor {
                     // Find image on screen
                     let (found, pos) = self.find_image_on_screen(image_id).await?;
                     if !found {
+                        let image_name = self.image_library
+                            .get(image_id)
+                            .map(|m| m.name.as_str())
+                            .unwrap_or("unknown");
                         return Ok(BlockResult::Error {
                             message: format!(
-                                "Image not found on screen: {}",
-                                image_id
+                                "Image not found on screen: {} (name: {})",
+                                image_id, image_name
                             ),
                         });
                     }
