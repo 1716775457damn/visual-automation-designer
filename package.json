@@ -1,7 +1,7 @@
 {
   "name": "visual-automation-designer",
   "private": true,
-  "version": "0.5.10",
+  "version": "0.5.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify-versions": "node scripts/verify-versions.cjs"
+    "verify-versions": "node scripts/verify-versions.cjs",
+    "prebuild": "npm run verify-versions"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

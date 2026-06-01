@@ -72,6 +72,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Verify Version Consistency
+        run: node scripts/verify-versions.cjs
+
       - name: Build with Tauri
         uses: tauri-apps/tauri-action@v0
         env:
