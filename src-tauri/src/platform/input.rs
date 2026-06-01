@@ -61,8 +61,8 @@ impl InputController {
 
         Ok(Self {
             enigo,
-            click_interval_ms: 50,
-            key_interval_ms: 10,
+            click_interval_ms: 10,
+            key_interval_ms: 1,
         })
     }
 
@@ -387,8 +387,8 @@ mod tests {
         // but should work on a local machine
         if let Ok(_controller) = Enigo::new(&Settings::default()) {
             let controller = InputController::new().unwrap();
-            assert_eq!(controller.click_interval_ms, 50);
-            assert_eq!(controller.key_interval_ms, 10);
+            assert_eq!(controller.click_interval_ms, 10);
+            assert_eq!(controller.key_interval_ms, 1);
         }
     }
 
@@ -487,8 +487,8 @@ mod tests {
     #[test]
     fn should_have_default_intervals() {
         let controller = InputController::new().unwrap();
-        assert_eq!(controller.click_interval_ms, 50);
-        assert_eq!(controller.key_interval_ms, 10);
+        assert_eq!(controller.click_interval_ms, 10);
+        assert_eq!(controller.key_interval_ms, 1);
     }
 
     #[test]

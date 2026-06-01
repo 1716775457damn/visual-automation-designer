@@ -81,6 +81,8 @@ impl Executor {
             });
         }
 
+        let mut input = InputController::new()?;
+
         // Perform clicks with panic handling
         for i in 0..count {
             if *self.stop_receiver.borrow() {
@@ -92,10 +94,9 @@ impl Executor {
             self.wait_if_paused().await;
 
             let click_result = safe_execute(
-                || {
-                    let mut input = InputController::new()?;
+                std::panic::AssertUnwindSafe(|| {
                     input.click_at(x, y, crate::platform::MouseButton::Left)
-                },
+                }),
                 "Click operation",
             );
 
@@ -127,6 +128,7 @@ impl Executor {
         interval_ms: Option<u64>,
     ) -> Result<BlockResult> {
         let interval = interval_ms.unwrap_or(10);
+        let mut input = InputController::new()?;
 
         for character in text.chars() {
             if *self.stop_receiver.borrow() {
@@ -137,10 +139,7 @@ impl Executor {
 
             self.wait_if_paused().await;
 
-            {
-                let mut input = InputController::new()?;
-                input.type_text_with_interval(&character.to_string(), 0)?;
-            }
+            input.type_text_with_interval(&character.to_string(), 0)?;
 
             sleep(Duration::from_millis(interval)).await;
         }
