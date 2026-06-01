@@ -491,6 +491,10 @@ impl Executor {
     /// Polls every PAUSE_POLL_INTERVAL_MS so stop latency is bounded.
     pub(super) async fn wait_if_paused(&self) {
         loop {
+            // Check stop signal first to prevent getting stuck in pause loop when stopped
+            if *self.stop_receiver.borrow() {
+                break;
+            }
             let paused = *self.paused.lock().await;
             if !paused {
                 break;
