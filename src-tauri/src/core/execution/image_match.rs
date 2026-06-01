@@ -39,51 +39,77 @@ impl Executor {
             "Image loading",
         )??;
 
-        // Capture only the primary monitor instead of the full virtual desktop.
-        // This is significantly faster—single capture vs capturing and stitching N monitors.
-        // Match coordinates are returned in virtual desktop space (monitor origin + match offset)
-        // for use with enigo::Coordinate::Abs.
-        let capture = safe_execute(
+        // 1. Try primary monitor first (fast path)
+        let capture_result = safe_execute(
             || crate::platform::ScreenCapture::new().capture_screen(),
-            "Screen capture",
-        )??;
+            "Screen capture primary",
+        );
 
-        // Use cached matcher for better performance
-        let result = {
-            let mut matcher = self.matcher.lock().await;
-            matcher.find_image_cached(&capture.image, &template, image_id)
-        };
+        if let Ok(Ok(capture)) = capture_result {
+            let result = {
+                let mut matcher = self.matcher.lock().await;
+                matcher.find_image_cached(&capture.image, &template, image_id)
+            };
+
+            if result.found {
+                let center = (
+                    (capture.origin_x as u32)
+                        .saturating_add(result.center_x.unwrap_or(0)),
+                    (capture.origin_y as u32)
+                        .saturating_add(result.center_y.unwrap_or(0)),
+                );
+                let duration = start.elapsed();
+                log::debug!(
+                    "Image matching found on primary screen in {}ms for image_id: {}",
+                    duration.as_millis(),
+                    image_id
+                );
+                return Ok((true, center));
+            }
+        }
+
+        // 2. If not found, try all other monitors (multi-monitor fallback path)
+        if let Ok(count) = crate::platform::ScreenCapture::screen_count() {
+            for i in 1..count {
+                let capture_fallback_result = safe_execute(
+                    || crate::platform::ScreenCapture::with_screen(i).capture_screen(),
+                    "Screen capture fallback",
+                );
+
+                if let Ok(Ok(capture)) = capture_fallback_result {
+                    let result = {
+                        let mut matcher = self.matcher.lock().await;
+                        matcher.find_image_cached(&capture.image, &template, image_id)
+                    };
+
+                    if result.found {
+                        let center = (
+                            (capture.origin_x as u32)
+                                .saturating_add(result.center_x.unwrap_or(0)),
+                            (capture.origin_y as u32)
+                                .saturating_add(result.center_y.unwrap_or(0)),
+                        );
+                        let duration = start.elapsed();
+                        log::info!(
+                            "Image matching found on secondary screen {} in {}ms for image_id: {}",
+                            i,
+                            duration.as_millis(),
+                            image_id
+                        );
+                        return Ok((true, center));
+                    }
+                }
+            }
+        }
 
         let duration = start.elapsed();
+        log::warn!(
+            "Image matching failed across all screens in {}ms for image_id: {}",
+            duration.as_millis(),
+            image_id
+        );
 
-        // Log performance metrics
-        if duration.as_millis() > 500 {
-            log::warn!(
-                "Image matching took {}ms (exceeds 500ms target) for image_id: {}",
-                duration.as_millis(),
-                image_id
-            );
-        } else {
-            log::debug!(
-                "Image matching completed in {}ms for image_id: {}",
-                duration.as_millis(),
-                image_id
-            );
-        }
-
-        if result.found {
-            // Convert virtual-desktop-relative coordinates to absolute screen coordinates
-            // by adding the virtual desktop origin offset.
-            let center = (
-                (capture.origin_x as u32)
-                    .saturating_add(result.center_x.unwrap_or(0)),
-                (capture.origin_y as u32)
-                    .saturating_add(result.center_y.unwrap_or(0)),
-            );
-            Ok((true, center))
-        } else {
-            Ok((false, (0, 0)))
-        }
+        Ok((false, (0, 0)))
     }
 
     /// Get matcher performance metrics
