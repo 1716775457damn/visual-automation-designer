@@ -7,8 +7,8 @@
  */
 
 import { memo } from 'react';
-import {
 import styles from './FlowEditor.module.css';
+import {
   EdgeProps,
   getSmoothStepPath,
   BaseEdge,

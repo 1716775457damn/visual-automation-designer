@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+import commonStyles from './common.module.css';
 
 export interface ConfirmDialogProps {
   isOpen: boolean;

@@ -1,3 +1,6 @@
+import styles from './App.module.css';
+import commonStyles from '../common/common.module.css';
+
 export interface NewFlowDialogProps {
   isOpen: boolean;
   value: string;

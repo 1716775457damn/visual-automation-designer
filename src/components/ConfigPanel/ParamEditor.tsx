@@ -5,6 +5,8 @@
  * Validates: Requirements 3.5
  */
 
+import styles from './ConfigPanel.module.css';
+
 export type ParamType = 'string' | 'number' | 'boolean' | 'select';
 
 export interface ParamSchema {

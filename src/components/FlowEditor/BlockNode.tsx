@@ -246,7 +246,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       )}
 
       {validationMessage && (
-        <div className={`${styles.blockNodeValidationMessage} ${styles[`blockNodeValidationMessage${validationSeverity ?? 'warning'.charAt(0).toUpperCase() + validationSeverity ?? 'warning'.slice(1)}`]}`}>
+        <div className={`${styles.blockNodeValidationMessage} ${styles[`blockNodeValidationMessage${(validationSeverity ?? 'warning').charAt(0).toUpperCase() + (validationSeverity ?? 'warning').slice(1)}`]}`}>
           <strong className="block-node__validation-label">
             {validationSeverity === 'error' ? '错误：' : '警告：'}
           </strong>

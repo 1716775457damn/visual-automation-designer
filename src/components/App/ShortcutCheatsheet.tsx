@@ -1,3 +1,5 @@
+import styles from './App.module.css';
+
 export interface ShortcutCheatsheetProps {
   isOpen: boolean;
   onClose: () => void;

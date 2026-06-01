@@ -17,8 +17,8 @@ import {
   WaitTimeConfigUI,
   InputTextConfigUI,
 } from './ActionBlockConfig';
-import {
 import styles from './ConfigPanel.module.css';
+import {
   LoopConfigUI,
   LoopInfiniteConfigUI,
   ConditionConfigUI,
@@ -224,7 +224,7 @@ export function BlockConfig({
 
       {externalValidationMessage && (
         <div
-          className={`${styles.blockConfigValidationSummary} ${styles[`blockConfigValidationSummary${externalValidationSeverity ?? 'warning'.charAt(0).toUpperCase() + externalValidationSeverity ?? 'warning'.slice(1)}`]}`}
+          className={`${styles.blockConfigValidationSummary} ${styles[`blockConfigValidationSummary${(externalValidationSeverity ?? 'warning').charAt(0).toUpperCase() + (externalValidationSeverity ?? 'warning').slice(1)}`]}`}
         >
           <strong>{externalValidationSeverity === 'error' ? '结构错误：' : '结构警告：'}</strong>
           <span>{externalValidationMessage}</span>

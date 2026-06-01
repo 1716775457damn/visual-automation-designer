@@ -4,6 +4,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import commonStyles from './common.module.css';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
