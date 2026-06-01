@@ -219,7 +219,7 @@ export function BlockConfig({
           <h3>配置积木块</h3>
           <span className={styles.blockConfigMeta}>ID: {blockId.slice(0, 8)}</span>
         </div>
-        <span className={styles.blockConfigType}>{getBlockTypeName(blockType)}</span>
+        <span className={`block-config__type ${styles.blockConfigType}`}>{getBlockTypeName(blockType)}</span>
       </div>
 
       {externalValidationMessage && (

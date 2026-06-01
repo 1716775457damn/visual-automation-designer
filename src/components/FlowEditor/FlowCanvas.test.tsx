@@ -73,7 +73,7 @@ describe('FlowCanvas Context Menu', () => {
   it('shows placement guidance for condition blocks', () => {
     render(<FlowCanvas pendingPlacement={{ type: 'condition', category: 'control' }} />);
 
-    expect(screen.getByText('点击白板放置: condition · 提示：请只使用“真/假”分支，每个分支先连接 1 个直接节点')).toBeInTheDocument();
+    expect(screen.getByText('点击白板放置: condition · 提示：请只使用"真/假"分支，每个分支先连接 1 个直接节点')).toBeInTheDocument();
   });
 
   it('shows placement guidance for loop blocks', () => {

@@ -133,7 +133,7 @@ function ContextMenuComponent({
         {items.map((item, index) => (
           <li key={index} className={styles.contextMenuItemWrapper}>
             <button
-              className={`${styles.contextMenuItem} ${item.disabled ? styles.contextMenuItemDisabled : ''} ${item.danger ? styles.contextMenuItemDanger : ''} ${item.submenu ? styles.contextMenuItemHasSubmenu : ''}`}
+              className={`context-menu__item ${styles.contextMenuItem} ${item.disabled ? `context-menu__item--disabled ${styles.contextMenuItemDisabled}` : ''} ${item.danger ? `context-menu__item--danger ${styles.contextMenuItemDanger}` : ''} ${item.submenu ? `context-menu__item--has-submenu ${styles.contextMenuItemHasSubmenu}` : ''}`}
               onClick={() => handleItemClick(item)}
               disabled={item.disabled}
               data-testid={`context-menu-item-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -147,7 +147,7 @@ function ContextMenuComponent({
                 {item.submenu.map((subItem, subIndex) => (
                   <li key={subIndex} className={styles.contextMenuItemWrapper}>
                     <button
-                      className={`${styles.contextMenuItem} ${subItem.disabled ? styles.contextMenuItemDisabled : ''} ${subItem.danger ? styles.contextMenuItemDanger : ''}`}
+                      className={`context-menu__item ${styles.contextMenuItem} ${subItem.disabled ? `context-menu__item--disabled ${styles.contextMenuItemDisabled}` : ''} ${subItem.danger ? `context-menu__item--danger ${styles.contextMenuItemDanger}` : ''}`}
                       onClick={() => handleItemClick(subItem)}
                       disabled={subItem.disabled}
                     >
