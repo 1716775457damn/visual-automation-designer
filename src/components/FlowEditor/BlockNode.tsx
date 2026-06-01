@@ -181,7 +181,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
   return (
     <div
-      className={`block-node block-node--${blockCategory} ${selected ? 'block-node--selected' : ''} ${executing ? 'block-node--executing' : ''} ${disabled ? 'block-node--disabled' : ''} ${recent ? 'block-node--recent' : ''} ${validationSeverity ? `block-node--validation-${validationSeverity}` : ''}`}
+      className={`block-node block-node--${blockCategory} ${styles.blockNode} ${styles[`blockNode${blockCategory.charAt(0).toUpperCase() + blockCategory.slice(1)}`]} ${selected ? `block-node--selected ${styles.blockNodeSelected}` : ''} ${executing ? `block-node--executing ${styles.blockNodeExecuting}` : ''} ${disabled ? `block-node--disabled ${styles.blockNodeDisabled}` : ''} ${recent ? `block-node--recent ${styles.blockNodeRecent}` : ''} ${validationSeverity ? `block-node--validation-${validationSeverity} ${styles[`blockNodeValidation${validationSeverity.charAt(0).toUpperCase() + validationSeverity.slice(1)}`]}` : ''}`}
       data-testid={`block-node-${blockType}`}
       data-block-type={blockType}
       data-block-category={blockCategory}
@@ -197,7 +197,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       <Handle
         type="target"
         position={Position.Top}
-        className="block-node__handle block-node__handle--input"
+        className={`block-node__handle block-node__handle--input ${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleTop}`}
         onMouseEnter={() => setShowConnectionHint('input')}
         onMouseLeave={() => setShowConnectionHint(null)}
       />
@@ -267,7 +267,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="block-node__handle block-node__handle--output"
+        className={`block-node__handle block-node__handle--output ${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleBottom}`}
         onMouseEnter={() => setShowConnectionHint('output')}
         onMouseLeave={() => setShowConnectionHint(null)}
       />
