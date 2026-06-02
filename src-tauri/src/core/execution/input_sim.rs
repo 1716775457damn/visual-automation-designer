@@ -85,6 +85,17 @@ impl Executor {
             });
         }
 
+        // Create input controller once for all clicks to avoid
+        // per-click initialization overhead (Enigo setup cost is non-trivial).
+        let mut input = InputController::new().map_err(|e| {
+            crate::logging::log_error(
+                "Failed to create input controller",
+                Some(&e.to_string()),
+                None,
+            );
+            e
+        })?;
+
         // Perform clicks with panic handling
         for i in 0..count {
             if *self.stop_receiver.borrow() {
@@ -96,10 +107,7 @@ impl Executor {
             self.wait_if_paused().await;
 
             let click_result = safe_execute(
-                || {
-                    let mut input = InputController::new()?;
-                    input.click_at(x, y, crate::platform::MouseButton::Left)
-                },
+                || input.click_at(x, y, crate::platform::MouseButton::Left),
                 "Click operation",
             );
 
