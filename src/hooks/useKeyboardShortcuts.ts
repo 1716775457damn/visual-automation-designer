@@ -110,7 +110,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     const { key, shiftKey } = event;
     const isMetaPressed = isMetaOrCtrlPressed(event);
 
-    // Undo: Ctrl+Z / Cmd+Z
+    // New: Ctrl+N / Cmd+N
     if (key === 'n' && isMetaPressed && !shiftKey) {
       event.preventDefault();
       handlers.onNew?.();

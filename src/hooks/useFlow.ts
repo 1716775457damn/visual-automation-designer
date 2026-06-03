@@ -191,7 +191,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         setLoading(false);
       }
     },
-    [loadFlowList]
+    []
   );
 
   const deleteFlow = useCallback(
