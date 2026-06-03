@@ -6,6 +6,7 @@
 import { useCallback } from 'react';
 import { Node, Edge, NodeChange, applyNodeChanges } from 'reactflow';
 import type { BlockNodeData } from '../components/FlowEditor/BlockNode';
+import { toError } from '../utils/error';
 import {
   createBlock as tauriCreateBlock,
   updateBlockPosition as tauriUpdateBlockPosition,
@@ -81,7 +82,7 @@ export function useFlowNodes(params: UseFlowNodesParams): UseFlowNodesReturn {
         return block.id;
       } catch (err) {
         await reportRuntimeIssue('useFlowNodes.addNode', err);
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       }
@@ -116,7 +117,7 @@ export function useFlowNodes(params: UseFlowNodesParams): UseFlowNodesReturn {
         await tauriDeleteBlock(flow.id, nodeId);
         await refreshUndoRedoForFlow(flow.id);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       }
@@ -171,7 +172,7 @@ export function useFlowNodes(params: UseFlowNodesParams): UseFlowNodesReturn {
         await refreshUndoRedoForFlow(flow.id);
       } catch (err) {
         await reportRuntimeIssue('useFlowNodes.updateNodeConfig', err);
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       }

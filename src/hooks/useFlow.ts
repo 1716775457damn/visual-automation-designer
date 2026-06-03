@@ -13,6 +13,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Node, Edge } from 'reactflow';
 import type { BlockNodeData } from '../components/FlowEditor/BlockNode';
+import { toError } from '../utils/error';
 import {
   createFlow as tauriCreateFlow,
   saveFlow as tauriSaveFlow,
@@ -132,7 +133,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         await loadFlowList();
         return newFlow;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       } finally {
@@ -159,7 +160,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
       setIsDirty(false);
       await loadFlowList();
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -184,7 +185,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         setEdges(loadedEdges);
         setIsDirty(false);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       } finally {
@@ -208,7 +209,7 @@ export function useFlow(options: UseFlowOptions = {}): UseFlowReturn {
         }
         await loadFlowList();
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       } finally {

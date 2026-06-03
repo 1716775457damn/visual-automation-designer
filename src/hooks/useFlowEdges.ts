@@ -6,6 +6,7 @@
 import { useCallback, useRef } from 'react';
 import { Node, Edge, Connection, addEdge, EdgeChange, applyEdgeChanges } from 'reactflow';
 import type { BlockNodeData } from '../components/FlowEditor/BlockNode';
+import { toError } from '../utils/error';
 import {
   createConnection as tauriCreateConnection,
   deleteConnection as tauriDeleteConnection,
@@ -62,7 +63,7 @@ export function useFlowEdges(params: UseFlowEdgesParams): UseFlowEdgesReturn {
         setIsDirty(true);
         await refreshUndoRedoForFlow(flow.id);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       }
@@ -90,7 +91,7 @@ export function useFlowEdges(params: UseFlowEdgesParams): UseFlowEdgesReturn {
         await tauriDeleteConnection(flow.id, connectionId);
         await refreshUndoRedoForFlow(flow.id);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toError(err);
         setError(error);
         throw error;
       }

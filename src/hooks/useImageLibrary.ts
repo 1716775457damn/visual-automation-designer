@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { ImageMetadata } from '../types/image';
+import { toError } from '../utils/error';
 import {
   addImage as tauriAddImage,
   addImageFromBase64 as tauriAddImageFromBase64,
@@ -69,7 +70,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
       setImages((prev) => [...prev, metadata]);
       return metadata;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -108,7 +109,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
           const metadata = await tauriAddImage(filePath, defaultName);
           uploadedImages.push(metadata);
         } catch (err) {
-          errors.push(err instanceof Error ? err : new Error(String(err)));
+          errors.push(toError(err));
         }
       }
 
@@ -124,7 +125,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
 
       return uploadedImages;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -153,7 +154,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
       setImages((prev) => [...prev, metadata]);
       return metadata;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -204,7 +205,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
       console.warn('No image found in clipboard');
       return null;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -223,7 +224,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
       await tauriRemoveImage(id);
       setImages((prev) => prev.filter((img) => img.id !== id));
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -244,7 +245,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
         prev.map((img) => (img.id === id ? { ...img, name: newName } : img))
       );
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
@@ -263,7 +264,7 @@ export function useImageLibrary(): UseImageLibraryReturn {
       const imageList = await tauriListImages();
       setImages(imageList);
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toError(err);
       setError(error);
       throw error;
     } finally {
