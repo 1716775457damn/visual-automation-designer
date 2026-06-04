@@ -21,7 +21,7 @@ export interface UseFlowValidationReturn {
 }
 
 export function useFlowValidation(params: UseFlowValidationParams): UseFlowValidationReturn {
-  const { flow: _flow, setCanUndo, setCanRedo } = params;
+  const { setCanUndo, setCanRedo } = params;
 
   const refreshUndoRedoForFlow = useCallback(
     async (flowId: string) => {
