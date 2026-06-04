@@ -101,19 +101,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     isExecuting = false,
   } = options;
 
-  const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
-
-  const canUndoRef = useRef(canUndo);
-  canUndoRef.current = canUndo;
-  const canRedoRef = useRef(canRedo);
-  canRedoRef.current = canRedo;
-  const hasSelectionRef = useRef(hasSelection);
-  hasSelectionRef.current = hasSelection;
-  const hasFlowRef = useRef(hasFlow);
-  hasFlowRef.current = hasFlow;
-  const isExecutingRef = useRef(isExecuting);
-  isExecutingRef.current = isExecuting;
+  const stateRef = useRef({ handlers, canUndo, canRedo, hasSelection, hasFlow, isExecuting });
+  stateRef.current = { handlers, canUndo, canRedo, hasSelection, hasFlow, isExecuting };
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!enabled) {
@@ -125,22 +114,22 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
       return;
     }
 
-    const h = handlersRef.current;
+    const s = stateRef.current;
     const { key, shiftKey } = event;
     const isMetaPressed = isMetaOrCtrlPressed(event);
 
     // New: Ctrl+N / Cmd+N
     if (key === 'n' && isMetaPressed && !shiftKey) {
       event.preventDefault();
-      h.onNew?.();
+      s.handlers.onNew?.();
       return;
     }
 
     // Undo: Ctrl+Z / Cmd+Z
     if (key === 'z' && isMetaPressed && !shiftKey) {
       event.preventDefault();
-      if (canUndoRef.current && h.onUndo) {
-        h.onUndo();
+      if (s.canUndo && s.handlers.onUndo) {
+        s.handlers.onUndo();
       }
       return;
     }
@@ -153,8 +142,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
       (key === 'z' && isMetaPressed && shiftKey)     // Ctrl+Shift+Z / Cmd+Shift+Z
     ) {
       event.preventDefault();
-      if (canRedoRef.current && h.onRedo) {
-        h.onRedo();
+      if (s.canRedo && s.handlers.onRedo) {
+        s.handlers.onRedo();
       }
       return;
     }
@@ -162,8 +151,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // Save: Ctrl+S / Cmd+S
     if (key === 's' && isMetaPressed && !shiftKey) {
       event.preventDefault();
-      if (hasFlowRef.current && h.onSave) {
-        h.onSave();
+      if (s.hasFlow && s.handlers.onSave) {
+        s.handlers.onSave();
       }
       return;
     }
@@ -171,17 +160,17 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // Open: Ctrl+O / Cmd+O
     if (key === 'o' && isMetaPressed && !shiftKey) {
       event.preventDefault();
-      if (h.onOpen) {
-        h.onOpen();
+      if (s.handlers.onOpen) {
+        s.handlers.onOpen();
       }
       return;
     }
 
     // Delete selected: Delete / Backspace
-    if ((key === 'Delete' || key === 'Backspace') && hasSelectionRef.current) {
+    if ((key === 'Delete' || key === 'Backspace') && s.hasSelection) {
       event.preventDefault();
-      if (h.onDelete) {
-        h.onDelete();
+      if (s.handlers.onDelete) {
+        s.handlers.onDelete();
       }
       return;
     }
@@ -189,8 +178,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // F5: Execute flow (or resume if paused)
     if (key === 'F5' && !shiftKey) {
       event.preventDefault();
-      if (hasFlowRef.current && h.onExecute && !isExecutingRef.current) {
-        h.onExecute();
+      if (s.hasFlow && s.handlers.onExecute && !s.isExecuting) {
+        s.handlers.onExecute();
       }
       return;
     }
@@ -198,8 +187,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // Shift+F5: Stop execution
     if (key === 'F5' && shiftKey) {
       event.preventDefault();
-      if (isExecutingRef.current && h.onStop) {
-        h.onStop();
+      if (s.isExecuting && s.handlers.onStop) {
+        s.handlers.onStop();
       }
       return;
     }
@@ -207,8 +196,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     // F10: Step execution
     if (key === 'F10') {
       event.preventDefault();
-      if (hasFlowRef.current && h.onStep && !isExecutingRef.current) {
-        h.onStep();
+      if (s.hasFlow && s.handlers.onStep && !s.isExecuting) {
+        s.handlers.onStep();
       }
       return;
     }
