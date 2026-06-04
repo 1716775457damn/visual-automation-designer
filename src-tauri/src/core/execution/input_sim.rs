@@ -85,49 +85,29 @@ impl Executor {
             });
         }
 
-        // Create input controller once for all clicks to avoid
-        // per-click initialization overhead (Enigo setup cost is non-trivial).
-        let mut input = InputController::new().map_err(|e| {
-            crate::logging::log_error(
-                "Failed to create input controller",
-                Some(&e.to_string()),
-                None,
-            );
-            e
-        })?;
+        self.wait_if_paused().await;
 
-        // Perform clicks with panic handling
-        for i in 0..count {
-            if *self.stop_receiver.borrow() {
-                return Ok(BlockResult::Error {
-                    message: "Execution stopped".to_string(),
-                });
-            }
-
-            self.wait_if_paused().await;
-
-            let click_result = safe_execute(
-                || input.click_at(x, y, crate::platform::MouseButton::Left),
-                "Click operation",
-            );
-
-            match click_result {
-                Ok(_) => {}
-                Err(e) => {
-                    crate::logging::log_error(
-                        &format!("Click operation {} of {} failed", i + 1, count),
-                        Some(&e.to_string()),
-                        None,
-                    );
-                    return Err(e);
+        // Perform clicks with panic handling in a single synchronous block
+        // to avoid Enigo thread-safety (non-Send) issues across async awaits.
+        let click_result = safe_execute(
+            || {
+                let mut input = InputController::new()?;
+                for i in 0..count {
+                    input.click_at(x, y, crate::platform::MouseButton::Left)?;
+                    if i < count - 1 {
+                        std::thread::sleep(std::time::Duration::from_millis(25));
+                    }
                 }
-            }
+                Ok(())
+            },
+            "Click operation",
+        );
 
-            // Small delay between clicks
-            sleep(Duration::from_millis(25)).await;
+        match click_result {
+            Ok(Ok(_)) => Ok(BlockResult::Continue),
+            Ok(Err(e)) => Err(e),
+            Err(e) => Err(e),
         }
-
-        Ok(BlockResult::Continue)
     }
 
     /// Execute InputTextBlock
