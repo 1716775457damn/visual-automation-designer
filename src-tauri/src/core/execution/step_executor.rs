@@ -308,6 +308,29 @@ impl Executor {
     // Control Block Implementations
     // ========================================================================
 
+    /// Execute a list of child blocks sequentially.
+    /// Each child gets stop/pause checks. Returns early on JumpTo/Error;
+    /// returns Continue when all children completed.
+    async fn execute_child_blocks(
+        &mut self,
+        children: &[BlockId],
+    ) -> Result<BlockResult> {
+        for child_id in children {
+            if *self.stop_receiver.borrow() {
+                return Ok(BlockResult::Error {
+                    message: "Execution stopped".to_string(),
+                });
+            }
+            self.wait_if_paused().await;
+            let result = self.execute_block(child_id).await?;
+            match result {
+                BlockResult::Continue | BlockResult::WaitFor { .. } => continue,
+                other => return Ok(other),
+            }
+        }
+        Ok(BlockResult::Continue)
+    }
+
     /// Execute LoopBlock
     pub(super) fn execute_loop_block<'a>(
         &'a mut self,
@@ -341,32 +364,9 @@ impl Executor {
                 }
 
                 // Execute all child blocks
-                for child_id in children {
-                    // Check stop signal
-                    if *self.stop_receiver.borrow() {
-                        return Ok(BlockResult::Error {
-                            message: "Execution stopped".to_string(),
-                        });
-                    }
-
-                    // Check pause signal
-                    self.wait_if_paused().await;
-
-                    // Execute child block
-                    let result = self.execute_block(child_id).await?;
-
-                    // Handle result
-                    match result {
-                        BlockResult::Continue => continue,
-                        BlockResult::JumpTo { target_block_id } => {
-                            // Jump out of loop
-                            return Ok(BlockResult::JumpTo { target_block_id });
-                        }
-                        BlockResult::Error { message } => {
-                            return Ok(BlockResult::Error { message });
-                        }
-                        BlockResult::WaitFor { .. } => continue,
-                    }
+                match self.execute_child_blocks(children).await? {
+                    BlockResult::Continue => {}
+                    other => return Ok(other),
                 }
             }
 
@@ -408,31 +408,9 @@ impl Executor {
                 }
 
                 // Execute all child blocks
-                for child_id in children {
-                    // Check stop signal
-                    if *self.stop_receiver.borrow() {
-                        return Ok(BlockResult::Error {
-                            message: "Execution stopped".to_string(),
-                        });
-                    }
-
-                    // Check pause signal
-                    self.wait_if_paused().await;
-
-                    // Execute child block
-                    let result = self.execute_block(child_id).await?;
-
-                    // Handle result
-                    match result {
-                        BlockResult::Continue => continue,
-                        BlockResult::JumpTo { target_block_id } => {
-                            return Ok(BlockResult::JumpTo { target_block_id });
-                        }
-                        BlockResult::Error { message } => {
-                            return Ok(BlockResult::Error { message });
-                        }
-                        BlockResult::WaitFor { .. } => continue,
-                    }
+                match self.execute_child_blocks(children).await? {
+                    BlockResult::Continue => {}
+                    other => return Ok(other),
                 }
             }
         })
@@ -469,31 +447,9 @@ impl Executor {
                 false_branch
             };
 
-            for child_id in branch {
-                // Check stop signal
-                if *self.stop_receiver.borrow() {
-                    return Ok(BlockResult::Error {
-                        message: "Execution stopped".to_string(),
-                    });
-                }
-
-                // Check pause signal
-                self.wait_if_paused().await;
-
-                // Execute child block
-                let result = self.execute_block(child_id).await?;
-
-                // Handle result
-                match result {
-                    BlockResult::Continue => continue,
-                    BlockResult::JumpTo { target_block_id } => {
-                        return Ok(BlockResult::JumpTo { target_block_id });
-                    }
-                    BlockResult::Error { message } => {
-                        return Ok(BlockResult::Error { message });
-                    }
-                    BlockResult::WaitFor { .. } => continue,
-                }
+            match self.execute_child_blocks(branch).await? {
+                BlockResult::Continue => {}
+                other => return Ok(other),
             }
 
             Ok(BlockResult::Continue)
