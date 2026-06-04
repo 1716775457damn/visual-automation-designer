@@ -20,11 +20,15 @@
 import { useEffect, useCallback, useRef } from 'react';
 
 /**
- * Check if the user is on macOS
+ * Check if the user is on macOS — cached at module level (platform never changes).
  */
-function isMacOS(): boolean {
-  return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-}
+const isMacOS: boolean = (() => {
+  try {
+    return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  } catch {
+    return false;
+  }
+})();
 
 /**
  * Check if a keyboard event is from an input element
@@ -57,7 +61,7 @@ function isInputElement(event: KeyboardEvent): boolean {
  * Check if the meta/ctrl key is pressed (platform-specific)
  */
 function isMetaOrCtrlPressed(event: KeyboardEvent): boolean {
-  return isMacOS() ? event.metaKey : event.ctrlKey;
+  return isMacOS ? event.metaKey : event.ctrlKey;
 }
 
 export interface KeyboardShortcutHandlers {
