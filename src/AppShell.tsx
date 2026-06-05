@@ -466,15 +466,19 @@ export function AppShell() {
     setFlowValidationWarnings(validation.warnings);
   }, [buildCurrentFlowForValidation]);
 
+  // Stable ref to avoid invalidating handleSave / effects when only nodes/edges shift
+  const refreshValidationRef = useRef(refreshValidationState);
+  refreshValidationRef.current = refreshValidationState;
+
   useEffect(() => {
     if (!flow) {
       setFlowValidationErrors([]);
       setFlowValidationWarnings([]);
       return;
     }
-    const timeoutId = window.setTimeout(() => { void refreshValidationState(); }, isDirty ? 180 : 0);
+    const timeoutId = window.setTimeout(() => { void refreshValidationRef.current(); }, isDirty ? 180 : 0);
     return () => window.clearTimeout(timeoutId);
-  }, [flow, edges, isDirty, nodes, refreshValidationState]);
+  }, [flow, isDirty]);
 
   const handleSetEntryNode = useCallback(async (nodeId: string | null) => {
     try {
@@ -528,13 +532,13 @@ export function AppShell() {
     if (!flow) { showToast('warning', '没有可保存的流程'); return; }
     try {
       await saveFlow();
-      await refreshValidationState();
+      await refreshValidationRef.current();
       showToast('success', '流程已保存');
     } catch (err) {
       console.error('Failed to save flow:', err);
       showToast('error', '保存失败');
     }
-  }, [flow, refreshValidationState, saveFlow, showToast]);
+  }, [flow, saveFlow, showToast]);
 
   const handleLoad = useCallback(async () => {
     setShowFlowList((prev) => !prev);

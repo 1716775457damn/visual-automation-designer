@@ -6,6 +6,7 @@
  */
 
 import type { ThemeMode } from '../../hooks';
+import { memo } from 'react';
 import styles from './FlowEditor.module.css';
 
 export interface FlowToolbarProps {
@@ -33,7 +34,7 @@ export interface FlowToolbarProps {
  * FlowToolbar 组件 - 流程编辑工具栏
  * 提供流程控制、执行和文件操作按钮
  */
-export function FlowToolbar({
+export const FlowToolbar = memo(function FlowToolbar({
   canUndo = false,
   canRedo = false,
   isExecuting = false,
@@ -226,6 +227,6 @@ export function FlowToolbar({
       </div>
     </div>
   );
-}
+});
 
 export default FlowToolbar;
