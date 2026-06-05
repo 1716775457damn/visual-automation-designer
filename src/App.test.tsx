@@ -370,7 +370,7 @@ describe('App execution log console interactions', () => {
 
     render(<App />);
 
-    const logPanel = screen.getByTestId('execution-log').parentElement;
+    const logPanel = screen.getByTestId('execution-log').closest('.app__execution-log');
     expect(logPanel).toHaveStyle({ height: '54px' });
 
     fireEvent.click(screen.getByRole('button', { name: '展开日志' }));

@@ -125,7 +125,23 @@ export function AppShell() {
   });
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
   const [focusedValidationNodeId, setFocusedValidationNodeId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'output' | 'problems'>('output');
   const [frontendRuntimeEvents, setFrontendRuntimeEvents] = useState<InternalExecutionEvent[]>([]);
+
+  const [prevErrorsCount, setPrevErrorsCount] = useState(0);
+  const [prevWarningsCount, setPrevWarningsCount] = useState(0);
+
+  const errorsCount = flowValidationErrors.length;
+  const warningsCount = flowValidationWarnings.length;
+
+  if (errorsCount !== prevErrorsCount || warningsCount !== prevWarningsCount) {
+    setPrevErrorsCount(errorsCount);
+    setPrevWarningsCount(warningsCount);
+    if (errorsCount > 0 || warningsCount > 0) {
+      setActiveTab('problems');
+      setLogCollapsed(false);
+    }
+  }
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
   const buildDialogFlowName = useCallback(() => `新流程_${new Date().toLocaleDateString()}`, []);
@@ -714,25 +730,134 @@ export function AppShell() {
         </aside>
 
         <main className="app__main">
-          <FlowCanvas
-            nodes={nodes}
-            edges={edges}
-            nodeValidation={validationByNodeId}
-            focusedNodeId={focusedValidationNodeId}
-            onNodeSelect={handleNodeSelect}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={handleConnect}
-            executingBlockId={currentBlockId}
-            onAddNode={handleAddNode}
-            pendingPlacement={pendingPlacement}
-            onPlacePendingNode={handlePlacePendingNode}
-            onViewportCenterReady={(getCenter) => { viewportCenterRef.current = getCenter; }}
-            recentNodeId={recentNodeId}
-            onNodeDelete={handleDeleteNode}
-            onEdgeDelete={handleDeleteEdge}
-            onSetEntryNode={handleSetEntryNode}
-          />
+          <div className="app__canvas-container">
+            <FlowCanvas
+              nodes={nodes}
+              edges={edges}
+              nodeValidation={validationByNodeId}
+              focusedNodeId={focusedValidationNodeId}
+              onNodeSelect={handleNodeSelect}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={handleEdgesChange}
+              onConnect={handleConnect}
+              executingBlockId={currentBlockId}
+              onAddNode={handleAddNode}
+              pendingPlacement={pendingPlacement}
+              onPlacePendingNode={handlePlacePendingNode}
+              onViewportCenterReady={(getCenter) => { viewportCenterRef.current = getCenter; }}
+              recentNodeId={recentNodeId}
+              onNodeDelete={handleDeleteNode}
+              onEdgeDelete={handleDeleteEdge}
+              onSetEntryNode={handleSetEntryNode}
+            />
+          </div>
+
+          <div
+            className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}
+            style={{ height: logCollapsed ? 54 : logHeight }}
+          >
+            <button
+              className="execution-log__resize-handle"
+              type="button"
+              aria-label="调整日志面板高度"
+              title="拖动调整日志面板高度"
+              onMouseDown={handleLogResizeStart}
+            />
+            
+            {/* VS Code Style Header */}
+            <div className="vscode-panel-header">
+              <div className="vscode-panel-tabs">
+                <button
+                  type="button"
+                  className={`vscode-panel-tab ${activeTab === 'problems' ? 'vscode-panel-tab--active' : ''}`}
+                  onClick={() => { setActiveTab('problems'); setLogCollapsed(false); }}
+                >
+                  问题
+                  {validationItems.length > 0 && (
+                    <span className="vscode-panel-badge">{validationItems.length}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={`vscode-panel-tab ${activeTab === 'output' ? 'vscode-panel-tab--active' : ''}`}
+                  onClick={() => { setActiveTab('output'); setLogCollapsed(false); }}
+                >
+                  输出
+                </button>
+              </div>
+              
+              <div className="vscode-panel-actions">
+                {activeTab === 'output' && !logCollapsed && (
+                  <button
+                    className="vscode-panel-action-btn"
+                    type="button"
+                    onClick={handleClearExecutionLog}
+                    title="清空日志"
+                  >
+                    🗑️
+                  </button>
+                )}
+                <button
+                  className="vscode-panel-action-btn"
+                  onClick={handleToggleLogCollapsed}
+                  title={logCollapsed ? '展开日志' : '折叠日志'}
+                  aria-label={logCollapsed ? '展开日志' : '折叠日志'}
+                  type="button"
+                >
+                  {logCollapsed ? '▲' : '▼'}
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="vscode-panel-content"
+              style={{
+                height: logCollapsed ? 0 : Math.max(logHeight - 40, 80),
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Problems Tab Content (Always in DOM, visible when active) */}
+              <div
+                className="config-placeholder__hint-box app__validation-panel vscode-problems-list"
+                data-testid="validation-panel"
+                style={{ display: activeTab === 'problems' ? 'block' : 'none', height: '100%', overflowY: 'auto' }}
+              >
+                <p className="config-placeholder__hint-title">🩺 流程问题清单</p>
+                {validationItems.length === 0 ? (
+                  <div className="vscode-problems-empty">没有检测到流程问题。</div>
+                ) : (
+                  <ul className="app__validation-list vscode-problems-ul">
+                    {validationItems.map((item) => (
+                      <li key={item.id} className="vscode-problem-li">
+                        <button
+                          type="button"
+                          className={`app__validation-item app__validation-item--${item.severity} vscode-problem-btn`}
+                          onClick={() => handleSelectValidationBlock(item.blockId)}
+                          data-testid={`validation-item-${item.id}`}
+                        >
+                          <strong>{item.severity === 'error' ? '错误' : '警告'}</strong>
+                          <span>{item.message}</span>
+                          {item.blockId && <span className="app__validation-item-meta">定位到节点</span>}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Output Tab Content (Always in DOM, visible when active) */}
+              <div style={{ display: activeTab === 'output' ? 'block' : 'none', height: '100%' }}>
+                <ExecutionLog
+                  entries={logEntries}
+                  maxHeight={Math.max(logHeight - 40, 80)}
+                  collapsed={false}
+                  onClear={handleClearExecutionLog}
+                />
+              </div>
+            </div>
+          </div>
         </main>
 
         <aside className="app__sidebar app__sidebar--right">
@@ -746,28 +871,7 @@ export function AppShell() {
             <div className="error-message">
               <span className="error-icon">⚠️</span>
               <span>{error.message}</span>
-              <button onClick={() => window.location.reload()} className="error-retry-btn">重试</button>
-            </div>
-          )}
-          {validationItems.length > 0 && (
-            <div className="config-placeholder__hint-box app__validation-panel" data-testid="validation-panel">
-              <p className="config-placeholder__hint-title">🩺 流程问题清单</p>
-              <ul className="app__validation-list">
-                {validationItems.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      className={`app__validation-item app__validation-item--${item.severity}`}
-                      onClick={() => handleSelectValidationBlock(item.blockId)}
-                      data-testid={`validation-item-${item.id}`}
-                    >
-                      <strong>{item.severity === 'error' ? '错误' : '警告'}</strong>
-                      <span>{item.message}</span>
-                      {item.blockId && <span className="app__validation-item-meta">定位到节点</span>}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <button onClick={() => window.location.reload()} className="error-retry-btn" type="button">重试</button>
             </div>
           )}
           {selectedNode ? (
@@ -823,36 +927,12 @@ export function AppShell() {
         primaryFlowValidationError={primaryFlowValidationError}
         primaryFlowValidationWarning={primaryFlowValidationWarning}
         placementLabel={pendingPlacement?.type ?? null}
-        onFocusNode={(blockId) => setFocusedValidationNodeId(blockId)}
+        onFocusNode={(blockId) => {
+          setFocusedValidationNodeId(blockId);
+          setActiveTab('problems');
+          setLogCollapsed(false);
+        }}
       />
-
-      <div
-        className={`app__execution-log ${logCollapsed ? 'app__execution-log--collapsed' : ''}`}
-        style={{ height: logCollapsed ? 54 : logHeight }}
-      >
-        <button
-          className="execution-log__resize-handle"
-          type="button"
-          aria-label="调整日志面板高度"
-          title="拖动调整日志面板高度"
-          onMouseDown={handleLogResizeStart}
-        />
-        <ExecutionLog
-          entries={logEntries}
-          maxHeight={logCollapsed ? 0 : Math.max(logHeight - 54, 80)}
-          collapsed={logCollapsed}
-          onClear={handleClearExecutionLog}
-        />
-        <button
-          className="execution-log__collapse-btn"
-          onClick={handleToggleLogCollapsed}
-          title={logCollapsed ? '展开日志' : '折叠日志'}
-          aria-label={logCollapsed ? '展开日志' : '折叠日志'}
-          type="button"
-        >
-          {logCollapsed ? '▲' : '▼'}
-        </button>
-      </div>
 
       <FlowListModal
         isOpen={showFlowList}
