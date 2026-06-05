@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "LATEST_FILE=logs\latest-run.txt"
+set "LATEST_FILE=%~dp0logs\latest-run.txt"
 
 if not exist "%LATEST_FILE%" (
   echo latest run pointer not found: %LATEST_FILE%
