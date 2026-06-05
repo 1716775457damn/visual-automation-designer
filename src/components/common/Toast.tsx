@@ -3,7 +3,7 @@
  * 显示操作成功/失败/信息提示
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
 import commonStyles from './common.module.css';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -37,6 +37,15 @@ interface ToastProviderProps {
 
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Cleanup all pending timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutIdsRef.current.forEach((id) => clearTimeout(id));
+      timeoutIdsRef.current.length = 0;
+    };
+  }, []);
 
   const showToast = useCallback((type: ToastType, message: string, duration = 3000) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -46,9 +55,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
     // Auto remove after duration
     if (duration > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));
+        timeoutIdsRef.current = timeoutIdsRef.current.filter((tid) => tid !== timeoutId);
       }, duration);
+      timeoutIdsRef.current.push(timeoutId);
     }
   }, []);
 
