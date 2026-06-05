@@ -369,16 +369,51 @@ impl Executor {
             ctx.current_block().cloned()
         };
 
-        if let Some(block_id) = current_block {
-            self.emit_event(ExecutionEvent::resumed(block_id)).await?;
+        if let Some(ref block_id) = current_block {
+            self.emit_event(ExecutionEvent::resumed(block_id.clone())).await?;
         }
 
         let mut status = self.status.lock().await;
         *status = ExecutionStatus::Running;
         drop(status);
 
-        // Continue execution
-        self.execute_flow().await
+        // Continue execution starting from the current block, or fallback to entry block
+        let start_block = match current_block {
+            Some(block_id) => block_id,
+            None => match &self.flow.entry_block {
+                Some(entry) => entry.clone(),
+                None => {
+                    let first_block = self.flow.blocks.keys().next().cloned();
+                    match first_block {
+                        Some(block_id) => block_id,
+                        None => {
+                            let mut status = self.status.lock().await;
+                            *status = ExecutionStatus::Completed;
+                            self.emit_event(ExecutionEvent::flow_completed()).await?;
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+        };
+
+        let result = self.execute_from_block(&start_block).await;
+
+        match result {
+            Ok(()) => {
+                let mut status = self.status.lock().await;
+                if *status == ExecutionStatus::Running {
+                    *status = ExecutionStatus::Completed;
+                    self.emit_event(ExecutionEvent::flow_completed()).await?;
+                }
+                Ok(())
+            }
+            Err(e) => {
+                let mut status = self.status.lock().await;
+                *status = ExecutionStatus::Error;
+                Err(e)
+            }
+        }
     }
 
     /// Stop execution
