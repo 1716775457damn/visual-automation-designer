@@ -81,12 +81,52 @@ impl ImageLibraryManager {
         Self::new(images_dir)
     }
     
-    /// Load the library metadata from disk.
+    /// Load the library metadata from disk with corruption recovery.
     fn load_library(path: &Path) -> Result<ImageLibrary> {
         if path.exists() {
-            let content = fs::read_to_string(path)?;
-            let library: ImageLibrary = serde_json::from_str(&content)?;
-            Ok(library)
+            let content = match fs::read_to_string(path) {
+                Ok(c) => c,
+                Err(e) => {
+                    crate::logging::log_error(
+                        "Failed to read image library metadata file from disk",
+                        Some(&e.to_string()),
+                        None,
+                    );
+                    return Ok(ImageLibrary::new());
+                }
+            };
+
+            match serde_json::from_str::<ImageLibrary>(&content) {
+                Ok(library) => Ok(library),
+                Err(e) => {
+                    // Corruption detected!
+                    crate::logging::log_error(
+                        "Image library metadata file is corrupted, backing up and creating clean replacement",
+                        Some(&e.to_string()),
+                        None,
+                    );
+                    
+                    // Attempt to backup the corrupted file
+                    let mut backup_path = path.to_path_buf();
+                    backup_path.set_extension("json.bak");
+                    if let Err(backup_err) = fs::rename(path, &backup_path) {
+                        crate::logging::log_error(
+                            "Failed to backup corrupted image library metadata file",
+                            Some(&backup_err.to_string()),
+                            None,
+                        );
+                    } else {
+                        crate::logging::log_error(
+                            &format!("Corrupted metadata backed up to {:?}", backup_path),
+                            None,
+                            None,
+                        );
+                    }
+
+                    // Fallback to a clean library to prevent app crash
+                    Ok(ImageLibrary::new())
+                }
+            }
         } else {
             Ok(ImageLibrary::new())
         }
