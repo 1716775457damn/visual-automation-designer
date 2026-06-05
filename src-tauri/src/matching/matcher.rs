@@ -95,6 +95,19 @@ impl MatchConfig {
     }
 }
 
+/// Precomputed needle data for fast NCC matching.
+///
+/// Caches grayscale-normalized pixel values, mean, and variance sum
+/// so they are computed only once per needle rather than for every
+/// (x, y) position in the search area.
+struct NeedleCache {
+    grays_normalized: Vec<f64>,
+    needle_var_sum: f64,
+    width: u32,
+    height: u32,
+    pixel_count: f64,
+}
+
 /// Image matcher for template matching
 pub struct ImageMatcher {
     /// Matching configuration
@@ -130,6 +143,49 @@ impl ImageMatcher {
         self.config.threshold
     }
 
+    /// Precompute needle grayscale data for efficient NCC matching.
+    ///
+    /// Converts the needle to normalized grayscale values once so that
+    /// repeated `calculate_ncc_at` calls skip redundant pixel reads
+    /// and grayscale conversions.
+    fn precompute_needle(needle: &DynamicImage) -> NeedleCache {
+        let width = needle.width();
+        let height = needle.height();
+        let size = (width * height) as usize;
+        let mut grays = Vec::with_capacity(size);
+        let mut sum = 0.0;
+
+        for py in 0..height {
+            for px in 0..width {
+                let pixel = needle.get_pixel(px, py);
+                let gray = Self::to_grayscale(&pixel);
+                grays.push(gray);
+                sum += gray;
+            }
+        }
+
+        let pixel_count = size as f64;
+        let mean = if size > 0 { sum / pixel_count } else { 0.0 };
+
+        let mut needle_var_sum = 0.0;
+        let grays_normalized: Vec<f64> = grays
+            .into_iter()
+            .map(|g| {
+                let d = g - mean;
+                needle_var_sum += d * d;
+                d
+            })
+            .collect();
+
+        NeedleCache {
+            grays_normalized,
+            needle_var_sum,
+            width,
+            height,
+            pixel_count,
+        }
+    }
+
     /// Find a template image within a larger image
     ///
     /// # Arguments
@@ -149,8 +205,11 @@ impl ImageMatcher {
             return MatchResult::not_found();
         }
 
+        // Precompute needle data to avoid redundant per-position work
+        let needle_cache = Self::precompute_needle(needle);
+
         // Perform template matching
-        let (best_x, best_y, best_score) = self.template_match(haystack, needle);
+        let (best_x, best_y, best_score) = self.template_match(haystack, &needle_cache);
 
         // Check if score meets threshold
         if best_score >= self.config.threshold {
@@ -183,6 +242,9 @@ impl ImageMatcher {
         let mut results = Vec::new();
         let mut used_positions = Vec::new();
 
+        // Precompute needle data
+        let needle_cache = Self::precompute_needle(needle);
+
         // Create a mutable copy for multiple passes
         let search_width = haystack_width - needle_width + 1;
         let search_height = haystack_height - needle_height + 1;
@@ -201,7 +263,7 @@ impl ImageMatcher {
                     continue;
                 }
 
-                let score = self.calculate_ncc_at(haystack, needle, x, y);
+                let score = self.calculate_ncc_at(haystack, &needle_cache, x, y);
 
                 if score >= self.config.threshold {
                     let center_x = x + needle_width / 2;
@@ -222,11 +284,11 @@ impl ImageMatcher {
     }
 
     /// Template matching using Normalized Cross-Correlation
-    fn template_match(&self, haystack: &DynamicImage, needle: &DynamicImage) -> (u32, u32, f64) {
+    fn template_match(&self, haystack: &DynamicImage, needle_cache: &NeedleCache) -> (u32, u32, f64) {
         let haystack_width = haystack.width();
         let haystack_height = haystack.height();
-        let needle_width = needle.width();
-        let needle_height = needle.height();
+        let needle_width = needle_cache.width;
+        let needle_height = needle_cache.height;
 
         let search_width = haystack_width - needle_width + 1;
         let search_height = haystack_height - needle_height + 1;
@@ -240,7 +302,7 @@ impl ImageMatcher {
 
         for y in (0..search_height).step_by(step) {
             for x in (0..search_width).step_by(step) {
-                let score = self.calculate_ncc_at(haystack, needle, x, y);
+                let score = self.calculate_ncc_at(haystack, needle_cache, x, y);
                 if score > best_score {
                     best_score = score;
                     best_x = x;
@@ -262,7 +324,7 @@ impl ImageMatcher {
                     if x == best_x && y == best_y {
                         continue;
                     }
-                    let score = self.calculate_ncc_at(haystack, needle, x, y);
+                    let score = self.calculate_ncc_at(haystack, needle_cache, x, y);
                     if score > best_score {
                         best_score = score;
                         best_x = x;
@@ -275,58 +337,54 @@ impl ImageMatcher {
         (best_x, best_y, best_score)
     }
 
-    /// Calculate Normalized Cross-Correlation at a specific position
-    fn calculate_ncc_at(&self, haystack: &DynamicImage, needle: &DynamicImage, x: u32, y: u32) -> f64 {
-        let needle_width = needle.width();
-        let needle_height = needle.height();
+    /// Calculate Normalized Cross-Correlation at a specific position.
+    ///
+    /// Uses precomputed needle data (`NeedleCache`) to avoid redundant pixel
+    /// reads and grayscale conversions on the template for every (x, y) position.
+    fn calculate_ncc_at(
+        &self,
+        haystack: &DynamicImage,
+        needle_cache: &NeedleCache,
+        x: u32,
+        y: u32,
+    ) -> f64 {
+        let needle_width = needle_cache.width;
+        let needle_height = needle_cache.height;
 
-        // Calculate means
+        // Calculate haystack mean (single pass)
         let mut haystack_sum = 0.0;
-        let mut needle_sum = 0.0;
-        let mut count = 0;
-
         for py in 0..needle_height {
             for px in 0..needle_width {
                 let hp = haystack.get_pixel(x + px, y + py);
-                let np = needle.get_pixel(px, py);
-
-                // Convert to grayscale for comparison
-                let hg = Self::to_grayscale(&hp);
-                let ng = Self::to_grayscale(&np);
-
-                haystack_sum += hg;
-                needle_sum += ng;
-                count += 1;
+                haystack_sum += Self::to_grayscale(&hp);
             }
         }
 
-        if count == 0 {
+        let pixel_count = needle_cache.pixel_count;
+        if pixel_count == 0.0 {
             return 0.0;
         }
 
-        let haystack_mean = haystack_sum / count as f64;
-        let needle_mean = needle_sum / count as f64;
+        let haystack_mean = haystack_sum / pixel_count;
 
-        // Calculate NCC
+        // Calculate NCC in a single pass using precomputed needle data
         let mut numerator = 0.0;
         let mut haystack_var = 0.0;
-        let mut needle_var = 0.0;
+        let mut idx: usize = 0;
 
         for py in 0..needle_height {
             for px in 0..needle_width {
                 let hp = haystack.get_pixel(x + px, y + py);
-                let np = needle.get_pixel(px, py);
-
                 let hg = Self::to_grayscale(&hp) - haystack_mean;
-                let ng = Self::to_grayscale(&np) - needle_mean;
+                let ng = needle_cache.grays_normalized[idx];
 
                 numerator += hg * ng;
                 haystack_var += hg * hg;
-                needle_var += ng * ng;
+                idx += 1;
             }
         }
 
-        let denominator = (haystack_var * needle_var).sqrt();
+        let denominator = (haystack_var * needle_cache.needle_var_sum).sqrt();
         if denominator == 0.0 {
             return 0.0;
         }
