@@ -63,6 +63,28 @@ export function useFlowHistory(params: UseFlowHistoryParams): UseFlowHistoryRetu
     }
   }, [flow, setCanUndo, setCanRedo]);
 
+  // ── applyFlowSnapshot (shared by undo/redo) ─────────────────────
+
+  const applyFlowSnapshot = useCallback(
+    async (result: Flow): Promise<void> => {
+      const nextEdges = result.connections.map(connectionToEdge);
+      setFlow(result);
+      setNodes(
+        synchronizeNodeSemantics(
+          Object.values(result.blocks).map((block) =>
+            blockNodeToReactFlowNode(block, result.entryBlock === block.id)
+          ),
+          nextEdges,
+          result.entryBlock
+        )
+      );
+      setEdges(nextEdges);
+      setIsDirty(true);
+      await updateUndoRedoState();
+    },
+    [setFlow, setNodes, setEdges, setIsDirty, updateUndoRedoState]
+  );
+
   // ── undo ────────────────────────────────────────────────────────
 
   const undo = useCallback(async (): Promise<void> => {
@@ -73,24 +95,12 @@ export function useFlowHistory(params: UseFlowHistoryParams): UseFlowHistoryRetu
     try {
       const result = await tauriUndo(flow.id);
       if (result) {
-        setFlow(result);
-        setNodes(
-          synchronizeNodeSemantics(
-            Object.values(result.blocks).map((block) =>
-              blockNodeToReactFlowNode(block, result.entryBlock === block.id)
-            ),
-            result.connections.map(connectionToEdge),
-            result.entryBlock
-          )
-        );
-        setEdges(result.connections.map(connectionToEdge));
-        setIsDirty(true);
-        await updateUndoRedoState();
+        await applyFlowSnapshot(result);
       }
     } catch (err) {
       console.error('Undo failed:', err);
     }
-  }, [flow, setFlow, setNodes, setEdges, setIsDirty, updateUndoRedoState]);
+  }, [flow, applyFlowSnapshot]);
 
   // ── redo ────────────────────────────────────────────────────────
 
@@ -102,24 +112,12 @@ export function useFlowHistory(params: UseFlowHistoryParams): UseFlowHistoryRetu
     try {
       const result = await tauriRedo(flow.id);
       if (result) {
-        setFlow(result);
-        setNodes(
-          synchronizeNodeSemantics(
-            Object.values(result.blocks).map((block) =>
-              blockNodeToReactFlowNode(block, result.entryBlock === block.id)
-            ),
-            result.connections.map(connectionToEdge),
-            result.entryBlock
-          )
-        );
-        setEdges(result.connections.map(connectionToEdge));
-        setIsDirty(true);
-        await updateUndoRedoState();
+        await applyFlowSnapshot(result);
       }
     } catch (err) {
       console.error('Redo failed:', err);
     }
-  }, [flow, setFlow, setNodes, setEdges, setIsDirty, updateUndoRedoState]);
+  }, [flow, applyFlowSnapshot]);
 
   // ── Auto-sync history state ─────────────────────────────────────
 
