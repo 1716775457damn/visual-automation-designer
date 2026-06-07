@@ -91,142 +91,46 @@ function saveDevFlow(store: DevFlowStore, flow: Flow): Flow {
 }
 
 // ============================================================================
-// Flow Types (matching Rust backend)
+// Flow Types — canonical definitions in src/types/, re-exported here
 // ============================================================================
 
-/** Block ID type */
-export type BlockId = string;
+import type {
+  BlockId,
+  ActionType,
+  ControlType,
+  BlockType,
+  BlockPosition,
+  ClickMode,
+  ConditionOp,
+  BlockConfig,
+  BlockNode,
+} from '../types/block';
+import type {
+  FlowId,
+  ConnectionId,
+  Connection,
+  Flow,
+  FlowMetadata,
+} from '../types/flow';
+import type { ImageId } from '../types/image';
 
-/** Flow ID type */
-export type FlowId = string;
-
-/** Connection ID type */
-export type ConnectionId = string;
-
-/** Image ID type */
-export type ImageId = string;
-
-/**
- * Action block types
- */
-export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text';
-
-/**
- * Control block types
- */
-export type ControlType = 'loop' | 'loop_infinite' | 'condition';
-
-/**
- * Block type classification
- */
-export type BlockType =
-  | { type: 'action'; action: ActionType }
-  | { type: 'control'; control: ControlType };
-
-/**
- * Position on the canvas
- */
-export interface BlockPosition {
-  x: number;
-  y: number;
-}
-
-/**
- * Click mode configuration
- */
-export type ClickMode =
-  | { mode: 'coordinates'; x: number; y: number }
-  | { mode: 'image'; imageId?: ImageId };
-
-/**
- * Condition operator
- */
-export type ConditionOp = 'image_exists' | 'image_not_exists';
-
-/**
- * Block configuration
- */
-export type BlockConfig =
-  | {
-      type: 'click';
-      mode: ClickMode;
-      count: number;
-    }
-  | {
-      type: 'wait_image';
-      imageId?: ImageId;
-      timeoutMs?: number;
-    }
-  | {
-      type: 'wait_time';
-      durationMs: number;
-    }
-  | {
-      type: 'input_text';
-      text: string;
-      intervalMs?: number;
-    }
-  | {
-      type: 'loop';
-      count: number;
-    }
-  | {
-      type: 'loop_infinite';
-    }
-  | {
-      type: 'condition';
-      imageId?: ImageId;
-      condition: ConditionOp;
-      trueBranch: BlockId[];
-      falseBranch: BlockId[];
-    };
-
-/**
- * Block node in the flow
- */
-export interface BlockNode {
-  id: BlockId;
-  blockType: BlockType;
-  position: BlockPosition;
-  config: BlockConfig;
-  children: BlockId[];
-}
-
-/**
- * Connection between two blocks
- */
-export interface Connection {
-  id: ConnectionId;
-  source: BlockId;
-  target: BlockId;
-  sourceHandle?: string;
-}
-
-/**
- * Complete flow definition
- */
-export interface Flow {
-  id: FlowId;
-  name: string;
-  description?: string;
-  blocks: Record<BlockId, BlockNode>;
-  connections: Connection[];
-  entryBlock?: BlockId;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Flow metadata for list display
- */
-export interface FlowMetadata {
-  id: FlowId;
-  name: string;
-  description?: string;
-  blockCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
+export type {
+  BlockId,
+  ActionType,
+  ControlType,
+  BlockType,
+  BlockPosition,
+  ClickMode,
+  ConditionOp,
+  BlockConfig,
+  BlockNode,
+  FlowId,
+  ConnectionId,
+  Connection,
+  Flow,
+  FlowMetadata,
+  ImageId,
+};
 
 /**
  * Validation error response
