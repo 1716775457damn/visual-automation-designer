@@ -1344,4 +1344,223 @@ mod tests {
         // Main assertion: function does not crash.
         assert!(!result.found || result.center_x.is_some());
     }
+
+    // ========================================================================
+    // Real-world matching tests (non-uniform images with variance)
+    // ========================================================================
+
+    /// Helper: create a grayscale image with an arrow/chevron pattern.
+    /// The pattern is: a bright diagonal stripe on a dark background.
+    fn create_pattern_image(width: u32, height: u32) -> DynamicImage {
+        let mut img = ImageBuffer::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                // Diagonal gradient: bright at (x=y), dark elsewhere
+                let dist = if x >= y { x - y } else { y - x };
+                let v = if dist < 3 { 220 } else { 30 };
+                img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+        DynamicImage::ImageRgba8(img)
+    }
+
+    /// Helper: create a textured checkerboard image.
+    fn create_checkerboard_image(
+        width: u32, height: u32, tile: u32,
+        dark: u8, light: u8,
+    ) -> DynamicImage {
+        let mut img = ImageBuffer::new(width, height);
+        for y in 0..height {
+            for x in 0..width {
+                let is_light = ((x / tile) + (y / tile)) % 2 == 0;
+                let v = if is_light { light } else { dark };
+                img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+        DynamicImage::ImageRgba8(img)
+    }
+
+    #[test]
+    fn should_find_pattern_needle_in_pattern_haystack() {
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.85));
+
+        let haystack = create_checkerboard_image(100, 100, 8, 30, 200);
+        let needle = create_checkerboard_image(24, 24, 8, 30, 200);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Pattern image should be found with score >= 0.85, got confidence={:?}",
+            result.confidence
+        );
+    }
+
+    #[test]
+    fn should_find_diagonal_pattern_needle() {
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.8));
+
+        let haystack = create_pattern_image(60, 60);
+        // Extract a sub-region as needle (should match exactly)
+        let needle_img = {
+            let mut img = ImageBuffer::new(20, 20);
+            for y in 0..20u32 {
+                for x in 0..20u32 {
+                    let dist = if x >= y { x - y } else { y - x };
+                    let v = if dist < 3 { 220 } else { 30 };
+                    img.put_pixel(x, y, Rgba([v, v, v, 255]));
+                }
+            }
+            DynamicImage::ImageRgba8(img)
+        };
+
+        let result = matcher.find_image(&haystack, &needle_img);
+
+        assert!(
+            result.found,
+            "Diagonal pattern should be found with score >= 0.8, got confidence={:?}",
+            result.confidence
+        );
+    }
+
+    #[test]
+    fn should_find_sub_region_in_large_haystack() {
+        // Realistic test: create a 200x200 haystack with a pseudo-random pattern
+        // and extract a 30x30 sub-region as needle.
+        // The pattern uses position-hashing so every window is unique,
+        // preventing false duplicate matches from periodic or smooth patterns.
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.9));
+
+        let mut haystack_img = ImageBuffer::new(200, 200);
+        for y in 0..200u32 {
+            for x in 0..200u32 {
+                // Position-hash: gives uncorrelated values per pixel
+                let h = (x.wrapping_mul(374761393) ^ y.wrapping_mul(668265263)).wrapping_add(1274126177);
+                let base = ((h >> 16) & 0xFF) as u8;
+                // Spread range to ensure good variance for NCC
+                let base = if base < 128 { 28 + base % 100 } else { 128 + base % 100 };
+                haystack_img.put_pixel(x, y, Rgba([base, base, base, 255]));
+            }
+        }
+
+        // Create needle by copying a 30x30 sub-region from (50, 60)
+        let mut needle_img = ImageBuffer::new(30, 30);
+        for y in 0..30u32 {
+            for x in 0..30u32 {
+                let p = haystack_img.get_pixel(50 + x, 60 + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Sub-region should be found with score >= 0.9, got confidence={:?}, best_score={:?}",
+            result.confidence,
+            result.confidence,
+        );
+
+        if result.found {
+            assert_eq!(
+                result.center_x,
+                Some(50 + 30 / 2),
+                "Match center x should be at 65"
+            );
+            assert_eq!(
+                result.center_y,
+                Some(60 + 30 / 2),
+                "Match center y should be at 75"
+            );
+        }
+    }
+
+    #[test]
+    fn should_find_sub_region_after_image_roundtrip() {
+        // Simulate: image saved as PNG and re-loaded (common in the app)
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.85));
+
+        let mut haystack_img = ImageBuffer::new(80, 80);
+        for y in 0..80u32 {
+            for x in 0..80u32 {
+                // Sinusoidal pattern (non-uniform, has variance)
+                let phase = ((x as f64 * 0.3 + y as f64 * 0.5).sin() * 0.5 + 0.5) * 200.0 + 28.0;
+                let v = phase as u8;
+                haystack_img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+
+        // Extract needle from (20, 15), size 25x25
+        let mut needle_img = ImageBuffer::new(25, 25);
+        for y in 0..25u32 {
+            for x in 0..25u32 {
+                let p = haystack_img.get_pixel(20 + x, 15 + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        // Round-trip through PNG encoding/decoding to simulate save+load
+        let mut png_bytes = Vec::new();
+        {
+            let haystack_dyn = DynamicImage::ImageRgba8(haystack_img.clone());
+            haystack_dyn.write_to(&mut std::io::Cursor::new(&mut png_bytes), image::ImageFormat::Png)
+                .expect("PNG encode should succeed");
+        }
+
+        let haystack_loaded = image::load_from_memory(&png_bytes)
+            .expect("PNG decode should succeed");
+
+        let result = matcher.find_image(&haystack_loaded, &DynamicImage::ImageRgba8(needle_img));
+
+        assert!(
+            result.found,
+            "Sub-region should be found after PNG round-trip with score >= 0.85, got confidence={:?}",
+            result.confidence
+        );
+    }
+
+    #[test]
+    fn should_find_image_with_small_needle() {
+        // Small needle (10x10) with a distinct pattern in a larger haystack
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.85));
+
+        let mut haystack_img = ImageBuffer::new(120, 120);
+        for y in 0..120u32 {
+            for x in 0..120u32 {
+                // Position-hash pattern (uncorrelated between positions)
+                let h = (x.wrapping_mul(374761393) ^ y.wrapping_mul(668265263)).wrapping_add(1274126177);
+                let base = ((h >> 16) & 0xFF) as u8;
+                let v = if base < 128 { 28 + base % 100 } else { 128 + base % 100 };
+                haystack_img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+
+        // Needle: 10x10 sub-region from (40, 50)
+        let mut needle_img = ImageBuffer::new(10, 10);
+        for y in 0..10u32 {
+            for x in 0..10u32 {
+                let p = haystack_img.get_pixel(40 + x, 50 + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Small needle should be found with score >= 0.85, got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            assert_eq!(result.center_x, Some(40 + 10 / 2), "Center x should be 45");
+            assert_eq!(result.center_y, Some(50 + 10 / 2), "Center y should be 55");
+        }
+    }
 }

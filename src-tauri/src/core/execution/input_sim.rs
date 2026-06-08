@@ -5,10 +5,6 @@
 //!
 //! Validates: Requirements 8.4
 
-use std::time::Duration;
-
-use tokio::time::sleep;
-
 use crate::error::{AppError, Result};
 use crate::models::ClickMode;
 use crate::core::BlockResult;
