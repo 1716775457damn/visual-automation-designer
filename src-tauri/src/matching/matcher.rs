@@ -95,14 +95,113 @@ impl MatchConfig {
     }
 }
 
-/// Precomputed needle data for fast NCC matching.
+/// Flat grayscale buffer — converts a DynamicImage to a contiguous f64 array
+/// once, eliminating repeated `get_pixel()` calls (which involve dynamic
+/// dispatch, bounds checks, and colour conversion) during template matching.
+struct GrayBuffer {
+    data: Vec<f64>,
+    width: u32,
+    height: u32,
+}
+
+impl GrayBuffer {
+    /// Build the buffer by sampling every pixel of `image`.
+    /// Called once per match — the O(W×H) cost is negligible compared to
+    /// the billions of `get_pixel` calls it replaces.
+    fn from_image(image: &DynamicImage) -> Self {
+        let (width, height) = (image.width(), image.height());
+        let mut data = Vec::with_capacity((width * height) as usize);
+        for y in 0..height {
+            for x in 0..width {
+                let p = image.get_pixel(x, y);
+                data.push(Self::to_grayscale(&p));
+            }
+        }
+        Self { data, width, height }
+    }
+
+    /// Convert RGBA pixel to grayscale (matches ImageMatcher::to_grayscale).
+    fn to_grayscale(pixel: &Rgba<u8>) -> f64 {
+        0.299 * pixel[0] as f64 + 0.587 * pixel[1] as f64 + 0.114 * pixel[2] as f64
+    }
+}
+
+/// Summed-Area Table (integral image) for O(1) rectangular region sums.
 ///
-/// Caches grayscale-normalized pixel values, mean, and variance sum
-/// so they are computed only once per needle rather than for every
-/// (x, y) position in the search area.
+/// Precomputing the SAT once per haystack eliminates the inner "sum over
+/// needle region" loop that `calculate_ncc_at` would otherwise repeat for
+/// every search position.
+///
+/// Size: (W+1) × (H+1) f64 entries.  For a 4K screen ≈ 66 MB, allocated
+/// once per top-level `find_image` call and dropped after the search.
+struct IntegralImage {
+    data: Vec<f64>,
+    /// Width  = original_image_width  + 1  (top row is all-0 sentinel)
+    width: u32,
+    /// Height = original_image_height + 1  (left column is all-0 sentinel)
+    _height: u32,
+}
+
+impl IntegralImage {
+    /// Build from a `GrayBuffer`.  Result has (W+1)×(H+1) elements.
+    fn from_buffer(buf: &GrayBuffer) -> Self {
+        let w = buf.width + 1;
+        let h = buf.height + 1;
+        let cap = (w * h) as usize;
+        let mut data = vec![0.0; cap];
+
+        // Standard incremental SAT: SAT[y+1][x+1] = gray[y][x]
+        //   + SAT[y][x+1] + SAT[y+1][x] - SAT[y][x]
+        let iw = buf.width;
+        for y in 0..buf.height {
+            let sat_curr = ((y + 1) * w) as usize;
+            let sat_prev = (y * w) as usize;
+            let gray_off = (y * iw) as usize;
+            for x in 0..iw {
+                let g_val = buf.data[gray_off + x as usize];
+                let idx = sat_curr + x as usize + 1;
+                data[idx] = g_val
+                    + data[sat_prev + x as usize + 1]
+                    + data[sat_curr + x as usize]
+                    - data[sat_prev + x as usize];
+            }
+        }
+
+        Self { data, width: w, _height: h }
+    }
+
+    /// Sum of the rectangle [x, x+w) × [y, y+h) in O(1).
+    #[inline]
+    fn rect_sum(&self, x: u32, y: u32, w: u32, h: u32) -> f64 {
+        let (x1, y1) = (x as usize, y as usize);
+        let (x2, y2) = ((x + w) as usize, (y + h) as usize);
+        let stride = self.width as usize;
+
+        // SAT formula: sum = br - tr - bl + tl
+        let br = self.data[y2 * stride + x2];
+        let tr = self.data[y1 * stride + x2];
+        let bl = self.data[y2 * stride + x1];
+        let tl = self.data[y1 * stride + x1];
+        br + tl - tr - bl
+    }
+}
+
+/// Precomputed needle data for fast NCC matching (fast formula).
+///
+/// Stores raw grayscale values, ΣN and ΣN² so every `calculate_ncc_at`
+/// call can use the numerically-equivalent fast NCC form:
+///
+///   NCC = (n·ΣHN − ΣH·ΣN) / √((n·ΣH² − ΣH²)·(n·ΣN² − ΣN²))
+///
+/// where ΣH / ΣH² come from the haystack's integral image (O(1)) and
+/// ΣHN is the only term that still requires a single per-pixel pass.
 struct NeedleCache {
-    grays_normalized: Vec<f64>,
-    needle_var_sum: f64,
+    /// Raw grayscale pixel values (not centered).
+    grays: Vec<f64>,
+    /// ΣN — raw sum of needle grayscale values.
+    sum: f64,
+    /// ΣN² — raw sum of squared grayscale values.
+    sum_sq: f64,
     width: u32,
     height: u32,
     pixel_count: f64,
@@ -143,17 +242,19 @@ impl ImageMatcher {
         self.config.threshold
     }
 
-    /// Precompute needle grayscale data for efficient NCC matching.
+    /// Precompute needle grayscale data for the fast NCC formula.
     ///
-    /// Converts the needle to normalized grayscale values once so that
-    /// repeated `calculate_ncc_at` calls skip redundant pixel reads
-    /// and grayscale conversions.
+    /// Stores raw (not centered) grayscale values plus ΣN and ΣN² so the
+    /// per-position calculation can use:
+    ///
+    ///   NCC = (n·ΣHN − ΣH·ΣN) / √((n·ΣH² − ΣH²)·(n·ΣN² − ΣN²))
     fn precompute_needle(needle: &DynamicImage) -> NeedleCache {
         let width = needle.width();
         let height = needle.height();
         let size = (width * height) as usize;
         let mut grays = Vec::with_capacity(size);
         let mut sum = 0.0;
+        let mut sum_sq = 0.0;
 
         for py in 0..height {
             for px in 0..width {
@@ -161,29 +262,26 @@ impl ImageMatcher {
                 let gray = Self::to_grayscale(&pixel);
                 grays.push(gray);
                 sum += gray;
+                sum_sq += gray * gray;
             }
         }
 
-        let pixel_count = size as f64;
-        let mean = if size > 0 { sum / pixel_count } else { 0.0 };
-
-        let mut needle_var_sum = 0.0;
-        let grays_normalized: Vec<f64> = grays
-            .into_iter()
-            .map(|g| {
-                let d = g - mean;
-                needle_var_sum += d * d;
-                d
-            })
-            .collect();
-
         NeedleCache {
-            grays_normalized,
-            needle_var_sum,
+            grays,
+            sum,
+            sum_sq,
             width,
             height,
-            pixel_count,
+            pixel_count: size as f64,
         }
+    }
+
+    /// Build the per-haystack acceleration structures (gray buffer + SAT)
+    /// once per top-level `find_image` / `find_all_images` call.
+    fn precompute_haystack(haystack: &DynamicImage) -> (GrayBuffer, IntegralImage) {
+        let gray = GrayBuffer::from_image(haystack);
+        let sat = IntegralImage::from_buffer(&gray);
+        (gray, sat)
     }
 
     /// Find a template image within a larger image
@@ -205,11 +303,12 @@ impl ImageMatcher {
             return MatchResult::not_found();
         }
 
-        // Precompute needle data to avoid redundant per-position work
+        // Precompute needle + haystack acceleration structures (done once)
         let needle_cache = Self::precompute_needle(needle);
+        let (gray, sat) = Self::precompute_haystack(haystack);
 
-        // Perform template matching
-        let (best_x, best_y, best_score) = self.template_match(haystack, &needle_cache);
+        // Perform template matching using flat buffer + integral image
+        let (best_x, best_y, best_score) = self.template_match(&gray, &sat, &needle_cache);
 
         // Check if score meets threshold
         if best_score >= self.config.threshold {
@@ -239,13 +338,13 @@ impl ImageMatcher {
             return vec![];
         }
 
+        // Precompute acceleration structures once
+        let needle_cache = Self::precompute_needle(needle);
+        let (gray, sat) = Self::precompute_haystack(haystack);
+
         let mut results = Vec::new();
         let mut used_positions = Vec::new();
 
-        // Precompute needle data
-        let needle_cache = Self::precompute_needle(needle);
-
-        // Create a mutable copy for multiple passes
         let search_width = haystack_width - needle_width + 1;
         let search_height = haystack_height - needle_height + 1;
 
@@ -263,7 +362,7 @@ impl ImageMatcher {
                     continue;
                 }
 
-                let score = self.calculate_ncc_at(haystack, &needle_cache, x, y);
+                let score = self.calculate_ncc_at(&gray, &sat, &needle_cache, x, y);
 
                 if score >= self.config.threshold {
                     let center_x = x + needle_width / 2;
@@ -283,15 +382,22 @@ impl ImageMatcher {
         results
     }
 
-    /// Template matching using Normalized Cross-Correlation
-    fn template_match(&self, haystack: &DynamicImage, needle_cache: &NeedleCache) -> (u32, u32, f64) {
-        let haystack_width = haystack.width();
-        let haystack_height = haystack.height();
+    /// Template matching using Normalized Cross-Correlation.
+    ///
+    /// Uses the precomputed `GrayBuffer` and `IntegralImage` so that the
+    /// haystack region sum is O(1) and pixel access is a flat-array index
+    /// instead of a `get_pixel()` call.
+    fn template_match(
+        &self,
+        gray: &GrayBuffer,
+        sat: &IntegralImage,
+        needle_cache: &NeedleCache,
+    ) -> (u32, u32, f64) {
         let needle_width = needle_cache.width;
         let needle_height = needle_cache.height;
 
-        let search_width = haystack_width - needle_width + 1;
-        let search_height = haystack_height - needle_height + 1;
+        let search_width = gray.width - needle_width + 1;
+        let search_height = gray.height - needle_height + 1;
 
         let mut best_x = 0;
         let mut best_y = 0;
@@ -302,7 +408,7 @@ impl ImageMatcher {
 
         for y in (0..search_height).step_by(step) {
             for x in (0..search_width).step_by(step) {
-                let score = self.calculate_ncc_at(haystack, needle_cache, x, y);
+                let score = self.calculate_ncc_at(gray, sat, needle_cache, x, y);
                 if score > best_score {
                     best_score = score;
                     best_x = x;
@@ -324,7 +430,7 @@ impl ImageMatcher {
                     if x == best_x && y == best_y {
                         continue;
                     }
-                    let score = self.calculate_ncc_at(haystack, needle_cache, x, y);
+                    let score = self.calculate_ncc_at(gray, sat, needle_cache, x, y);
                     if score > best_score {
                         best_score = score;
                         best_x = x;
@@ -339,57 +445,78 @@ impl ImageMatcher {
 
     /// Calculate Normalized Cross-Correlation at a specific position.
     ///
-    /// Uses precomputed needle data (`NeedleCache`) to avoid redundant pixel
-    /// reads and grayscale conversions on the template for every (x, y) position.
+    /// Uses the **fast NCC formula** (mathematically equivalent to the
+    /// standard centred form but avoiding an explicit mean-computation pass):
+    ///
+    ///   n = needle pixel count  
+    ///   ΣH  = integral-image rect sum  (O(1))  
+    ///   ΣHN = single per-pixel pass over the needle region  
+    ///   ΣH² = same pass, accumulated  
+    ///
+    ///   NCC = (n·ΣHN − ΣH·ΣN) / √((n·ΣH² − ΣH²)·(n·ΣN² − ΣN²))
     fn calculate_ncc_at(
         &self,
-        haystack: &DynamicImage,
+        gray: &GrayBuffer,
+        sat: &IntegralImage,
         needle_cache: &NeedleCache,
         x: u32,
         y: u32,
     ) -> f64 {
-        let needle_width = needle_cache.width;
-        let needle_height = needle_cache.height;
+        let nw = needle_cache.width;
+        let nh = needle_cache.height;
+        let n = needle_cache.pixel_count;
 
-        // Calculate haystack mean (single pass)
-        let mut haystack_sum = 0.0;
-        for py in 0..needle_height {
-            for px in 0..needle_width {
-                let hp = haystack.get_pixel(x + px, y + py);
-                haystack_sum += Self::to_grayscale(&hp);
-            }
-        }
-
-        let pixel_count = needle_cache.pixel_count;
-        if pixel_count == 0.0 {
+        if n == 0.0 {
             return 0.0;
         }
 
-        let haystack_mean = haystack_sum / pixel_count;
+        // O(1) — haystack region sum from integral image
+        let sum_h = sat.rect_sum(x, y, nw, nh);
 
-        // Calculate NCC in a single pass using precomputed needle data
-        let mut numerator = 0.0;
-        let mut haystack_var = 0.0;
+        // Single per-pixel pass: ΣHN (cross term) + ΣH² (for variance).
+        // Needle values are raw (not centred) — the fast formula handles
+        // centring algebraically so we avoid a second loop.
+        let mut sum_hn = 0.0;
+        let mut sum_h_sq = 0.0;
         let mut idx: usize = 0;
 
-        for py in 0..needle_height {
-            for px in 0..needle_width {
-                let hp = haystack.get_pixel(x + px, y + py);
-                let hg = Self::to_grayscale(&hp) - haystack_mean;
-                let ng = needle_cache.grays_normalized[idx];
-
-                numerator += hg * ng;
-                haystack_var += hg * hg;
+        let gw = gray.width;
+        for py in 0..nh {
+            let row_start = ((y + py) * gw + x) as usize;
+            for px in 0..nw {
+                let h_val = gray.data[row_start + px as usize];
+                let n_val = needle_cache.grays[idx];
+                sum_hn += h_val * n_val;
+                sum_h_sq += h_val * h_val;
                 idx += 1;
             }
         }
 
-        let denominator = (haystack_var * needle_cache.needle_var_sum).sqrt();
+        // Fast NCC formula (avoids computing centred values explicitly).
+        // Numerically identical to the standard form:
+        //   (n·ΣHN − ΣH·ΣN)  =  n² · Cov(H,N)         (scaled by n)
+        //   (n·ΣH² − ΣH²)    =  n² · Var(H)            (scaled by n)
+        //   (n·ΣN² − ΣN²)    =  n² · Var(N)            (scaled by n)
+        let numerator = n * sum_hn - sum_h * needle_cache.sum;
+        let denom_h = n * sum_h_sq - sum_h * sum_h;
+        let denom_n = n * needle_cache.sum_sq - needle_cache.sum * needle_cache.sum;
+
+        // Use an epsilon to guard against floating-point noise from SAT
+        // accumulation when the image region is uniform (zero variance).
+        // For normal images denom is >> 1e-3; near-zero-variance → NCC undefined.
+        // The 1e-6 threshold handles SAT cumulative rounding (~3e-8 per pixel
+        // for uniform images) while being << typical image variance.
+        const VARIANCE_EPS: f64 = 1e-6;
+        if denom_h <= VARIANCE_EPS || denom_n <= VARIANCE_EPS {
+            return 0.0;
+        }
+
+        let denominator = (denom_h * denom_n).sqrt();
         if denominator == 0.0 {
             return 0.0;
         }
 
-        numerator / denominator
+        (numerator / denominator).clamp(-1.0, 1.0)
     }
 
     /// Convert RGBA pixel to grayscale
