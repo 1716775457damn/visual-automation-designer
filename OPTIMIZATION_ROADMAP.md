@@ -123,11 +123,11 @@ Improve the overall stability of the codebase and release cycles.
   * Implement recovery code in the Rust Image Library manager to restore corrupted JSON metadata (`metadata.json`).
   * Introduce an auto-clean task that cleans up orphaned temp files generated from clipboard captures.
 * **Version Consistency Validator**:
-  * Create a pre-commit or pre-release script (e.g., `scripts/verify-versions.js`) to automatically verify that:
+  * Implemented a prebuild verification script (`scripts/verify-versions.cjs`) that automatically verifies that:
     1. `package.json` version
     2. `src-tauri/Cargo.toml` package version
     3. `src-tauri/tauri.conf.json` product version
-    always match perfectly before a build is allowed.
+    always match perfectly before a build is allowed. Integrated into the `prebuild` hook.
 * **Expanded Integration Testing**:
   * Write additional execution tests for complex nesting patterns (e.g., condition blocks inside loops, loops inside conditions) in `tests/commands_integration_test.rs`.
 
@@ -137,7 +137,7 @@ Improve the overall stability of the codebase and release cycles.
 
 Before packaging the next release, complete the following quality control steps:
 
-1. [ ] **Verify Versions**: Run `npm run verify-versions` (to be created) or manually match versions in `package.json`, `Cargo.toml`, and `tauri.conf.json`.
+1. [ ] **Verify Versions**: Run `npm run verify-versions` or manually match versions in `package.json`, `Cargo.toml`, and `tauri.conf.json`.
 2. [ ] **Lint Suite**: Ensure `npm run lint` yields zero warnings or errors.
 3. [ ] **Test Suite (Frontend)**: Run `npm run test` (all 206 tests must pass).
 4. [ ] **Test Suite (Backend)**: Run `cargo test` (all 184 tests must pass).
