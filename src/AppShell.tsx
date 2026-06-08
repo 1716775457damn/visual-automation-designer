@@ -128,20 +128,16 @@ export function AppShell() {
   const [activeTab, setActiveTab] = useState<'output' | 'problems'>('output');
   const [frontendRuntimeEvents, setFrontendRuntimeEvents] = useState<InternalExecutionEvent[]>([]);
 
-  const [prevErrorsCount, setPrevErrorsCount] = useState(0);
-  const [prevWarningsCount, setPrevWarningsCount] = useState(0);
-
   const errorsCount = flowValidationErrors.length;
   const warningsCount = flowValidationWarnings.length;
 
-  if (errorsCount !== prevErrorsCount || warningsCount !== prevWarningsCount) {
-    setPrevErrorsCount(errorsCount);
-    setPrevWarningsCount(warningsCount);
+  useEffect(() => {
     if (errorsCount > 0 || warningsCount > 0) {
       setActiveTab('problems');
       setLogCollapsed(false);
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [errorsCount, warningsCount]);
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);
   const buildDialogFlowName = useCallback(() => `新流程_${new Date().toLocaleDateString()}`, []);
