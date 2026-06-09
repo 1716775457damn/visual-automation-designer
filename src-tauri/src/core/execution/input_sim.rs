@@ -56,16 +56,24 @@ impl Executor {
                     pos
                 } else {
                     // Find image on screen
-                    let (found, pos) = self.find_image_on_screen(image_id).await?;
+                    let (found, pos, confidence) = self.find_image_on_screen(image_id, None).await?;
                     if !found {
                         let image_name = self.image_library
                             .get(image_id)
                             .map(|m| m.name.as_str())
                             .unwrap_or("unknown");
+                        // Include accuracy info in error when available
+                        let detail = if confidence > 0.0 {
+                            format!(
+                                " (最佳匹配准确率 {:.1}%)", confidence * 100.0
+                            )
+                        } else {
+                            String::new()
+                        };
                         return Ok(BlockResult::Error {
                             message: format!(
-                                "Image not found on screen: {} (name: {})",
-                                image_id, image_name
+                                "Image not found on screen: {} (name: {}){}",
+                                image_id, image_name, detail
                             ),
                         });
                     }

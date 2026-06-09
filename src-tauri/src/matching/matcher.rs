@@ -123,7 +123,7 @@ pub struct MatchConfig {
 impl Default for MatchConfig {
     fn default() -> Self {
         Self {
-            threshold: 0.9,
+            threshold: 0.7,
             max_matches: 10,
             use_grayscale: false,
         }
@@ -361,7 +361,12 @@ impl ImageMatcher {
             let center_y = best_y + needle_height / 2;
             MatchResult::found(center_x, center_y, best_score, needle_width, needle_height)
         } else {
-            MatchResult::not_found()
+            // Preserve best score even on failure for diagnostic messages
+            MatchResult {
+                found: false,
+                confidence: Some(best_score),
+                ..MatchResult::not_found()
+            }
         }
     }
 
@@ -1111,7 +1116,7 @@ mod tests {
     #[test]
     fn test_match_config_default() {
         let config = MatchConfig::default();
-        assert_eq!(config.threshold, 0.9);
+        assert_eq!(config.threshold, 0.7);
         assert_eq!(config.max_matches, 10);
         assert!(!config.use_grayscale);
     }
@@ -1125,7 +1130,7 @@ mod tests {
     #[test]
     fn test_image_matcher_creation() {
         let matcher = ImageMatcher::new();
-        assert_eq!(matcher.threshold(), 0.9);
+        assert_eq!(matcher.threshold(), 0.7);
     }
 
     #[test]
@@ -1319,7 +1324,7 @@ mod tests {
         let needle = create_test_image(10, 10, Rgba([128, 128, 128, 255]));
         let haystack = create_test_image(20, 20, Rgba([128, 128, 128, 255]));
         let result = matcher.find_image(&haystack, &needle);
-        // Zero-variance images have denominator = 0 → score = 0.0 < 0.9 → not found
+        // Zero-variance images have denominator = 0 → score = 0.0 < 0.7 → not found
         assert!(!result.found);
     }
 
@@ -1363,7 +1368,7 @@ mod tests {
     #[test]
     fn should_create_cached_matcher_with_defaults() {
         let matcher = CachedImageMatcher::new();
-        assert_eq!(matcher.threshold(), 0.9);
+        assert_eq!(matcher.threshold(), 0.7);
         let stats = matcher.cache_stats();
         assert_eq!(stats.entries, 0);
         assert_eq!(stats.hits, 0);
@@ -1373,7 +1378,7 @@ mod tests {
     fn should_create_cached_matcher_with_cache_config() {
         let cache_config = MatchCacheConfig::new(50, 10);
         let matcher = CachedImageMatcher::with_cache_config(cache_config);
-        assert_eq!(matcher.threshold(), 0.9);
+        assert_eq!(matcher.threshold(), 0.7);
     }
 
     #[test]

@@ -129,8 +129,9 @@ impl Executor {
             BlockConfig::WaitImage {
                 image_id,
                 timeout_ms,
+                threshold,
             } => {
-                self.execute_wait_image_block(image_id.as_ref(), *timeout_ms)
+                self.execute_wait_image_block(image_id.as_ref(), *timeout_ms, *threshold)
                     .await
             }
             BlockConfig::WaitTime { duration_ms } => {
@@ -262,6 +263,7 @@ impl Executor {
         &mut self,
         image_id: Option<&ImageId>,
         timeout_ms: Option<u64>,
+        threshold: Option<f64>,
     ) -> Result<BlockResult> {
         let image_id = image_id.ok_or_else(|| {
             AppError::ExecutionFailed(
@@ -269,7 +271,10 @@ impl Executor {
             )
         })?;
         let timeout = timeout_ms.unwrap_or(DEFAULT_WAIT_TIMEOUT_MS);
+        let threshold = threshold.unwrap_or(0.7);
         let start = std::time::Instant::now();
+        let mut best_confidence: f64 = 0.0;
+        let mut low_accuracy_warned = false;
 
         loop {
             // Check stop signal
@@ -288,16 +293,40 @@ impl Executor {
                     .get(image_id)
                     .map(|m| m.name.as_str())
                     .unwrap_or("unknown");
+                if best_confidence > 0.0 && best_confidence < threshold {
+                    return Ok(BlockResult::Error {
+                        message: format!(
+                            "WaitImage timeout: 图片 {} (名称: {}) 在 {}ms 内未找到 — \
+                             最高匹配准确率 {:.1}% 低于阈值 {:.0}%，请降低阈值或更换图片",
+                            image_id, image_name, timeout,
+                            best_confidence * 100.0, threshold * 100.0,
+                        ),
+                    });
+                }
                 return Ok(BlockResult::Error {
                     message: format!(
-                        "WaitImage timeout: image {} (name: {}) not found within {}ms",
+                        "WaitImage timeout: image {} (name: {}) not found within {}ms \
+                         (the image may not be on screen at all)",
                         image_id, image_name, timeout
                     ),
                 });
             }
 
             // Try to find image
-            let (found, pos) = self.find_image_on_screen(image_id).await?;
+            let (found, pos, confidence) = self.find_image_on_screen(image_id, Some(threshold)).await?;
+
+            // Track best confidence across poll attempts
+            best_confidence = best_confidence.max(confidence);
+
+            // Warn once if accuracy is low
+            if !low_accuracy_warned && confidence > 0.0 && confidence < threshold {
+                log::warn!(
+                    "图片 {} 匹配准确率 {:.1}% 低于阈值 {:.0}% — 建议降低阈值或更换图片",
+                    image_id, confidence * 100.0, threshold * 100.0,
+                );
+                low_accuracy_warned = true;
+            }
+
             if found {
                 // Cache the result
                 let mut ctx = self.context.lock().await;
@@ -466,8 +495,8 @@ impl Executor {
                         .to_string(),
                 )
             })?;
-            // Find image on screen
-            let (found, _) = self.find_image_on_screen(image_id).await?;
+            // Find image on screen (condition blocks use default threshold)
+            let (found, _, _) = self.find_image_on_screen(image_id, None).await?;
 
             // Evaluate condition
             let condition_met = match condition {

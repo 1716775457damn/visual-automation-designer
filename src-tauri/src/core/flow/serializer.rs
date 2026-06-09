@@ -370,6 +370,7 @@ mod tests {
             BlockConfig::WaitImage {
                 image_id: Some(image_id.clone()),
                 timeout_ms: Some(5000),
+                threshold: None,
             },
         );
         flow.add_block(block);
@@ -392,6 +393,7 @@ mod tests {
             BlockConfig::WaitImage {
                 image_id: Some(image_id.clone()),
                 timeout_ms: Some(5000),
+                threshold: None,
             },
         );
         let block2 = BlockNode::new(

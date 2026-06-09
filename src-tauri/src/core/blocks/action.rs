@@ -155,6 +155,7 @@ impl Block for WaitImageBlock {
         let config = BlockConfig::WaitImage {
             image_id: self.image_id.clone(),
             timeout_ms: self.timeout_ms,
+            threshold: None,
         };
         validate_config(&config)
     }

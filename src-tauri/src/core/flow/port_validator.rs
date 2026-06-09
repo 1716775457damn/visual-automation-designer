@@ -184,6 +184,7 @@ mod tests {
             BlockConfig::WaitImage {
                 image_id: None,
                 timeout_ms: Some(5000),
+                threshold: None,
             },
         );
         flow.entry_block = Some(block);

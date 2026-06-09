@@ -25,7 +25,12 @@ fn match_center(
 }
 
 impl Executor {
-    /// Find an image on screen with caching and performance tracking
+    /// Find an image on screen with caching and performance tracking.
+    ///
+    /// `threshold` overrides the matcher's default threshold for this call.
+    /// Returns `(found, center_coords, best_confidence)` — the confidence is
+    /// the highest NCC score seen even when `found` is false, so callers can
+    /// give specific feedback like "匹配准确率 15% 低于阈值 70%".
     ///
     /// This method uses the CachedImageMatcher for improved performance
     /// on repeated matches. It also logs performance metrics.
@@ -34,7 +39,8 @@ impl Executor {
     pub(super) async fn find_image_on_screen(
         &self,
         image_id: &ImageId,
-    ) -> Result<(bool, (u32, u32))> {
+        threshold: Option<f64>,
+    ) -> Result<(bool, (u32, u32), f64)> {
         let start = Instant::now();
 
         // Get image metadata
@@ -51,6 +57,9 @@ impl Executor {
             "Image loading",
         )??;
 
+        // Track best confidence across all monitors
+        let mut best_confidence: f64 = 0.0;
+
         // 1. Try primary monitor first (fast path)
         let capture_result = safe_execute(
             || crate::platform::ScreenCapture::new().capture_screen(),
@@ -60,8 +69,17 @@ impl Executor {
         if let Ok(Ok(capture)) = capture_result {
             let result = {
                 let mut matcher = self.matcher.lock().await;
+                // Apply optional threshold override
+                if let Some(t) = threshold {
+                    matcher.set_threshold(t);
+                }
                 matcher.find_image_cached(&capture.image, &template, image_id)
             };
+
+            // Track best confidence even on failure
+            if let Some(c) = result.confidence {
+                best_confidence = best_confidence.max(c);
+            }
 
             if result.found {
                 let duration = start.elapsed();
@@ -70,7 +88,7 @@ impl Executor {
                     duration.as_millis(),
                     image_id
                 );
-                return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result)));
+                return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result), best_confidence));
             }
         }
 
@@ -85,8 +103,15 @@ impl Executor {
                 if let Ok(Ok(capture)) = capture_fallback_result {
                     let result = {
                         let mut matcher = self.matcher.lock().await;
+                        if let Some(t) = threshold {
+                            matcher.set_threshold(t);
+                        }
                         matcher.find_image_cached(&capture.image, &template, image_id)
                     };
+
+                    if let Some(c) = result.confidence {
+                        best_confidence = best_confidence.max(c);
+                    }
 
                     if result.found {
                         let duration = start.elapsed();
@@ -96,20 +121,31 @@ impl Executor {
                             duration.as_millis(),
                             image_id
                         );
-                        return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result)));
+                        return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result), best_confidence));
                     }
                 }
             }
         }
 
         let duration = start.elapsed();
-        log::warn!(
-            "Image matching failed across all screens in {}ms for image_id: {}",
-            duration.as_millis(),
-            image_id
-        );
+        let current_threshold = threshold.unwrap_or(0.7);
+        if best_confidence > 0.0 && best_confidence < current_threshold {
+            log::warn!(
+                "Image matching failed: {} — 最佳匹配准确率 {:.1}% 低于阈值 {:.0}% (用时 {}ms)",
+                image_id,
+                best_confidence * 100.0,
+                current_threshold * 100.0,
+                duration.as_millis(),
+            );
+        } else {
+            log::warn!(
+                "Image matching failed across all screens in {}ms for image_id: {}",
+                duration.as_millis(),
+                image_id
+            );
+        }
 
-        Ok((false, (0, 0)))
+        Ok((false, (0, 0), best_confidence))
     }
 
     /// Get matcher performance metrics

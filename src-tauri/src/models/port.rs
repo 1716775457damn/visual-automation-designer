@@ -189,6 +189,10 @@ fn wait_image_ports() -> PortDefinitions {
                 "最长等待时间（毫秒），默认 5000",
             ).required(false).default_value(serde_json::json!(5000)),
             PortSchema::new(
+                "threshold", "匹配阈值", PortType::Number, PortDirection::Input,
+                "图片匹配准确率阈值 (0.0~1.0)，低于此值视为未找到。匹配准确率太低时会提示，建议降低阈值或更换图片。默认 0.7",
+            ).required(false).default_value(serde_json::json!(0.7)),
+            PortSchema::new(
                 "region", "搜索区域", PortType::Any, PortDirection::Input,
                 "限制搜索区域 {x, y, width, height}，默认全屏",
             ).required(false),

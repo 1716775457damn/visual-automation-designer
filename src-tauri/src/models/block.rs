@@ -129,6 +129,10 @@ pub enum BlockConfig {
         /// Timeout in milliseconds (optional)
         #[serde(alias = "timeout_ms")]
         timeout_ms: Option<u64>,
+        /// Matching accuracy threshold (0.0~1.0). Default: 0.7
+        /// Scores below this are treated as "not found".
+        #[serde(alias = "threshold")]
+        threshold: Option<f64>,
     },
     /// Wait for time block configuration
     WaitTime {

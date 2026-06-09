@@ -274,6 +274,7 @@ mod tests {
         let config = BlockConfig::WaitImage {
             image_id: None,
             timeout_ms: Some(50),
+            threshold: None,
         };
         let errors = validate_block_config(&validator, &block_id, &config);
         assert_eq!(errors.len(), 1);
@@ -288,6 +289,7 @@ mod tests {
         let config = BlockConfig::WaitImage {
             image_id: None,
             timeout_ms: Some(100000),
+            threshold: None,
         };
         let errors = validate_block_config(&validator, &block_id, &config);
         assert_eq!(errors.len(), 1);
@@ -301,6 +303,7 @@ mod tests {
         let config = BlockConfig::WaitImage {
             image_id: None,
             timeout_ms: Some(5000),
+            threshold: None,
         };
         let errors = validate_block_config(&validator, &block_id, &config);
         assert!(errors.is_empty());
@@ -313,6 +316,7 @@ mod tests {
         let config = BlockConfig::WaitImage {
             image_id: None,
             timeout_ms: None,
+            threshold: None,
         };
         let errors = validate_block_config(&validator, &block_id, &config);
         assert!(errors.is_empty());
@@ -479,6 +483,7 @@ mod tests {
             BlockConfig::WaitImage {
                 image_id: Some(crate::models::image::ImageId(uuid::Uuid::nil())),
                 timeout_ms: Some(5000),
+                threshold: None,
             },
         );
         flow.add_block(block);

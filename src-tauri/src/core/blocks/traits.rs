@@ -100,7 +100,7 @@ pub fn validate_config(config: &BlockConfig) -> Vec<BlockError> {
                 let _ = (x, y); // Coordinates can be any valid screen position
             }
         }
-        BlockConfig::WaitImage { image_id: _, timeout_ms } => {
+        BlockConfig::WaitImage { image_id: _, timeout_ms, threshold: _ } => {
             if let Some(timeout) = timeout_ms {
                 if *timeout == 0 {
                     errors.push(BlockError::new("timeout_ms", "Timeout must be greater than 0"));
