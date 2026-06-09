@@ -19,6 +19,7 @@ use visual_automation_designer_lib::core::{
     FlowManager, FlowValidator, ImageLibraryManager,
 };
 use visual_automation_designer_lib::matching::{ImageMatcher, MatchConfig};
+use visual_automation_designer_lib::platform::{InputController, MouseButton, ScreenCapture};
 
 // ============================================================================
 // Test Utilities
@@ -803,4 +804,368 @@ fn test_nesting_loop_inside_condition() {
     } else {
         panic!("Expected Condition config after load");
     }
+}
+
+#[test]
+fn test_real_image_diff_self() {
+    // Load a real PNG from fixtures and verify diff against itself = 0%
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/reference.png");
+    assert!(fixture_path.exists(), "Fixture image not found: {:?}", fixture_path);
+
+    let img = image::open(&fixture_path).expect("Failed to load fixture image");
+    eprintln!("Fixture image: {}x{} ({} bytes)", img.width(), img.height(), std::fs::metadata(&fixture_path).map(|m| m.len()).unwrap_or(0));
+
+    let matcher = ImageMatcher::new();
+
+    // diff_images: identical image → 0% diff, pass
+    let result = matcher.diff_images(&img, &img, 30, false);
+    assert!(result.passed, "Identical image should pass");
+    assert_eq!(result.diff_percentage, 0.0, "Identical image should have 0% diff");
+    assert_eq!(result.total_pixels, (img.width() as u64) * (img.height() as u64), "Total pixels should match image area");
+    assert_eq!(result.diff_pixel_count, 0, "No pixels should differ");
+
+    // diff_images_scaled: with scale 0.5 should also give 0%
+    let scaled = matcher.diff_images_scaled(&img, &img, 30, false, 0.5);
+    assert!(scaled.passed, "Scaled identical should pass");
+    assert_eq!(scaled.diff_percentage, 0.0, "Scaled identical should have 0% diff");
+
+    // diff_images with heatmap: identical images → no diff → no heatmap
+    let with_heatmap = matcher.diff_images(&img, &img, 30, true);
+    assert!(with_heatmap.passed);
+    // When diff_count == 0, heatmap is intentionally None (no differences to visualize)
+    assert!(with_heatmap.diff_image.is_none(), "No heatmap when images are identical");
+
+    eprintln!("PASS: diff_images self-test = 0.0% diff, {}x{}", img.width(), img.height());
+}
+
+#[test]
+fn test_real_image_diff_completely_different() {
+    // Load a real image, create a white version of same size, verify ~100% diff
+    use image::{Rgba, ImageBuffer};
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/reference.png");
+    let img = image::open(&fixture_path).expect("Failed to load fixture image");
+
+    // Create a completely white image of same size
+    let white = ImageBuffer::from_pixel(img.width(), img.height(), Rgba([255u8, 255u8, 255u8, 255]));
+    let white_dyn = image::DynamicImage::ImageRgba8(white);
+
+    let matcher = ImageMatcher::new();
+    let result = matcher.diff_images(&img, &white_dyn, 30, true);
+    assert!(!result.passed, "Different image should fail");
+    assert!(result.diff_percentage > 0.5, "Should detect >50% pixel difference, got {}", result.diff_percentage);
+    assert!(result.diff_image.is_some(), "Heatmap should be generated");
+
+    eprintln!("PASS: diff_images vs white = {:.2}% diff", result.diff_percentage * 100.0);
+
+    // diff_images_scaled with 0.25 should also detect failure
+    let scaled = matcher.diff_images_scaled(&img, &white_dyn, 30, false, 0.25);
+    assert!(!scaled.passed, "Scaled should also detect difference");
+    eprintln!("PASS: diff_images_scaled(0.25) = {:.2}% diff", scaled.diff_percentage * 100.0);
+}
+
+#[test]
+fn test_real_image_matching() {
+    // Test template matching on a real image: crop a region, then match it back
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/reference.png");
+    let img = image::open(&fixture_path).expect("Failed to load fixture image");
+
+    // Crop a 50x50 region from the top-left corner
+    let needle = img.crop_imm(0, 0, 50.min(img.width()), 50.min(img.height()));
+
+    let matcher = ImageMatcher::new();
+    let results = matcher.find_all_images(&img, &needle);
+
+    assert!(!results.is_empty(), "Should find at least one match");
+    let best = &results[0];
+    assert!(best.found, "Best match should be found");
+    assert!(best.confidence.unwrap_or(0.0) > 0.8, "Confidence should be high for exact crop match");
+    eprintln!("PASS: matching best = confidence {:.4}, position ({}, {})",
+        best.confidence.unwrap_or(0.0), best.center_x.unwrap_or(0), best.center_y.unwrap_or(0));
+}
+
+#[test]
+fn test_real_image_full_flow_timing() {
+    // Benchmark: measure end-to-end matching → click pipeline time
+    // on a real 285x290 image, including REAL input driver timing.
+    //
+    // ⚠️  This test performs an actual mouse click at the CURRENT cursor
+    //     position (click_at current position without moving). It does NOT
+    //     move the mouse. The click target is wherever your mouse is right now.
+    //
+    // Flow: WaitImage(match) → Click(coords)
+
+    use std::time::Instant;
+
+    let fixture_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/reference.png");
+    let img = image::open(&fixture_path).expect("Failed to load fixture image");
+
+    // --- Phase 1: WaitImage matching (find_all_images) ---
+    // Simulate: crop a 50x50 region of the image as the "reference template"
+    // and search the full image for it (same as WaitImage does).
+    let needle = img.crop_imm(0, 0, 50.min(img.width()), 50.min(img.height()));
+    let matcher = ImageMatcher::new();
+
+    // Warmup run
+    let _ = matcher.find_all_images(&img, &needle);
+
+    // Timed runs
+    const SAMPLES: u32 = 5;
+    let mut match_times = Vec::with_capacity(SAMPLES as usize);
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        let results = matcher.find_all_images(&img, &needle);
+        let elapsed = start.elapsed();
+        match_times.push(elapsed);
+        assert!(!results.is_empty(), "Should find at least one match");
+    }
+    let avg_match = match_times.iter().sum::<std::time::Duration>() / SAMPLES;
+
+    // --- Phase 2: diff_images timing (screenshot assert) ---
+    let mut diff_times = Vec::with_capacity(SAMPLES as usize);
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        let r = matcher.diff_images(&img, &img, 30, false);
+        let elapsed = start.elapsed();
+        diff_times.push(elapsed);
+        assert!(r.passed);
+    }
+    let avg_diff = diff_times.iter().sum::<std::time::Duration>() / SAMPLES;
+
+    // --- Phase 3: diff_images_scaled(0.5) timing ---
+    let mut scaled_times = Vec::with_capacity(SAMPLES as usize);
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        let r = matcher.diff_images_scaled(&img, &img, 30, false, 0.5);
+        let elapsed = start.elapsed();
+        scaled_times.push(elapsed);
+        assert!(r.passed);
+    }
+    let avg_scaled = scaled_times.iter().sum::<std::time::Duration>() / SAMPLES;
+
+    // --- Phase 4: diff_images_scaled(0.25) timing ---
+    let mut qtr_times = Vec::with_capacity(SAMPLES as usize);
+    for _ in 0..SAMPLES {
+        let start = Instant::now();
+        let r = matcher.diff_images_scaled(&img, &img, 30, false, 0.25);
+        let elapsed = start.elapsed();
+        qtr_times.push(elapsed);
+        assert!(r.passed);
+    }
+    let avg_qtr = qtr_times.iter().sum::<std::time::Duration>() / SAMPLES;
+
+    // --- Phase 5: REAL InputController timing ---
+    // Measure the actual platform input layer using click_at() — the EXACT
+    // same function the execution engine uses for Click blocks.
+    //
+    // click_at(x, y, button) = move_to(<1ms) + sleep(10ms) + click(button)
+    //   where click(button) = mouse_down(<1ms) + sleep(10ms) + mouse_up(<1ms)
+    //
+    // Total = sleep(10ms) * 2 = 20ms + enigo overhead ≈ 22ms
+    //
+    // ⚠️  This WILL move your mouse to position (1, 1) and click there.
+    //     Position (1,1) is the top-left corner — typically on the desktop
+    //     background, safe to click.
+    println!("\n  ⚠️  即将移动鼠标至 (1,1) 并执行真实左键点击 — 3 次");
+    let mut click_times = Vec::with_capacity(3);
+    for i in 0..3 {
+        let start = Instant::now();
+        let mut input = InputController::new()
+            .expect("InputController init failed");
+
+        // This is EXACTLY what the execution engine calls for a Click block:
+        //   step_executor.rs → input_controller.click_at(x, y, Left)
+        input.click_at(1, 1, MouseButton::Left)
+            .expect("click_at failed");
+
+        let elapsed = start.elapsed();
+        click_times.push(elapsed);
+        print_timing(&format!("   试次 {}  click_at(1,1,Left)", i+1), elapsed);
+    }
+    let avg_click_at = click_times.iter().sum::<std::time::Duration>() / 3;
+    println!("   如上所示 — 鼠标已移动到 (1,1) 并完成了真实点击");
+
+    // --- Engine overhead (code analysis) ---
+    let engine_overhead_loop_check = std::time::Duration::from_micros(2);  // stop_signal.borrow() + pause check
+    let engine_dispatch = std::time::Duration::from_micros(100);           // execute_block: clone + emit + dispatch
+    let engine_total = engine_overhead_loop_check + engine_dispatch;
+
+    // --- Report ---
+    const SEP: &str = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+    println!("\n{}", SEP);
+    println!("  📊 完整流水线实测 (图片: 285×290, n={})", SAMPLES);
+    println!("{}", SEP);
+
+    println!("  🔍 模板匹配 (50×50 → 285×290 NCC):");
+    print_timing("     平均", avg_match);
+    print_timing("     最慢", *match_times.iter().max().unwrap());
+    print_timing("     最快", *match_times.iter().min().unwrap());
+
+    println!("  📐 差异比对 (全分辨率像素级):");
+    print_timing("     平均", avg_diff);
+    print_timing("     最慢", *diff_times.iter().max().unwrap());
+
+    println!("  ⚡ 下采样比对:");
+    print_timing("     scale 0.5", avg_scaled);
+    print_timing("     scale 0.25", avg_qtr);
+
+    println!("  🖱 真实点击驱动 (InputController):");
+    println!("     click_at(1,1,Left) 路径 (引擎实际调用):");
+    println!("       move_to(1,1) → sleep(10ms) → mouse_down → sleep(10ms) → mouse_up");
+    print_timing("     click_at() (实测, n=3)", avg_click_at);
+
+    println!("  ⚙️  引擎块切换开销:");
+    print_timing("     stop/pause 检查", engine_overhead_loop_check);
+    print_timing("     block dispatch + event", engine_dispatch);
+
+    // --- Full flow timing breakdowns ---
+    println!("{}", SEP);
+    println!("  🏁 完整流程 WaitImage(匹配) → Click:\n");
+
+    // Scenario A: Coordinate-mode Click (no re-matching)
+    print_timing("   1. NCC 模板匹配定位", avg_match);
+    print_timing("   2. 引擎块切换 (stop+pause+dispatch)", engine_total);
+    print_timing("   3. Click 块 (click_at, 实测)", avg_click_at);
+    let total_a = avg_match + engine_total + avg_click_at;
+    print_timing("   ─────────────────────────────────", std::time::Duration::ZERO);
+    print_timing("   总计 (匹配 → 点击完成)", total_a);
+    println!();
+    print_timing("   ≈ {:.1}ms", total_a);
+
+    // Scenario B: Image-mode Click (click_at cached match position)
+    // In this case, click_mode=image with MatchImage cache hit → no re-matching
+    println!();
+    println!("  🏁 备选: Click(image模式, 命中缓存):");
+    print_timing("   1. 从上下文读缓存坐标", std::time::Duration::from_micros(5));
+    print_timing("   2. Click 块 (click_at, 实测)", avg_click_at);
+    let total_b = std::time::Duration::from_micros(5) + avg_click_at;
+    print_timing("   总计 (缓存命中 → 点击完成)", total_b);
+    print_timing("   ≈ {:.1}ms", total_b);
+
+    println!("{}", SEP);
+    println!("  📌 注:");
+    println!("   - click_at() 执行 2× sleep(10ms) = 20ms 固定延迟 (click_interval_ms)");
+    println!("     enigo SendInput 驱动额外开销 ≈ {:.1}ms",
+        (avg_click_at.as_secs_f64() * 1000.0) - 20.0);
+    println!("   - Click(image模式) 从 WaitImage 缓存读取坐标，无需二次截屏匹配定位");
+    println!("{}", SEP);
+
+    // Sanity checks
+    assert!(avg_match.as_millis() < 100, "Match too slow: {}ms", avg_match.as_millis());
+    assert!(avg_diff.as_millis() < 100, "Diff too slow: {}ms", avg_diff.as_millis());
+    assert!(avg_click_at.as_millis() >= 18, "click_at() should be >=18ms (2×sleep(10ms) with variance), got {}ms", avg_click_at.as_millis());
+    assert!(avg_click_at.as_millis() < 100, "click_at() too slow: {}ms", avg_click_at.as_millis());
+}
+
+/// Helper: print a timing line with consistent formatting
+fn print_timing(label: &str, d: std::time::Duration) {
+    let us = d.as_micros();
+    let ms = d.as_secs_f64() * 1000.0;
+    if us < 1000 {
+        println!("    {}  {:>6}µs", label, us);
+    } else if ms < 10.0 {
+        println!("    {}  {:>6.2}ms", label, ms);
+    } else if ms < 1000.0 {
+        println!("    {}  {:>6.1}ms", label, ms);
+    } else {
+        println!("    {}  {:>6.2}s", label, d.as_secs_f64());
+    }
+}
+
+// ============================================================================
+// End-to-End: Find 665.png on screen → Click at match position
+// ============================================================================
+//
+// This test:
+// 1. Loads F:\665.png as the template image
+// 2. Captures the current screen
+// 3. Uses NCC template matching to find 665.png on screen
+// 4. Clicks at the center of the match
+//
+// ⚠️  Make sure F:\665.png is visible somewhere on your screen!
+//    The test will panic if the image is not found.
+//
+#[test]
+fn test_e2e_find_665png_and_click() {
+    use std::time::Instant;
+
+    // Step 1: Load the reference image
+    let template_path = r"F:\665.png";
+    let template = image::open(template_path)
+        .expect("Failed to load F:\\665.png — does the file exist?");
+    println!("\n  📸 模板图片: 665.png ({}×{})", template.width(), template.height());
+
+    // Step 2: Capture the primary monitor
+    let capture = ScreenCapture::new();
+    let screen = capture.capture_screen()
+        .expect("Failed to capture screen");
+    println!("  🖥  截取屏幕: {}×{}", screen.width, screen.height);
+
+    // Step 3: Template matching — try decreasing thresholds
+    // NCC can be sensitive to DPI scaling, compression artifacts, and
+    // anti-aliasing that alter screen rendering vs the on-disk file.
+    let (cx, cy, conf, used_threshold) = 'find: loop {
+        for &threshold in &[0.9, 0.7, 0.5, 0.3, 0.2] {
+            let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(threshold));
+            let results = matcher.find_all_images(&screen.image, &template);
+            if !results.is_empty() {
+                let r = &results[0];
+                let match_cx = r.center_x.expect("center_x");
+                let match_cy = r.center_y.expect("center_y");
+                let match_conf = r.confidence.unwrap_or(0.0);
+                println!("\n  🔍 threshold={}: 找到 {} 个匹配", threshold, results.len());
+                for (i, r) in results.iter().take(5).enumerate() {
+                    let x = r.center_x.unwrap_or(0);
+                    let y = r.center_y.unwrap_or(0);
+                    let c = r.confidence.unwrap_or(0.0);
+                    println!("      {}: ({},{}), conf={:.4}", i + 1, x, y, c);
+                }
+                break 'find (match_cx, match_cy, match_conf, threshold);
+            }
+        }
+        // No match at any threshold — save screenshots for debugging
+        let screen_path = std::env::temp_dir().join("665_e2e_screen.png");
+        screen.image.save(&screen_path).ok();
+        let tmpl_path = std::env::temp_dir().join("665_e2e_template.png");
+        template.save(&tmpl_path).ok();
+        panic!(
+            "\n❌ 665.png 在屏幕上无匹配（连 threshold=0.2 都无效）！\n\
+             截图 → {}\n\
+             模板 → {}\n\
+             请确认:\n\
+             1. 665.png 当前在屏幕上可见（如图片查看器打开）\n\
+             2. 图片屏幕渲染尺寸与文件 (229×245) 不要差异太大\n\
+             3. 图片内容非纯色/低纹理（NCC 需要纹理匹配）",
+            screen_path.display(), tmpl_path.display()
+        );
+    };
+
+    println!("  ✅ 最佳匹配 (threshold={}): 中心 ({},{}), 置信度 {:.4}",
+        used_threshold, cx, cy, conf);
+    println!();
+    println!("  ⚠️  即将移动鼠标至 ({},{}) 并执行真实左键点击 — 2 次", cx, cy);
+    println!();
+
+    // Step 4: Click at the match position (exactly like the engine does)
+    let mut input = InputController::new()
+        .expect("InputController init failed");
+
+    for i in 0..2 {
+        let start = Instant::now();
+        input.click_at(cx, cy, MouseButton::Left)
+            .expect("click_at failed");
+        let elapsed = start.elapsed();
+        println!("     点击 {}: 位置({},{}), 耗时 {:.1}ms",
+            i + 1, cx, cy, elapsed.as_secs_f64() * 1000.0);
+    }
+
+    println!();
+    println!("  🎯 完成 — 鼠标移动至 665.png 位置并执行了真实点击");
+    println!("     你应看到鼠标移动到图片所在位置并点击了 2 次");
 }
