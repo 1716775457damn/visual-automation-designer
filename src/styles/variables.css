@@ -1,195 +1,181 @@
 /**
- * CSS 变量定义
- * 定义全局设计令牌 - 2026 Premium Edition
+ * CSS Variable Aliases — Phase 2 Migration
+ *
+ * This file maps all legacy --color-*, --spacing-*, --radius-*, etc.
+ * variable names to the new --vad-* Design Token System (tokens.css).
+ *
+ * tokens.css is the SINGLE SOURCE OF TRUTH. It is loaded first in
+ * main.tsx, and this file simply provides backward-compatible aliases.
+ *
+ * Theme switching (dark/light) is driven entirely by tokens.css via
+ * .theme-dark / .theme-light classes on <html>.
+ *
+ * Block-specific colors (action, control, click, wait, loop, condition)
+ * remain as literal values since they are part of the visual language.
+ *
+ * To migrate a component to the new system: replace --color-* with
+ * --vad-color-* directly and remove the @import of variables.css.
  */
 
 :root {
-  /* 颜色系统 */
-  --color-primary: #3b82f6; /* Premium Vibrant Blue */
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: rgba(59, 130, 246, 0.15);
-  --color-primary-soft: rgba(59, 130, 246, 0.08);
-  --color-accent: #8b5cf6; /* Modern Violet */
-  --color-accent-soft: rgba(139, 92, 246, 0.12);
-  
-  --color-success: #10b981; /* Emerald Green */
-  --color-warning: #f59e0b; /* Amber */
-  --color-danger: #ef4444; /* Rose Red */
-  --color-info: #06b6d4; /* Cyan */
-  
-  /* 背景色 */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8fafc; /* Softer slate background */
-  --color-bg-tertiary: #f1f5f9;
-  --color-bg-elevated: #ffffff;
-  --color-bg-panel: rgba(255, 255, 255, 0.72); /* Glass UI default */
-  
-  /* Glass UI 特有变量 */
-  --glass-bg: rgba(255, 255, 255, 0.65);
-  --glass-border: rgba(226, 232, 240, 0.8);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
-  --glass-backdrop: blur(16px);
-  
-  /* 文字色 */
-  --color-text-primary: #0f172a; /* Slate 900 for modern high contrast */
-  --color-text-secondary: #475569; /* Slate 600 */
-  --color-text-muted: #94a3b8; /* Slate 400 */
-  --color-canvas-grid: rgba(148, 163, 184, 0.09);
-  --color-overlay: rgba(15, 23, 42, 0.45);
-  
-  /* 边框色 */
-  --color-border: #e2e8f0; /* Slate 200 */
-  --color-border-focus: var(--color-primary);
-  --color-border-strong: #cbd5e1; /* Slate 300 */
-  
-  /* 积木块颜色 (Futuristic gradients) */
+  /* ------------------------------------------------------------------ */
+  /*  Colors: Primary & Accent                                          */
+  /* ------------------------------------------------------------------ */
+  --color-primary: var(--vad-color-primary);
+  --color-primary-hover: var(--vad-color-primary-hover);
+  --color-primary-dark: var(--vad-color-primary-active);
+  --color-primary-light: var(--vad-color-primary-soft);
+  --color-primary-soft: var(--vad-color-primary-muted);
+  --color-accent: var(--vad-color-accent);
+  --color-accent-soft: var(--vad-color-accent-soft);
+
+  /* ------------------------------------------------------------------ */
+  /*  Colors: Semantic                                                  */
+  /* ------------------------------------------------------------------ */
+  --color-success: var(--vad-color-success);
+  --color-warning: var(--vad-color-warning);
+  --color-danger: var(--vad-color-error);
+  --color-info: var(--vad-color-info);
+
+  /* ------------------------------------------------------------------ */
+  /*  Colors: Background & Surface                                      */
+  /* ------------------------------------------------------------------ */
+  --color-bg-primary: var(--vad-color-bg);
+  --color-bg-secondary: var(--vad-color-surface);
+  --color-bg-tertiary: var(--vad-color-surface-elevated);
+  --color-bg-elevated: var(--vad-color-surface-elevated);
+  --color-bg-panel: var(--vad-glass-bg);
+
+  /* ------------------------------------------------------------------ */
+  /*  Colors: Text                                                      */
+  /* ------------------------------------------------------------------ */
+  --color-text-primary: var(--vad-color-text-primary);
+  --color-text-secondary: var(--vad-color-text-secondary);
+  --color-text-muted: var(--vad-color-text-muted);
+  --color-overlay: var(--vad-color-surface-overlay);
+  --color-canvas-grid: color-mix(in srgb, var(--vad-color-text-muted) 9%, transparent);
+
+  /* ------------------------------------------------------------------ */
+  /*  Colors: Border                                                    */
+  /* ------------------------------------------------------------------ */
+  --color-border: var(--vad-color-border);
+  --color-border-focus: var(--vad-color-border-focus);
+  --color-border-strong: var(--vad-color-border-strong);
+
+  /* ------------------------------------------------------------------ */
+  /*  Glass UI                                                          */
+  /* ------------------------------------------------------------------ */
+  --glass-bg: var(--vad-glass-bg);
+  --glass-border: var(--vad-glass-border);
+  --glass-shadow: var(--vad-glass-shadow);
+  --glass-backdrop: var(--vad-glass-backdrop);
+
+  /* ------------------------------------------------------------------ */
+  /*  Block Type Colors (domain-specific visual language)               */
+  /* ------------------------------------------------------------------ */
   --color-block-action: #10b981;
   --color-block-control: #3b82f6;
   --color-block-click: #f59e0b;
   --color-block-wait: #8b5cf6;
   --color-block-loop: #06b6d4;
-  --color-block-condition: #ec4899; /* Vibrant Pink */
-  
-  /* 积木块渐变 background overlays */
+  --color-block-condition: #ec4899;
+
+  /* Block gradient overlays */
   --gradient-block-action: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
   --gradient-block-control: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.02) 100%);
   --gradient-block-click: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
   --gradient-block-wait: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%);
   --gradient-block-loop: linear-gradient(135deg, rgba(6, 182, 212, 0.08) 0%, rgba(6, 182, 212, 0.02) 100%);
   --gradient-block-condition: linear-gradient(135deg, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0.02) 100%);
-  
-  /* 执行状态颜色 */
-  --color-status-idle: #64748b;
-  --color-status-running: #10b981;
-  --color-status-paused: #f59e0b;
-  --color-status-completed: #06b6d4;
-  --color-status-error: #ef4444;
-  
-  /* 间距 */
-  --spacing-xs: 6px;
-  --spacing-sm: 10px;
-  --spacing-md: 18px;
-  --spacing-lg: 26px;
-  --spacing-xl: 36px;
-  
-  /* 圆角 (Modern super-round corners) */
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
-  
-  /* 阴影 (Subtle, elegant, layered shadows) */
-  --shadow-sm: 0 4px 12px 0 rgba(15, 23, 42, 0.03), 0 1px 2px 0 rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 16px -6px rgba(15, 23, 42, 0.04);
-  --shadow-lg: 0 25px 50px -12px rgba(15, 23, 42, 0.15);
+
+  /* ------------------------------------------------------------------ */
+  /*  Execution Status Colors                                           */
+  /* ------------------------------------------------------------------ */
+  --color-status-idle: var(--vad-color-text-muted);
+  --color-status-running: var(--vad-color-success);
+  --color-status-paused: var(--vad-color-warning);
+  --color-status-completed: var(--vad-color-accent);
+  --color-status-error: var(--vad-color-error);
+
+  /* ------------------------------------------------------------------ */
+  /*  Spacing (4px base scale)                                          */
+  /* ------------------------------------------------------------------ */
+  --spacing-xs: var(--vad-spacing-xs);
+  --spacing-sm: var(--vad-spacing-sm);
+  --spacing-md: var(--vad-spacing-md);
+  --spacing-lg: var(--vad-spacing-lg);
+  --spacing-xl: var(--vad-spacing-xl);
+
+  /* ------------------------------------------------------------------ */
+  /*  Radii                                                             */
+  /* ------------------------------------------------------------------ */
+  --radius-sm: var(--vad-radius-sm);
+  --radius-md: var(--vad-radius-md);
+  --radius-lg: var(--vad-radius-lg);
+  --radius-xl: var(--vad-radius-xl);
+
+  /* ------------------------------------------------------------------ */
+  /*  Shadows                                                           */
+  /* ------------------------------------------------------------------ */
+  --shadow-sm: var(--vad-shadow-sm);
+  --shadow-md: var(--vad-shadow-md);
+  --shadow-lg: var(--vad-shadow-lg);
+  --shadow-xl: var(--vad-shadow-lg);
+
+  /* Light-theme inset shadow (stays literal) */
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  
-  /* 字体 (Plus Jakarta Sans pairing with Inter & Segoe) */
-  --font-display: 'Plus Jakarta Sans', 'Outfit', 'Segoe UI', 'PingFang SC', sans-serif;
-  --font-body: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', 'PingFang SC', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
-  --font-family: var(--font-body);
-  --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  --font-family: var(--font-body);
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-md: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 20px;
+
+  /* ------------------------------------------------------------------ */
+  /*  Typography: Font Families                                         */
+  /* ------------------------------------------------------------------ */
+  --font-display: var(--vad-font-sans);
+  --font-body: var(--vad-font-sans);
+  --font-family: var(--vad-font-sans);
+  --font-mono: var(--vad-font-mono);
+
+  /* ------------------------------------------------------------------ */
+  /*  Typography: Font Sizes                                            */
+  /* ------------------------------------------------------------------ */
+  --font-size-xs: var(--vad-font-size-xs);
+  --font-size-sm: var(--vad-font-size-sm);
+  --font-size-md: var(--vad-font-size-md);
+  --font-size-lg: var(--vad-font-size-lg);
+  --font-size-xl: var(--vad-font-size-xl);
   --font-size-hero: 28px;
-  
-  /* 动画 */
-  --transition-fast: 0.1s ease;
-  --transition-normal: 0.2s ease;
-  --transition-slow: 0.3s ease;
-  
-  /* Z-index */
-  --z-index-toolbar: 100;
-  --z-index-modal: 200;
-  --z-index-dropdown: 150;
-  --z-index-tooltip: 250;
-  --z-index-overlay: 50;
+
+  /* ------------------------------------------------------------------ */
+  /*  Transitions & Easing                                              */
+  /* ------------------------------------------------------------------ */
+  --transition-fast: var(--vad-transition-fast);
+  --transition-normal: var(--vad-transition-normal);
+  --transition-slow: var(--vad-transition-slow);
+
+  /* ------------------------------------------------------------------ */
+  /*  Z-Index                                                           */
+  /* ------------------------------------------------------------------ */
+  --z-index-toolbar: var(--vad-z-sticky);
+  --z-index-modal: var(--vad-z-modal);
+  --z-index-dropdown: var(--vad-z-dropdown);
+  --z-index-tooltip: var(--vad-z-overlay);
+  --z-index-overlay: var(--vad-z-overlay);
 }
 
-/* UX优化101: 暗色主题支持 */
+/* ==========================================================================
+   Theme Overrides
+   All --color-* / --spacing-* aliases resolve to var(--vad-*) values,
+   which are theme-aware via tokens.css (.theme-dark / .theme-light).
+   These selectors are kept for backward-compatible CSS rule targeting
+   by module files that use [data-theme="dark"] .classname {} patterns.
+   ========================================================================== */
+
 [data-theme="dark"] {
-  /* 背景色 */
-  --color-bg-primary: #0f172a; /* Obsidian Deep Slate */
-  --color-bg-secondary: #020617; /* Void Midnight Slate */
-  --color-bg-tertiary: #1e293b;
-  --color-bg-elevated: #1e293b;
-  --color-bg-panel: rgba(15, 23, 42, 0.72); /* Glass UI Dark */
-  
-  /* Glass UI 特有变量 - Dark */
-  --glass-bg: rgba(15, 23, 42, 0.7);
-  --glass-border: rgba(51, 65, 85, 0.5);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-  --glass-backdrop: blur(16px);
-  
-  /* 文字色 */
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #64748b;
-  --color-canvas-grid: rgba(226, 232, 240, 0.04);
-  --color-overlay: rgba(2, 6, 23, 0.75);
-  
-  /* 边框色 */
-  --color-border: #334155; /* Slate 700 */
-  --color-border-strong: #475569; /* Slate 600 */
-  
-  /* 主色调调整 (High saturation for glowing dark mode) */
-  --color-primary: #60a5fa; /* Glowing Blue */
-  --color-primary-hover: #3b82f6;
-  --color-primary-light: rgba(96, 165, 250, 0.25);
-  --color-primary-soft: rgba(96, 165, 250, 0.12);
-  --color-accent: #a78bfa;
-  --color-accent-soft: rgba(167, 139, 250, 0.18);
-  
-  /* 阴影调整 (Deeper shadows for obsidian aesthetics) */
-  --shadow-sm: 0 4px 12px 0 rgba(0, 0, 0, 0.15), 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 12px 30px -4px rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 30px 60px -15px rgba(0, 0, 0, 0.5);
+  /* All --color-* values automatically resolve to dark via var(--vad-*) */
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-
-  /* 积木块渐变 background overlays - Dark Mode */
-  --gradient-block-action: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.03) 100%);
-  --gradient-block-control: linear-gradient(135deg, rgba(96, 165, 250, 0.15) 0%, rgba(96, 165, 250, 0.03) 100%);
-  --gradient-block-click: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.03) 100%);
-  --gradient-block-wait: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(167, 139, 250, 0.03) 100%);
-  --gradient-block-loop: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.03) 100%);
-  --gradient-block-condition: linear-gradient(135deg, rgba(236, 72, 153, 0.15) 0%, rgba(236, 72, 153, 0.03) 100%);
 }
 
-/* UX优化102: 自动跟随系统主题 */
+/* Auto dark mode for users who prefer dark OS theme */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    /* 背景色 */
-     --color-bg-primary: #131927;
-     --color-bg-secondary: #0e1420;
-     --color-bg-tertiary: #1b2436;
-     --color-bg-elevated: #171f30;
-     --color-bg-panel: rgba(19, 25, 39, 0.82);
-    
-    /* 文字色 */
-     --color-text-primary: #f5f8ff;
-     --color-text-secondary: #c7d4f3;
-     --color-text-muted: #97a6c7;
-     --color-canvas-grid: rgba(140, 170, 255, 0.08);
-     --color-overlay: rgba(0, 0, 0, 0.68);
-    
-    /* 边框色 */
-     --color-border: #2a3851;
-     --color-border-strong: #42557a;
-    
-    /* 主色调调整 */
-     --color-primary-light: rgba(72, 137, 255, 0.24);
-     --color-primary-soft: rgba(72, 137, 255, 0.12);
-     --color-accent-soft: rgba(145, 110, 255, 0.18);
-    
-    /* 阴影调整 */
-     --shadow-sm: 0 12px 24px rgba(0, 0, 0, 0.24);
-     --shadow-md: 0 24px 48px rgba(0, 0, 0, 0.32);
-     --shadow-lg: 0 34px 72px rgba(0, 0, 0, 0.42);
-     --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 }

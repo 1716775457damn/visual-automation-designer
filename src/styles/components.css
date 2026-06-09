@@ -1,9 +1,10 @@
 /**
  * 组件样式
  * 所有组件的基础样式
+ *
+ * Variables are provided by variables.css (loaded via index.css)
+ * which aliases all --color-* to --vad-* tokens from tokens.css.
  */
-
-@import './variables.css';
 
 /* ============================================================================
    FlowEditor 组件
