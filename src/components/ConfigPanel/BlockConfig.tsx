@@ -16,12 +16,15 @@ import {
   WaitImageConfigUI,
   WaitTimeConfigUI,
   InputTextConfigUI,
+  ScreenshotAssertConfigUI,
+  TextExtractConfigUI,
 } from './ActionBlockConfig';
 import styles from './ConfigPanel.module.css';
 import {
   LoopConfigUI,
   LoopInfiniteConfigUI,
   ConditionConfigUI,
+  TextCheckConfigUI,
 } from './ControlBlockConfig';
 
 export interface BlockConfigProps {
@@ -42,9 +45,12 @@ function getBlockTypeName(blockType: string): string {
     wait_image: '等待图片',
     wait_time: '等待时间',
     input_text: '输入文本',
+    screenshot_assert: '截图断言',
+    text_extract: '文本提取',
     loop: '循环',
     loop_infinite: '无限循环',
     condition: '条件判断',
+    text_check: '文本检查',
   };
   return typeNames[blockType] || blockType;
 }
@@ -67,12 +73,18 @@ function BlockSpecificConfig({ blockType, config, onChange }: BlockSpecificConfi
       return <WaitTimeConfigUI config={config} onChange={onChange} />;
     case 'input_text':
       return <InputTextConfigUI config={config} onChange={onChange} />;
+    case 'screenshot_assert':
+      return <ScreenshotAssertConfigUI config={config} onChange={onChange} />;
+    case 'text_extract':
+      return <TextExtractConfigUI config={config} onChange={onChange} />;
     case 'loop':
       return <LoopConfigUI config={config} onChange={onChange} />;
     case 'loop_infinite':
       return <LoopInfiniteConfigUI />;
     case 'condition':
       return <ConditionConfigUI config={config} onChange={onChange} />;
+    case 'text_check':
+      return <TextCheckConfigUI config={config} onChange={onChange} />;
     default:
       return (
         <div className={styles.blockConfigSection}>
@@ -132,6 +144,22 @@ export function BlockConfig({
           intervalMs: (localConfig.intervalMs as number) ?? 50,
         };
         break;
+      case 'screenshot_assert':
+        finalConfig = {
+          type: 'screenshot_assert',
+          imageId: (localConfig.imageId as string) ?? '',
+          threshold: (localConfig.threshold as number) ?? 0.0,
+          strictMode: (localConfig.strictMode as boolean) ?? false,
+          region: localConfig.region as { x: number; y: number; width: number; height: number } | undefined,
+        };
+        break;
+      case 'text_extract':
+        finalConfig = {
+          type: 'text_extract',
+          imageId: (localConfig.imageId as string) ?? '',
+          language: (localConfig.language as string) ?? 'chi_sim',
+        };
+        break;
       case 'loop':
         finalConfig = { type: 'loop', count: (localConfig.count as number) ?? 1 };
         break;
@@ -143,6 +171,15 @@ export function BlockConfig({
           type: 'condition',
           imageId: localConfig.imageId as string,
           condition: (localConfig.condition as ConditionOp) ?? 'image_exists',
+          trueBranch: (localConfig.trueBranch as string[]) ?? [],
+          falseBranch: (localConfig.falseBranch as string[]) ?? [],
+        };
+        break;
+      case 'text_check':
+        finalConfig = {
+          type: 'text_check',
+          imageId: (localConfig.imageId as string) ?? '',
+          keyword: (localConfig.keyword as string) ?? '',
           trueBranch: (localConfig.trueBranch as string[]) ?? [],
           falseBranch: (localConfig.falseBranch as string[]) ?? [],
         };
@@ -181,12 +218,18 @@ export function BlockConfig({
         return typeof localConfig.durationMs === 'number' && localConfig.durationMs >= 0;
       case 'input_text':
         return typeof localConfig.text === 'string' && localConfig.text.length > 0;
+      case 'screenshot_assert':
+        return typeof localConfig.imageId === 'string' && localConfig.imageId.length > 0;
+      case 'text_extract':
+        return typeof localConfig.language === 'string';
       case 'loop':
         return typeof localConfig.count === 'number' && localConfig.count >= 1;
       case 'loop_infinite':
         return true;
       case 'condition':
         return !!localConfig.imageId && !!localConfig.condition;
+      case 'text_check':
+        return typeof localConfig.keyword === 'string' && localConfig.keyword.length > 0;
       default:
         return false;
     }
@@ -203,10 +246,16 @@ export function BlockConfig({
         return '请输入有效的等待时间';
       case 'input_text':
         return '请输入要模拟的文本';
+      case 'screenshot_assert':
+        return '请选择参考图片';
+      case 'text_extract':
+        return '请选择识别语言';
       case 'loop':
         return '请输入有效的循环次数';
       case 'condition':
         return '请选择条件判断的图片';
+      case 'text_check':
+        return '请输入要检测的文字';
       default:
         return '请完成配置';
     }

@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import styles from './BlockToolbox.module.css';
 
-export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text';
+export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text' | 'screenshot_assert' | 'text_extract';
 
 export interface ActionBlockItem {
   type: ActionType;
@@ -23,6 +23,8 @@ const ACTION_BLOCKS: ActionBlockItem[] = [
   { type: 'wait_image', label: '等待图片', icon: '🖼️', description: '等待指定图片出现', shortcut: 'W' },
   { type: 'wait_time', label: '等待时间', icon: '⏱️', description: '等待指定时间', shortcut: 'T' },
   { type: 'input_text', label: '输入文本', icon: '⌨️', description: '模拟键盘输入', shortcut: 'I' },
+  { type: 'screenshot_assert', label: '截图断言', icon: '📸', description: '截图后与参考图比对', shortcut: 'S' },
+  { type: 'text_extract', label: '文本提取', icon: '👁️', description: '从屏幕区域提取文字', shortcut: 'X' },
 ];
 
 export interface ActionBlocksProps {

@@ -188,7 +188,10 @@ vi.mock('./components/BlockToolbox', () => ({
       <button type="button" onClick={() => onBlockSelect?.('wait_image', 'action')}>🖼️ 直接放一个等待图片积木块</button>
       <button type="button" onClick={() => onBlockSelect?.('wait_time', 'action')}>⏱️ 直接放一个等待时间积木块</button>
       <button type="button" onClick={() => onBlockSelect?.('input_text', 'action')}>⌨️ 直接放一个输入文本积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('screenshot_assert', 'action')}>📸 直接放一个截图断言积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('text_extract', 'action')}>👁️ 直接放一个文本提取积木块</button>
       <button type="button" onClick={() => onBlockSelect?.('loop_infinite', 'control')}>♾️ 直接放一个无限循环积木块</button>
+      <button type="button" onClick={() => onBlockSelect?.('text_check', 'control')}>🔤 直接放一个文本检查积木块</button>
       <button type="button" onClick={() => onBlockSelect?.('condition', 'control')}>❓ 直接放一个条件判断积木块</button>
       <button type="button" onClick={() => onArmPlacement?.('loop', 'control')}>在白板上指定位置放置 循环</button>
       {pendingPlacementLabel && (

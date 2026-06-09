@@ -299,6 +299,79 @@ describe('BlockConfig', () => {
     });
   });
 
+  describe('ScreenshotAssertBlock 配置', () => {
+    it('应该渲染参考图片选择器和阈值输入', () => {
+      render(<BlockConfig {...defaultProps} blockType="screenshot_assert" />);
+      expect(screen.getByTestId('screenshot-assert-config')).toBeInTheDocument();
+      expect(screen.getByTestId('image-selector')).toBeInTheDocument();
+      expect(screen.getByTestId('input-threshold')).toBeInTheDocument();
+    });
+
+    it('应该能够修改阈值', () => {
+      render(<BlockConfig {...defaultProps} blockType="screenshot_assert" />);
+      const thresholdInput = screen.getByTestId('input-threshold') as HTMLInputElement;
+      fireEvent.change(thresholdInput, { target: { value: '0.5' } });
+      expect(thresholdInput.value).toBe('0.5');
+    });
+
+    it('没有选择图片时保存按钮应禁用', () => {
+      render(<BlockConfig {...defaultProps} blockType="screenshot_assert" />);
+      expect(screen.getByTestId('btn-save-config')).toBeDisabled();
+    });
+
+    it('选择图片后保存按钮应可用', () => {
+      render(<BlockConfig {...defaultProps} blockType="screenshot_assert" config={{ imageId: 'test-img', threshold: 0.0, strictMode: false }} />);
+      expect(screen.getByTestId('btn-save-config')).not.toBeDisabled();
+    });
+  });
+
+  describe('TextExtractBlock 配置', () => {
+    it('应该渲染图片选择器和语言选择', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_extract" />);
+      expect(screen.getByTestId('text-extract-config')).toBeInTheDocument();
+      expect(screen.getByTestId('image-selector')).toBeInTheDocument();
+      expect(screen.getByTestId('select-language')).toBeInTheDocument();
+    });
+
+    it('应该能够切换识别语言', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_extract" />);
+      const select = screen.getByTestId('select-language') as HTMLSelectElement;
+      fireEvent.change(select, { target: { value: 'eng' } });
+      expect(select.value).toBe('eng');
+    });
+
+    it('有默认语言时保存按钮应可用', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_extract" config={{ language: 'chi_sim' }} />);
+      expect(screen.getByTestId('btn-save-config')).not.toBeDisabled();
+    });
+  });
+
+  describe('TextCheckBlock 配置', () => {
+    it('应该渲染关键字输入和图片选择器', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_check" />);
+      expect(screen.getByTestId('text-check-config')).toBeInTheDocument();
+      expect(screen.getByTestId('input-keyword')).toBeInTheDocument();
+      expect(screen.getByTestId('image-selector')).toBeInTheDocument();
+    });
+
+    it('应该能够修改关键字', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_check" />);
+      const keywordInput = screen.getByTestId('input-keyword') as HTMLInputElement;
+      fireEvent.change(keywordInput, { target: { value: '确认' } });
+      expect(keywordInput.value).toBe('确认');
+    });
+
+    it('没有输入关键字时保存按钮应禁用', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_check" />);
+      expect(screen.getByTestId('btn-save-config')).toBeDisabled();
+    });
+
+    it('输入关键字后保存按钮应可用', () => {
+      render(<BlockConfig {...defaultProps} blockType="text_check" config={{ keyword: '确认' }} />);
+      expect(screen.getByTestId('btn-save-config')).not.toBeDisabled();
+    });
+  });
+
   describe('未知积木块类型', () => {
     it('应显示未知类型提示', () => {
       render(<BlockConfig {...defaultProps} blockType="unknown_type" />);
@@ -310,6 +383,9 @@ describe('BlockConfig', () => {
     it.each([
       ['click', '点击'],
       ['wait_time', '等待时间'],
+      ['screenshot_assert', '截图断言'],
+      ['text_extract', '文本提取'],
+      ['text_check', '文本检查'],
       ['loop', '循环'],
       ['loop_infinite', '无限循环'],
       ['condition', '条件判断'],

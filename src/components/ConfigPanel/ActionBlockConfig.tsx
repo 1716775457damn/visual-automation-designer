@@ -1,6 +1,6 @@
 /**
  * ActionBlockConfig — 动作类积木配置组件
- * 从 BlockConfig.tsx 提取：click / wait_image / wait_time / input_text 的配置 UI。
+ * 从 BlockConfig.tsx 提取：click / wait_image / wait_time / input_text / screenshot_assert / text_extract 的配置 UI。
  */
 
 import type { ClickMode } from '../../types/block';
@@ -218,6 +218,152 @@ export function InputTextConfigUI({ config, onChange }: ConfigUIProps) {
           data-testid="input-interval"
         />
         <span className={styles.blockConfigHint}>字符之间的输入间隔，默认 50 毫秒</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Screenshot Assert ──────────────────────────────────────────────
+
+export function ScreenshotAssertConfigUI({ config, onChange }: ConfigUIProps) {
+  const imageId = (config.imageId as string) || '';
+  const threshold = (config.threshold as number) ?? 0.0;
+  const strictMode = (config.strictMode as boolean) ?? false;
+  const region = config.region as { x: number; y: number; width: number; height: number } | undefined;
+
+  const handleRegionChange = (field: string, value: number) => {
+    const currentRegion = region ?? { x: 0, y: 0, width: 0, height: 0 };
+    onChange({ ...config, region: { ...currentRegion, [field]: value } });
+  };
+
+  return (
+    <div className={styles.blockConfigSection} data-testid="screenshot-assert-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>参考图片</label>
+        <ImageSelector
+          selectedId={imageId}
+          onSelect={(newImageId: string) => onChange({ ...config, imageId: newImageId })}
+          showUploadButton={true}
+          emptyMessage="请选择或上传参考图片"
+        />
+      </div>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="screenshot-threshold">比对阈值</label>
+        <input
+          id="screenshot-threshold"
+          type="number"
+          className={styles.blockConfigInput}
+          value={threshold}
+          onChange={(e) => onChange({ ...config, threshold: Number(e.target.value) })}
+          min={0}
+          max={1}
+          step={0.05}
+          data-testid="input-threshold"
+        />
+        <span className={styles.blockConfigHint}>0.0 = 完全一致, 1.0 = 完全忽略差异</span>
+      </div>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>
+          <input
+            type="checkbox"
+            checked={strictMode}
+            onChange={(e) => onChange({ ...config, strictMode: e.target.checked })}
+            data-testid="checkbox-strict"
+          />
+          {' '}严格模式
+        </label>
+        <span className={styles.blockConfigHint}>开启后任何像素差异都将视为失败</span>
+      </div>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>裁剪区域（可选）</label>
+        <div className={styles.blockConfigFieldGroup}>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="screenshot-region-x">X</label>
+            <input
+              id="screenshot-region-x"
+              type="number"
+              className={styles.blockConfigInput}
+              value={region?.x ?? 0}
+              onChange={(e) => handleRegionChange('x', Number(e.target.value))}
+              min={0}
+              data-testid="input-region-x"
+            />
+          </div>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="screenshot-region-y">Y</label>
+            <input
+              id="screenshot-region-y"
+              type="number"
+              className={styles.blockConfigInput}
+              value={region?.y ?? 0}
+              onChange={(e) => handleRegionChange('y', Number(e.target.value))}
+              min={0}
+              data-testid="input-region-y"
+            />
+          </div>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="screenshot-region-w">宽度</label>
+            <input
+              id="screenshot-region-w"
+              type="number"
+              className={styles.blockConfigInput}
+              value={region?.width ?? 0}
+              onChange={(e) => handleRegionChange('width', Number(e.target.value))}
+              min={0}
+              data-testid="input-region-w"
+            />
+          </div>
+          <div className={styles.blockConfigField}>
+            <label className={styles.blockConfigLabel} htmlFor="screenshot-region-h">高度</label>
+            <input
+              id="screenshot-region-h"
+              type="number"
+              className={styles.blockConfigInput}
+              value={region?.height ?? 0}
+              onChange={(e) => handleRegionChange('height', Number(e.target.value))}
+              min={0}
+              data-testid="input-region-h"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Text Extract ───────────────────────────────────────────────────
+
+export function TextExtractConfigUI({ config, onChange }: ConfigUIProps) {
+  const imageId = (config.imageId as string) || '';
+  const language = (config.language as string) || 'chi_sim';
+
+  return (
+    <div className={styles.blockConfigSection} data-testid="text-extract-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>提取区域图片</label>
+        <ImageSelector
+          selectedId={imageId}
+          onSelect={(newImageId: string) => onChange({ ...config, imageId: newImageId })}
+          showUploadButton={true}
+          emptyMessage="选择要提取文字的图片区域（可选，留空则全屏提取）"
+        />
+      </div>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="text-extract-lang">识别语言</label>
+        <select
+          id="text-extract-lang"
+          className={styles.blockConfigSelect}
+          value={language}
+          onChange={(e) => onChange({ ...config, language: e.target.value })}
+          data-testid="select-language"
+        >
+          <option value="chi_sim">简体中文</option>
+          <option value="chi_tra">繁体中文</option>
+          <option value="eng">英语</option>
+          <option value="jpn">日语</option>
+          <option value="kor">韩语</option>
+        </select>
+        <span className={styles.blockConfigHint}>选择 OCR 识别语言</span>
       </div>
     </div>
   );

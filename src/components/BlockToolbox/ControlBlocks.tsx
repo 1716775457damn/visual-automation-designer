@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import styles from './BlockToolbox.module.css';
 
-export type ControlType = 'loop' | 'loop_infinite' | 'condition';
+export type ControlType = 'loop' | 'loop_infinite' | 'condition' | 'text_check';
 
 export interface ControlBlockItem {
   type: ControlType;
@@ -22,6 +22,7 @@ const CONTROL_BLOCKS: ControlBlockItem[] = [
   { type: 'loop', label: '循环', icon: '🔁', description: '重复执行指定次数', shortcut: 'L' },
   { type: 'loop_infinite', label: '无限循环', icon: '♾️', description: '无限重复执行', shortcut: 'U' },
   { type: 'condition', label: '条件判断', icon: '❓', description: '根据条件分支执行', shortcut: 'F' },
+  { type: 'text_check', label: '文本检查', icon: '🔤', description: '检查屏幕是否含指定文字', shortcut: 'K' },
 ];
 
 export interface ControlBlocksProps {

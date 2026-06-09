@@ -151,6 +151,10 @@ export function createDefaultConfig(type: string, category: string): BlockConfig
         return { type: 'wait_time', durationMs: 1000 };
       case 'input_text':
         return { type: 'input_text', text: '', intervalMs: 50 };
+      case 'screenshot_assert':
+        return { type: 'screenshot_assert', imageId: '', threshold: 0.0, strictMode: false };
+      case 'text_extract':
+        return { type: 'text_extract', imageId: '', language: 'chi_sim' };
       default:
         return { type: 'wait_time', durationMs: 1000 };
     }
@@ -162,6 +166,8 @@ export function createDefaultConfig(type: string, category: string): BlockConfig
         return { type: 'loop_infinite' };
       case 'condition':
         return { type: 'condition', imageId: createPlaceholderImageId(), condition: 'image_exists', trueBranch: [], falseBranch: [] };
+      case 'text_check':
+        return { type: 'text_check', imageId: '', keyword: '', trueBranch: [], falseBranch: [] };
       default:
         return { type: 'loop', count: 1 };
     }

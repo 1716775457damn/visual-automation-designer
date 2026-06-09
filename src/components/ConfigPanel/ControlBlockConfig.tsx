@@ -1,6 +1,6 @@
 /**
  * ControlBlockConfig — 控制流积木配置组件
- * 从 BlockConfig.tsx 提取：loop / loop_infinite / condition 的配置 UI。
+ * 从 BlockConfig.tsx 提取：loop / loop_infinite / condition / text_check 的配置 UI。
  */
 
 import type { ConditionOp } from '../../types/block';
@@ -95,6 +95,50 @@ export function ConditionConfigUI({ config, onChange }: ConfigUIProps) {
         <p className={styles.blockConfigInfo}>
           <strong>假分支：</strong>
           当条件不满足时，执行连接到「假」端口的积木块
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Text Check ─────────────────────────────────────────────────────
+
+export function TextCheckConfigUI({ config, onChange }: ConfigUIProps) {
+  const imageId = (config.imageId as string) || '';
+  const keyword = (config.keyword as string) || '';
+
+  return (
+    <div className={styles.blockConfigSection} data-testid="text-check-config">
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel} htmlFor="textcheck-keyword">检测文字</label>
+        <input
+          id="textcheck-keyword"
+          type="text"
+          className={styles.blockConfigInput}
+          value={keyword}
+          onChange={(e) => onChange({ ...config, keyword: e.target.value })}
+          placeholder="输入要检测的文字内容"
+          data-testid="input-keyword"
+          aria-required="true"
+        />
+      </div>
+      <div className={styles.blockConfigField}>
+        <label className={styles.blockConfigLabel}>检测区域图片</label>
+        <ImageSelector
+          selectedId={imageId}
+          onSelect={(newImageId: string) => onChange({ ...config, imageId: newImageId })}
+          showUploadButton={true}
+          emptyMessage="选择要检测文字的图片区域（可选，留空则全屏检测）"
+        />
+      </div>
+      <div className={styles.blockConfigBranches}>
+        <p className={styles.blockConfigInfo}>
+          <strong>真分支：</strong>
+          当检测到指定文字时，执行连接到「真」端口的积木块
+        </p>
+        <p className={styles.blockConfigInfo}>
+          <strong>假分支：</strong>
+          当未检测到指定文字时，执行连接到「假」端口的积木块
         </p>
       </div>
     </div>

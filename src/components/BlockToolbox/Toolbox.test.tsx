@@ -12,6 +12,24 @@ describe('Toolbox', () => {
     expect(onBlockSelect).toHaveBeenCalledWith('click', 'action');
   });
 
+  it('calls onBlockSelect for screenshot_assert block', () => {
+    const onBlockSelect = vi.fn();
+    render(<Toolbox onBlockSelect={onBlockSelect} />);
+
+    fireEvent.click(screen.getByTestId('action-block-screenshot_assert'));
+
+    expect(onBlockSelect).toHaveBeenCalledWith('screenshot_assert', 'action');
+  });
+
+  it('calls onBlockSelect for text_extract block', () => {
+    const onBlockSelect = vi.fn();
+    render(<Toolbox onBlockSelect={onBlockSelect} />);
+
+    fireEvent.click(screen.getByTestId('action-block-text_extract'));
+
+    expect(onBlockSelect).toHaveBeenCalledWith('text_extract', 'action');
+  });
+
   it('calls onBlockSelect when a control block is clicked', () => {
     const onBlockSelect = vi.fn();
     render(<Toolbox onBlockSelect={onBlockSelect} />);
@@ -19,6 +37,15 @@ describe('Toolbox', () => {
     fireEvent.click(screen.getByTestId('control-block-loop'));
 
     expect(onBlockSelect).toHaveBeenCalledWith('loop', 'control');
+  });
+
+  it('calls onBlockSelect for text_check block', () => {
+    const onBlockSelect = vi.fn();
+    render(<Toolbox onBlockSelect={onBlockSelect} />);
+
+    fireEvent.click(screen.getByTestId('control-block-text_check'));
+
+    expect(onBlockSelect).toHaveBeenCalledWith('text_check', 'control');
   });
 
   it('calls onArmPlacement when the place button is clicked', () => {
