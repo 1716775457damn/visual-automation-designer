@@ -50,12 +50,11 @@
                              },
                    "license":  "MIT",
                    "targets":  [
-                                   "msi",
-                                   "nsis",
-                                   "dmg",
-                                   "appimage",
-                                   "deb"
-                               ],
+                                    "nsis",
+                                    "dmg",
+                                    "appimage",
+                                    "deb"
+                                ],
                    "macOS":  {
                                  "minimumSystemVersion":  "10.13",
                                  "frameworks":  [
