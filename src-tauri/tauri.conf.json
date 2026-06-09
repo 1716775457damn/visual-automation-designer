@@ -1,5 +1,5 @@
 {
-    "version":  "0.5.23",
+    "version":  "1.0.0",
     "plugins":  {
                     "shell":  {
                                   "open":  true

@@ -11,6 +11,7 @@ pub mod manager;
 pub mod flow_validator;
 pub mod block_validator;
 pub mod connection_validator;
+pub mod port_validator;
 pub mod serializer;
 
 pub use manager::FlowManager;

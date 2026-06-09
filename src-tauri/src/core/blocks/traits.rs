@@ -140,6 +140,25 @@ pub fn validate_config(config: &BlockConfig) -> Vec<BlockError> {
                 errors.push(BlockError::new("branches", "At least one branch must have blocks"));
             }
         }
+        BlockConfig::TextExtract { image_id: _, language: _ } => {
+            // TextExtract has no required config validation beyond having
+            // a valid image reference, which is checked elsewhere
+        }
+        BlockConfig::ScreenshotAssert { image_id: _, threshold, strict_mode: _, region: _ } => {
+            if let Some(t) = threshold {
+                if *t < 0.0 || *t > 1.0 {
+                    errors.push(BlockError::new("threshold", "Threshold must be between 0.0 and 1.0"));
+                }
+            }
+        }
+        BlockConfig::TextCheck { image_id: _, keyword, true_branch, false_branch } => {
+            if keyword.is_empty() {
+                errors.push(BlockError::new("keyword", "Keyword cannot be empty"));
+            }
+            if true_branch.is_empty() && false_branch.is_empty() {
+                errors.push(BlockError::new("branches", "At least one branch must have blocks"));
+            }
+        }
     }
     
     errors

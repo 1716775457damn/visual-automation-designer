@@ -4,6 +4,48 @@
 
 ---
 
+## [1.0.0] - 2026-06-09
+
+### 🎉 V1 正式发布 — 功能完备，生产就绪
+
+### Added
+- **Phase A: 基础积木块体系** — Path + Mouse Input 节点、Condition + Loop 控制流节点、完善 Port 校验系统
+- **Phase B: OCR / 文字检测** — Tesseract OCR 引擎集成、TextExtract 块（文字提取）、TextCheck 块（文字条件跳转）
+- **Phase C: ScreenshotAssert 截图断言** — 像素级截图比对块，支持 Region of Interest 裁剪、可配置阈值、严格模式、差异热力图生成
+- **Phase D: 执行引擎加固** — 8 个差异比对单元测试、60 秒超时保护、可选下采样加速（diff_images_scaled）
+
+### Changed
+- 全版本号统一提升至 **1.0.0**，语义化版本正式发布
+
+### Technical
+- 新增 `DiffResult` / `diff_images()` / `diff_images_scaled()` 差异比对引擎
+- 新增 `execute_screenshot_assert_block()` 截图断言执行器
+- 新增 `ExecutionContext.variables` 运行时变量存储
+- 新增 `Rect` + `parse_region()` 区域裁剪工具
+- 新增 `SCREENSHOT_ASSERT_TIMEOUT_SECS` 超时保护常量
+- TypeScript 端补齐 `toTauriBlockConfig` 中 text_extract / screenshot_assert / text_check 三个缺失分支，修复 TS 编译阻断
+
+---
+
+## [0.5.23] - 2026-06-09
+
+### Added
+- ScreenshotAssert 块类型：数据模型（`ActionType::ScreenshotAssert`, `BlockConfig::ScreenshotAssert`）、端口定义、前端类型、BlockNode UI
+- `ImageMatcher::diff_images()`：逐像素灰度 absdiff 差异比对，支持热力图覆盖、尺寸自适应
+- 图片差异比对单元测试 8 个（覆盖完全一致、完全差异、单像素差异、热力图、尺寸缩放、零阈值、高阈值、空图）
+- `diff_images_scaled()`：可选下采样加速方法，scale_factor 参数 [0.01, 1.0]，6 个额外测试
+- 执行引擎超时保护：`image::open` + `ScreenCapture::capture_screen` 60 秒超时，嵌套 `safe_execute` + `tokio::time::timeout`
+- `ExecutionContext.variables`：通用运行时变量 HashMap，支持 `set_variable` / `get_variable` / `clear_variables`
+
+### Fixed
+- `toTauriBlockConfig()` 补齐 text_extract / screenshot_assert / text_check 三个 switch 分支，消除 TS 编译阻塞
+
+### Technical
+- `Rect` + `parse_region()` 工具函数，支持可选 ROI 裁剪
+- 前端 BlockNode 映射：ScreenshotAssert → 颜色 #f44336 / 图标 📸
+
+---
+
 ## [0.5.22] - 2026-06-08
 
 ### Performance

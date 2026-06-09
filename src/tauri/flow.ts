@@ -186,6 +186,25 @@ type TauriBlockConfigPayload =
       condition: ConditionOp;
       trueBranch: BlockId[];
       falseBranch: BlockId[];
+    }
+  | {
+      type: 'textExtract';
+      imageId?: string;
+      language?: string;
+    }
+  | {
+      type: 'screenshotAssert';
+      imageId?: string;
+      threshold?: number;
+      strictMode: boolean;
+      region?: { x: number; y: number; width: number; height: number };
+    }
+  | {
+      type: 'textCheck';
+      imageId?: string;
+      keyword: string;
+      trueBranch: BlockId[];
+      falseBranch: BlockId[];
     };
 
 function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
@@ -229,6 +248,28 @@ function toTauriBlockConfig(config: BlockConfig): TauriBlockConfigPayload {
         type: 'condition',
         imageId: config.imageId,
         condition: config.condition,
+        trueBranch: config.trueBranch,
+        falseBranch: config.falseBranch,
+      };
+    case 'text_extract':
+      return {
+        type: 'textExtract',
+        imageId: config.imageId,
+        language: config.language,
+      };
+    case 'screenshot_assert':
+      return {
+        type: 'screenshotAssert',
+        imageId: config.imageId,
+        threshold: config.threshold,
+        strictMode: config.strictMode,
+        region: config.region,
+      };
+    case 'text_check':
+      return {
+        type: 'textCheck',
+        imageId: config.imageId,
+        keyword: config.keyword,
         trueBranch: config.trueBranch,
         falseBranch: config.falseBranch,
       };

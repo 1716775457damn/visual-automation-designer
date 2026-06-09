@@ -12,6 +12,7 @@ pub mod flow;
 pub mod execution;
 pub mod image_library;
 pub mod history;
+pub mod ocr;
 
 // Re-export core types
 pub use blocks::{Block, BlockResult, BlockError, ClickBlock, WaitImageBlock, WaitTimeBlock, InputTextBlock, LoopBlock, InfiniteLoopBlock, ConditionalBlock};

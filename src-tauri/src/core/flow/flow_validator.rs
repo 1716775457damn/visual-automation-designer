@@ -129,6 +129,9 @@ impl FlowValidator {
         // Validate connections
         errors.extend(connection_validator::validate_connections(self, flow));
 
+        // Validate port requirements
+        errors.extend(super::port_validator::validate_port_requirements(self, flow));
+
         // Check for cycles
         if let Some(cycle) = self.detect_cycle(flow) {
             errors.push(

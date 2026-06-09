@@ -51,6 +51,8 @@ pub struct ExecutionContext {
     loop_counters: HashMap<BlockId, LoopCounter>,
     /// Image match result cache: image_id -> (x, y) center position
     image_match_cache: HashMap<ImageId, (u32, u32)>,
+    /// Generic runtime variables for cross-block data passing
+    variables: HashMap<String, String>,
     /// Total blocks executed
     blocks_executed: u64,
     /// Flow start time
@@ -71,6 +73,7 @@ impl ExecutionContext {
             execution_log: Vec::new(),
             loop_counters: HashMap::new(),
             image_match_cache: HashMap::new(),
+            variables: HashMap::new(),
             blocks_executed: 0,
             start_time: None,
         }
@@ -83,6 +86,7 @@ impl ExecutionContext {
         self.execution_log.clear();
         self.loop_counters.clear();
         self.image_match_cache.clear();
+        self.variables.clear();
     }
 
     /// Get the current block ID
@@ -137,6 +141,21 @@ impl ExecutionContext {
         self.image_match_cache.get(image_id).copied()
     }
 
+    /// Set a runtime variable for cross-block data passing
+    pub fn set_variable(&mut self, key: String, value: String) {
+        self.variables.insert(key, value);
+    }
+
+    /// Get a runtime variable value
+    pub fn get_variable(&self, key: &str) -> Option<&str> {
+        self.variables.get(key).map(|s| s.as_str())
+    }
+
+    /// Clear all runtime variables
+    pub fn clear_variables(&mut self) {
+        self.variables.clear();
+    }
+
     /// Clear image match cache
     pub fn clear_image_match_cache(&mut self) {
         self.image_match_cache.clear();
@@ -170,6 +189,7 @@ impl ExecutionContext {
         self.execution_log.clear();
         self.loop_counters.clear();
         self.image_match_cache.clear();
+        self.variables.clear();
         self.blocks_executed = 0;
         self.start_time = None;
     }

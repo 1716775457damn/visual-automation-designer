@@ -100,6 +100,47 @@ pub(super) fn validate_block_config(
                 );
             }
         }
+        BlockConfig::TextExtract { .. } => {
+            // TextExtract validation: requires image reference (checked in check_image_references)
+        }
+        BlockConfig::ScreenshotAssert { image_id: _, threshold, strict_mode: _, region: _ } => {
+            if let Some(t) = threshold {
+                if *t < 0.0 || *t > 1.0 {
+                    errors.push(
+                        ValidationError::warning(
+                            "INVALID_ASSERT_THRESHOLD",
+                            "Screenshot assert threshold should be between 0.0 (exact match) and 1.0 (ignore all)".to_string(),
+                        )
+                        .with_block(block_id.clone()),
+                    );
+                }
+            }
+        }
+        BlockConfig::TextCheck {
+            keyword,
+            true_branch,
+            false_branch,
+            ..
+        } => {
+            if keyword.is_empty() {
+                errors.push(
+                    ValidationError::warning(
+                        "EMPTY_TEXT_CHECK_KEYWORD",
+                        "Text check keyword is empty".to_string(),
+                    )
+                    .with_block(block_id.clone()),
+                );
+            }
+            if true_branch.is_empty() && false_branch.is_empty() {
+                errors.push(
+                    ValidationError::warning(
+                        "EMPTY_TEXT_CHECK_BRANCHES",
+                        "Both text check branches are empty".to_string(),
+                    )
+                    .with_block(block_id.clone()),
+                );
+            }
+        }
     }
 
     errors
@@ -143,6 +184,33 @@ pub(super) fn check_image_references(
                 }
             }
             BlockConfig::Condition { image_id, .. } => {
+                if let Some(image_id) = image_id {
+                    if image_id.0.is_nil() {
+                        errors.push(
+                            ValidationError::error(
+                                "INVALID_IMAGE_REFERENCE",
+                                "Image ID is invalid (nil UUID)".to_string(),
+                            )
+                            .with_block(block_id.clone()),
+                        );
+                    }
+                }
+            }
+            BlockConfig::TextExtract { image_id, .. } => {
+                if let Some(image_id) = image_id {
+                    if image_id.0.is_nil() {
+                        errors.push(
+                            ValidationError::error(
+                                "INVALID_IMAGE_REFERENCE",
+                                "Image ID is invalid (nil UUID)".to_string(),
+                            )
+                            .with_block(block_id.clone()),
+                        );
+                    }
+                }
+            }
+            BlockConfig::ScreenshotAssert { image_id, .. }
+            | BlockConfig::TextCheck { image_id, .. } => {
                 if let Some(image_id) = image_id {
                     if image_id.0.is_nil() {
                         errors.push(

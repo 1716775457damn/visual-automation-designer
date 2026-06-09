@@ -5,3 +5,4 @@
 export * from './block';
 export * from './flow';
 export * from './image';
+export * from './port';

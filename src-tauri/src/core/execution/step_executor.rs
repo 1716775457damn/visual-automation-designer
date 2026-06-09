@@ -7,17 +7,30 @@
 
 use std::time::Duration;
 
+use image::{DynamicImage, GenericImageView};
 use tokio::time::sleep;
 
 use crate::error::{AppError, Result};
 use crate::models::{
-    BlockConfig, BlockId, BlockNode, BlockType, ConditionOp, ImageId,
+    BlockConfig, BlockId, BlockNode, BlockType, ConditionOp, ImageId, ImageMetadata,
 };
+
+/// Default timeout for screenshot assert execution (in seconds).
+/// Prevents infinite hangs on large images or screen capture failures.
+const SCREENSHOT_ASSERT_TIMEOUT_SECS: u64 = 60;
+
+/// Simple rectangle for region-of-interest cropping
+struct Rect {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+}
 use crate::core::BlockResult;
 
 use super::events::ExecutionEvent;
 use super::runner::{
-    BoxFuture, DEFAULT_WAIT_TIMEOUT_MS, POLL_INTERVAL_MS,
+    BoxFuture, safe_execute, DEFAULT_WAIT_TIMEOUT_MS, POLL_INTERVAL_MS,
     Executor,
 };
 
@@ -126,6 +139,14 @@ impl Executor {
             BlockConfig::InputText { text, interval_ms } => {
                 self.execute_input_text_block(text, *interval_ms).await
             }
+            BlockConfig::TextExtract { image_id, language } => {
+                self.execute_text_extract_block(image_id.as_ref(), language.as_deref()).await
+            }
+            BlockConfig::ScreenshotAssert { image_id, threshold, strict_mode, region } => {
+                self.execute_screenshot_assert_block(
+                    image_id.as_ref(), *threshold, *strict_mode, region.as_ref(),
+                ).await
+            }
             _ => Err(AppError::ExecutionFailed(
                 "Invalid action block config".to_string(),
             )),
@@ -164,6 +185,20 @@ impl Executor {
                     self.execute_conditional_block(
                         image_id.as_ref(),
                         condition,
+                        true_branch,
+                        false_branch,
+                    )
+                    .await
+                }
+                BlockConfig::TextCheck {
+                    image_id,
+                    keyword,
+                    true_branch,
+                    false_branch,
+                } => {
+                    self.execute_text_check_block(
+                        image_id.as_ref(),
+                        keyword,
                         true_branch,
                         false_branch,
                     )
@@ -446,6 +481,252 @@ impl Executor {
             } else {
                 false_branch
             };
+
+            match self.execute_child_blocks(branch).await? {
+                BlockResult::Continue => {}
+                other => return Ok(other),
+            }
+
+            Ok(BlockResult::Continue)
+        })
+    }
+
+    /// Execute TextExtractBlock — take screenshot, run OCR, return recognized text
+    pub(super) async fn execute_text_extract_block(
+        &mut self,
+        _image_id: Option<&ImageId>,
+        language: Option<&str>,
+    ) -> Result<BlockResult> {
+        // Take screenshot of the primary monitor
+        let capture = safe_execute(
+            || crate::platform::ScreenCapture::new().capture_screen(),
+            "Screen capture for OCR text extraction",
+        )??;
+
+        // Run OCR on the captured image (convert from DynamicImage to RgbaImage)
+        let rgba = capture.image.to_rgba8();
+        let ocr_result = safe_execute(
+            || crate::core::ocr::recognize_text(&rgba, language),
+            "OCR text recognition",
+        )??;
+
+        log::info!(
+            "TextExtract: recognized {} characters from screen",
+            ocr_result.text.len()
+        );
+
+        // Store the result in context for downstream blocks via event emission
+        // TODO: emit a dedicated execution event with OCR result text when the
+        //       block is executed as part of a flow (currently returns Continue)
+        Ok(BlockResult::Continue)
+    }
+
+    /// Execute ScreenshotAssertBlock — take screenshot, compare with reference image,
+    /// and report pixel-level diff results.
+    pub(super) async fn execute_screenshot_assert_block(
+        &mut self,
+        image_id: Option<&ImageId>,
+        threshold: Option<f64>,
+        strict_mode: bool,
+        region: Option<&serde_json::Value>,
+    ) -> Result<BlockResult> {
+        let reference_id = image_id.ok_or_else(|| {
+            AppError::ExecutionFailed(
+                "ScreenshotAssert block requires a reference image".to_string(),
+            )
+        })?;
+
+        // Get image metadata and load reference from disk
+        // Clone metadata name eagerly to avoid borrow conflict with insert below
+        let metadata = self.image_library.get(reference_id).ok_or_else(|| {
+            AppError::ImageNotFound(reference_id.to_string())
+        })?;
+        let image_name = metadata.name.clone();
+        let image_path = self.images_dir.join(&metadata.file_path);
+        let reference_image: DynamicImage = tokio::time::timeout(
+            std::time::Duration::from_secs(SCREENSHOT_ASSERT_TIMEOUT_SECS),
+            async {
+                safe_execute(
+                    || image::open(&image_path).map_err(|e| AppError::ImageError(e.to_string())),
+                    "Loading reference image for screenshot assert",
+                )
+            },
+        ).await
+            .map_err(|_| AppError::ExecutionFailed(
+                "ScreenshotAssert timed out loading reference image (disk I/O hang)".to_string(),
+            ))?
+            .map_err(|panic_err| AppError::ExecutionFailed(
+                format!("Panic loading reference image: {}", panic_err),
+            ))?
+            ?;
+
+        // Take screenshot of the primary monitor
+        let capture = tokio::time::timeout(
+            std::time::Duration::from_secs(SCREENSHOT_ASSERT_TIMEOUT_SECS),
+            async {
+                safe_execute(
+                    || crate::platform::ScreenCapture::new().capture_screen(),
+                    "Screen capture for screenshot assertion",
+                )
+            },
+        ).await
+            .map_err(|_| AppError::ExecutionFailed(
+                "ScreenshotAssert timed out during screen capture (driver hang)".to_string(),
+            ))?
+            .map_err(|panic_err| AppError::ExecutionFailed(
+                format!("Screen capture panicked: {}", panic_err),
+            ))?
+            ?;
+
+        // Apply optional region cropping to both images
+        let region_rect = region.and_then(|v| Self::parse_region(v));
+
+        let actual_cropped = if let Some(rect) = &region_rect {
+            let (w, h) = capture.image.dimensions();
+            let x = rect.x.min(w.saturating_sub(1));
+            let y = rect.y.min(h.saturating_sub(1));
+            let rw = rect.width.min(w - x);
+            let rh = rect.height.min(h - y);
+            if rw > 0 && rh > 0 {
+                capture.image.crop_imm(x, y, rw, rh)
+            } else {
+                capture.image.clone()
+            }
+        } else {
+            capture.image.clone()
+        };
+
+        let reference_cropped = if let Some(rect) = &region_rect {
+            let (w, h) = reference_image.dimensions();
+            let x = rect.x.min(w.saturating_sub(1));
+            let y = rect.y.min(h.saturating_sub(1));
+            let rw = rect.width.min(w - x);
+            let rh = rect.height.min(h - y);
+            if rw > 0 && rh > 0 {
+                reference_image.crop_imm(x, y, rw, rh)
+            } else {
+                reference_image.clone()
+            }
+        } else {
+            reference_image.clone()
+        };
+
+        // Run diff comparison
+        let matcher = crate::matching::ImageMatcher::new();
+        let diff_result = matcher.diff_images(
+            &reference_cropped,
+            &actual_cropped,
+            30,   // default pixel-level grayscale threshold
+            true, // generate diff heatmap
+        );
+
+        let effective_threshold = threshold.unwrap_or(0.0);
+        let passed = diff_result.diff_percentage <= effective_threshold;
+
+        log::info!(
+            "ScreenshotAssert: image='{}', diff={:.6} ({:.4}%), threshold={:.4}, passed={}",
+            image_name,
+            diff_result.diff_pixel_count,
+            diff_result.diff_percentage * 100.0,
+            effective_threshold,
+            passed,
+        );
+
+        // Store diff results in context
+        {
+            let mut ctx = self.context.lock().await;
+            ctx.set_variable("screenshot_assert_passed".to_string(), passed.to_string());
+            ctx.set_variable("screenshot_assert_diff_pct".to_string(), diff_result.diff_percentage.to_string());
+            ctx.set_variable("screenshot_assert_diff_pixels".to_string(), diff_result.diff_pixel_count.to_string());
+            ctx.set_variable("screenshot_assert_total_pixels".to_string(), diff_result.total_pixels.to_string());
+        }
+
+        // Save diff heatmap image to disk and register it in the library
+        if let Some(diff_img) = &diff_result.diff_image {
+            let diff_image_id = ImageId::new();
+            let diff_file_name = format!("diff_{}.png", diff_image_id);
+            let diff_path = self.images_dir.join(&diff_file_name);
+
+            // Save diff image to disk
+            let _ = safe_execute(
+                || diff_img.save(&diff_path).map_err(|e| AppError::ImageError(e.to_string())),
+                "Saving diff heatmap image",
+            );
+
+            // Register in the image library HashMap
+            let diff_metadata = ImageMetadata::new(
+                format!("{}_diff", image_name),
+                diff_file_name,
+                diff_img.width(),
+                diff_img.height(),
+                crate::models::image::ImageFormat::Png,
+                String::new(), // no hash needed for generated diff images
+            );
+            self.image_library.insert(diff_image_id.clone(), diff_metadata);
+
+            // Store diff image ID in context
+            let mut ctx = self.context.lock().await;
+            ctx.set_variable("screenshot_assert_diff_image_id".to_string(), diff_image_id.to_string());
+        }
+
+        // In strict mode, fail on diff exceeding threshold
+        if strict_mode && !passed {
+            return Err(AppError::ExecutionFailed(format!(
+                "Screenshot assertion FAILED: image '{}' differs by {:.4}% (threshold {:.4})",
+                image_name, diff_result.diff_percentage * 100.0, effective_threshold,
+            )));
+        }
+
+        Ok(BlockResult::Continue)
+    }
+
+    /// Parse a region value from JSON {x, y, width, height}
+    fn parse_region(val: &serde_json::Value) -> Option<Rect> {
+        let obj = val.as_object()?;
+        let x = obj.get("x")?.as_f64()? as u32;
+        let y = obj.get("y")?.as_f64()? as u32;
+        let width = obj.get("width")?.as_f64()? as u32;
+        let height = obj.get("height")?.as_f64()? as u32;
+        Some(Rect { x, y, width, height })
+    }
+
+    /// Execute TextCheckBlock — take screenshot, run OCR, check keyword, branch
+    pub(super) fn execute_text_check_block<'a>(
+        &'a mut self,
+        image_id: Option<&'a ImageId>,
+        keyword: &'a str,
+        true_branch: &'a [BlockId],
+        false_branch: &'a [BlockId],
+    ) -> BoxFuture<'a, Result<BlockResult>> {
+        Box::pin(async move {
+            let _image_id = image_id.ok_or_else(|| {
+                AppError::ExecutionFailed(
+                    "Text check block requires a selected image before execution"
+                        .to_string(),
+                )
+            })?;
+
+            // Take screenshot of the primary monitor
+            let capture = safe_execute(
+                || crate::platform::ScreenCapture::new().capture_screen(),
+                "Screen capture for OCR text check",
+            )??;
+
+            // Run OCR (convert from DynamicImage to RgbaImage)
+            let rgba = capture.image.to_rgba8();
+            let ocr_result = crate::core::ocr::recognize_text(&rgba, None)?;
+
+            // Check for keyword (case-insensitive partial match)
+            let found = crate::core::ocr::contains_keyword(&ocr_result.text, keyword);
+
+            log::info!(
+                "TextCheck: keyword '{}' {} found in recognized text",
+                keyword,
+                if found { "was" } else { "not" }
+            );
+
+            // Execute appropriate branch
+            let branch = if found { true_branch } else { false_branch };
 
             match self.execute_child_blocks(branch).await? {
                 BlockResult::Continue => {}

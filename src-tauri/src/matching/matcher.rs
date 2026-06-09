@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use image::{DynamicImage, GenericImageView, Rgba};
+use image::{DynamicImage, GenericImage, GenericImageView, Rgba};
 
 use crate::models::ImageId;
 
@@ -60,6 +60,51 @@ impl MatchResult {
             confidence: Some(confidence),
             width: Some(width),
             height: Some(height),
+        }
+    }
+}
+
+/// Result of a pixel-level image diff comparison
+#[derive(Debug, Clone)]
+pub struct DiffResult {
+    /// Whether the images match within the given threshold
+    pub passed: bool,
+    /// Proportion of pixels that differ (0.0 to 1.0)
+    pub diff_percentage: f64,
+    /// Total number of differing pixels
+    pub diff_pixel_count: u64,
+    /// Total number of pixels compared
+    pub total_pixels: u64,
+    /// Optional diff heatmap image (pixels exceeding threshold highlighted in red)
+    /// Only set when there are differences
+    pub diff_image: Option<DynamicImage>,
+}
+
+impl DiffResult {
+    /// Create a "passed" result (identical images or within threshold)
+    pub fn passed() -> Self {
+        Self {
+            passed: true,
+            diff_percentage: 0.0,
+            diff_pixel_count: 0,
+            total_pixels: 0,
+            diff_image: None,
+        }
+    }
+
+    /// Create a "failed" result with diff details
+    pub fn failed(
+        diff_percentage: f64,
+        diff_pixel_count: u64,
+        total_pixels: u64,
+        diff_image: Option<DynamicImage>,
+    ) -> Self {
+        Self {
+            passed: diff_percentage <= 0.0,
+            diff_percentage,
+            diff_pixel_count,
+            total_pixels,
+            diff_image,
         }
     }
 }
@@ -517,6 +562,146 @@ impl ImageMatcher {
         }
 
         (numerator / denominator).clamp(-1.0, 1.0)
+    }
+
+    /// Compare two images pixel-by-pixel and return a diff result.
+    ///
+    /// This method:
+    /// 1. Resizes the reference image to match the actual screenshot dimensions
+    /// 2. Computes per-pixel absolute difference in grayscale
+    /// 3. Counts pixels whose difference exceeds the contrast threshold
+    /// 4. Generates an optional diff heatmap (red overlay on differing regions)
+    ///
+    /// # Arguments
+    /// * `reference` - The reference/expected image
+    /// * `actual` - The actual screenshot to compare
+    /// * `diff_threshold` - Pixel-level difference threshold (0-255, default 30).
+    ///   Pixels with grayscale difference above this are counted as "different".
+    /// * `generate_heatmap` - Whether to generate a diff heatmap image
+    ///
+    /// # Returns
+    /// A `DiffResult` with pass/fail, percentage, and optional heatmap
+    pub fn diff_images(
+        &self,
+        reference: &DynamicImage,
+        actual: &DynamicImage,
+        diff_threshold: u8,
+        generate_heatmap: bool,
+    ) -> DiffResult {
+        // Resize reference to match actual dimensions if needed
+        let reference = if reference.dimensions() != actual.dimensions() {
+            reference.resize_exact(
+                actual.width(),
+                actual.height(),
+                image::imageops::FilterType::Nearest,
+            )
+        } else {
+            reference.clone()
+        };
+
+        let width = actual.width();
+        let height = actual.height();
+        let total_pixels = (width as u64) * (height as u64);
+        if total_pixels == 0 {
+            return DiffResult::passed();
+        }
+
+        let mut diff_count: u64 = 0;
+        let mut diff_img = if generate_heatmap {
+            // Start with a clone of the actual image for the heatmap background
+            Some(actual.clone())
+        } else {
+            None
+        };
+
+        // Iterate over every pixel and compute grayscale difference
+        for y in 0..height {
+            for x in 0..width {
+                let ref_pixel = reference.get_pixel(x, y);
+                let actual_pixel = actual.get_pixel(x, y);
+                let ref_gray = Self::to_grayscale(&ref_pixel) as u8;
+                let actual_gray = Self::to_grayscale(&actual_pixel) as u8;
+                let diff = if ref_gray >= actual_gray {
+                    ref_gray - actual_gray
+                } else {
+                    actual_gray - ref_gray
+                };
+
+                if diff > diff_threshold {
+                    diff_count += 1;
+                    // Mark differing pixels in red on the heatmap
+                    if let Some(ref mut img) = diff_img {
+                        img.put_pixel(x, y, Rgba([255, 0, 0, 255]));
+                    }
+                }
+            }
+        }
+
+        let diff_percentage = diff_count as f64 / total_pixels as f64;
+        let diff_image = if diff_count > 0 { diff_img } else { None };
+
+        DiffResult::failed(diff_percentage, diff_count, total_pixels, diff_image)
+    }
+
+    /// Compare two images using optional downscaling for faster approximate results.
+    ///
+    /// This method downsamples both images by the given scale factor before
+    /// computing the per-pixel diff. This provides a speed-vs-accuracy tradeoff
+    /// at the cost of precision — useful for quick previews or very large images.
+    ///
+    /// The returned `diff_percentage` is approximate: it reflects the fraction of
+    /// differing *downsampled* pixels, which may not exactly match the full-resolution
+    /// result. For pixel-level accuracy, use `diff_images` instead.
+    ///
+    /// # Arguments
+    /// * `reference` - The reference/expected image
+    /// * `actual` - The actual screenshot to compare
+    /// * `diff_threshold` - Pixel-level grayscale difference threshold (0-255)
+    /// * `generate_heatmap` - Whether to generate a diff heatmap at the scaled resolution
+    /// * `scale_factor` - Downscaling factor (0.0 to 1.0). 1.0 = no scaling, 0.25 = 16x fewer pixels.
+    ///   Recommended: 0.5 for 4K screenshots, 1.0 for normal use.
+    ///
+    /// # Returns
+    /// A `DiffResult` with approximate pass/fail, percentage, and optional heatmap
+    pub fn diff_images_scaled(
+        &self,
+        reference: &DynamicImage,
+        actual: &DynamicImage,
+        diff_threshold: u8,
+        generate_heatmap: bool,
+        scale_factor: f64,
+    ) -> DiffResult {
+        let scale = scale_factor.clamp(0.01, 1.0);
+
+        let (ref_w, ref_h) = reference.dimensions();
+        let (act_w, act_h) = actual.dimensions();
+
+        // Use the actual image dimensions as target
+        let target_w = (act_w as f64 * scale) as u32;
+        let target_h = (act_h as f64 * scale) as u32;
+
+        let reference_scaled = if scale < 1.0 || ref_w != act_w || ref_h != act_h {
+            reference.resize_exact(
+                target_w.max(1),
+                target_h.max(1),
+                image::imageops::FilterType::Lanczos3,
+            )
+        } else {
+            reference.clone()
+        };
+
+        let actual_scaled = if scale < 1.0 {
+            actual.resize_exact(
+                target_w.max(1),
+                target_h.max(1),
+                image::imageops::FilterType::Lanczos3,
+            )
+        } else {
+            actual.clone()
+        };
+
+        // Delegate to full diff with the scaled images
+        self.diff_images(&reference_scaled, &actual_scaled, diff_threshold, generate_heatmap)
     }
 
     /// Convert RGBA pixel to grayscale
@@ -1565,6 +1750,110 @@ mod tests {
     }
 
     // ========================================================================
+    // diff_images tests (Phase C — ScreenshotAssert)
+    // ========================================================================
+
+    #[test]
+    fn should_diff_identical_images_zero_percentage() {
+        let matcher = ImageMatcher::new();
+        let img = create_test_image(100, 100, Rgba([128, 128, 128, 255]));
+        let result = matcher.diff_images(&img, &img, 30, false);
+        assert!(result.passed);
+        assert_eq!(result.diff_percentage, 0.0);
+        assert_eq!(result.diff_pixel_count, 0);
+        assert_eq!(result.total_pixels, 100 * 100);
+        assert!(result.diff_image.is_none());
+    }
+
+    #[test]
+    fn should_diff_completely_different_images() {
+        let matcher = ImageMatcher::new();
+        let white = create_test_image(50, 50, Rgba([255, 255, 255, 255]));
+        let black = create_test_image(50, 50, Rgba([0, 0, 0, 255]));
+        let result = matcher.diff_images(&white, &black, 30, false);
+        // Every pixel differs by 255 > 30
+        assert_eq!(result.diff_percentage, 1.0);
+        assert_eq!(result.diff_pixel_count, 50 * 50);
+        assert_eq!(result.total_pixels, 50 * 50);
+    }
+
+    #[test]
+    fn should_diff_slightly_different_images() {
+        let matcher = ImageMatcher::new();
+        let base = create_test_image(10, 10, Rgba([100, 100, 100, 255]));
+        let mut slightly_diff = ImageBuffer::new(10, 10);
+        for y in 0..10u32 {
+            for x in 0..10u32 {
+                // One pixel differs by 50, rest are identical
+                let v = if x == 5 && y == 5 { 50 } else { 100 };
+                slightly_diff.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+        let result = matcher.diff_images(
+            &base,
+            &DynamicImage::ImageRgba8(slightly_diff),
+            30, false,
+        );
+        assert_eq!(result.total_pixels, 100);
+        assert_eq!(result.diff_pixel_count, 1);
+        assert!((result.diff_percentage - 0.01).abs() < 1e-6);
+    }
+
+    #[test]
+    fn should_diff_with_generate_heatmap() {
+        let matcher = ImageMatcher::new();
+        let white = create_test_image(20, 20, Rgba([255, 255, 255, 255]));
+        let black = create_test_image(20, 20, Rgba([0, 0, 0, 255]));
+        let result = matcher.diff_images(&white, &black, 30, true);
+        assert!(result.diff_image.is_some());
+        let heatmap = result.diff_image.unwrap();
+        // Heatmap should have same dimensions
+        assert_eq!(heatmap.dimensions(), (20, 20));
+    }
+
+    #[test]
+    fn should_diff_resize_when_dimensions_differ() {
+        let matcher = ImageMatcher::new();
+        let small = create_test_image(10, 10, Rgba([255, 255, 255, 255]));
+        let large = create_test_image(20, 20, Rgba([255, 255, 255, 255]));
+        let result = matcher.diff_images(&small, &large, 30, false);
+        // After resize to 20x20 via Nearest, all pixels should be identical
+        assert_eq!(result.diff_percentage, 0.0);
+        assert_eq!(result.total_pixels, 20 * 20);
+    }
+
+    #[test]
+    fn should_diff_with_zero_threshold_treats_all_differences() {
+        let matcher = ImageMatcher::new();
+        let white = create_test_image(10, 10, Rgba([255, 255, 255, 255]));
+        let almost_white = create_test_image(10, 10, Rgba([254, 254, 254, 255]));
+        let result = matcher.diff_images(&white, &almost_white, 0, false);
+        // With threshold=0, even a 1-bit difference counts
+        assert_eq!(result.diff_pixel_count, 100);
+        assert_eq!(result.diff_percentage, 1.0);
+    }
+
+    #[test]
+    fn should_diff_with_high_threshold_ignores_small_differences() {
+        let matcher = ImageMatcher::new();
+        let white = create_test_image(10, 10, Rgba([255, 255, 255, 255]));
+        let almost_white = create_test_image(10, 10, Rgba([200, 200, 200, 255]));
+        // With threshold=100, diff of 55 should be below threshold
+        let result = matcher.diff_images(&white, &almost_white, 100, false);
+        assert_eq!(result.diff_pixel_count, 0);
+        assert_eq!(result.diff_percentage, 0.0);
+    }
+
+    #[test]
+    fn should_diff_empty_images_gracefully() {
+        let matcher = ImageMatcher::new();
+        let empty = create_test_image(0, 0, Rgba([0, 0, 0, 255]));
+        let result = matcher.diff_images(&empty, &empty, 30, false);
+        assert!(result.passed);
+        assert_eq!(result.total_pixels, 0);
+    }
+
+    // ========================================================================
     // Comprehensive runtime-simulation tests
     // ========================================================================
 
@@ -2005,5 +2294,86 @@ mod tests {
         assert!((old6 - new6).abs() < 1e-10,
             "30x30 exact match: old={}, new={}, diff={}", old6, new6, (old6 - new6).abs());
         assert!((old6 - 1.0).abs() < 1e-10, "30x30 exact match should give 1.0, got old={}", old6);
+    }
+
+    // ---------------------------------------------------------------------------
+    // diff_images_scaled tests (Phase D3)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    fn test_diff_scaled_identical_full_scale() {
+        // scale_factor = 1.0 should behave identically to diff_images
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(100, 100, Rgba([128u8; 4]));
+        let act_img = create_test_image(100, 100, Rgba([128u8; 4]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, false, 1.0);
+        assert!(result.passed);
+        assert_eq!(result.diff_percentage, 0.0);
+        assert!(result.diff_image.is_none());
+    }
+
+    #[test]
+    fn test_diff_scaled_identical_half_scale() {
+        // scale_factor = 0.5 — downsampled identical images still match
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(200, 200, Rgba([128u8; 4]));
+        let act_img = create_test_image(200, 200, Rgba([128u8; 4]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, false, 0.5);
+        assert!(result.passed);
+        assert_eq!(result.diff_percentage, 0.0);
+    }
+
+    #[test]
+    fn test_diff_scaled_completely_different() {
+        // scale_factor = 0.25 — even at reduced resolution, completely different
+        // images should still show diff ~1.0 (opposite colors → many pixels exceed threshold)
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(100, 100, Rgba([0u8, 0u8, 0u8, 255]));
+        let act_img = create_test_image(100, 100, Rgba([255u8, 255u8, 255u8, 255]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, false, 0.25);
+        assert!(!result.passed);
+        // At 25% scale, 25x25 pixels = 625 pixels. All should differ since
+        // grayscale diff of (0 vs 255) = 255 >> threshold 30
+        assert!((result.diff_percentage - 1.0).abs() < 1e-6, "Expected ~1.0, got {}", result.diff_percentage);
+    }
+
+    #[test]
+    fn test_diff_scaled_min_scale() {
+        // scale_factor clamped to 0.01 — tiny image but should still work
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(200, 200, Rgba([128u8; 4]));
+        let act_img = create_test_image(200, 200, Rgba([128u8; 4]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, false, 0.001);
+        // Clamped to 0.01: 200*0.01=2 pixels min — should not panic
+        assert!(result.passed);
+        assert_eq!(result.diff_percentage, 0.0);
+    }
+
+    #[test]
+    fn test_diff_scaled_generates_heatmap() {
+        // Scaled heatmap should be generated at the scaled resolution
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(100, 100, Rgba([0u8, 0u8, 0u8, 255]));
+        let act_img = create_test_image(100, 100, Rgba([255u8, 255u8, 255u8, 255]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, true, 0.5);
+        assert!(!result.passed);
+        let heatmap = result.diff_image.expect("Heatmap should be generated");
+        // Scaled to 50x50
+        assert_eq!(heatmap.width(), 50);
+        assert_eq!(heatmap.height(), 50);
+    }
+
+    #[test]
+    fn test_diff_scaled_different_dimensions() {
+        // scale-factor resize also handles the resize-to-match between images
+        let matcher = ImageMatcher::new();
+        let ref_img = create_test_image(80, 60, Rgba([128u8; 4]));
+        let act_img = create_test_image(200, 150, Rgba([128u8; 4]));
+        let result = matcher.diff_images_scaled(&ref_img, &act_img, 30, false, 0.5);
+        // act_img at 0.5 → 100x75.
+        // ref_img is 80x60, will be resized to 100x75.
+        // Both are uniform 128 → should still pass
+        assert!(result.passed);
+        assert_eq!(result.diff_percentage, 0.0);
     }
 }

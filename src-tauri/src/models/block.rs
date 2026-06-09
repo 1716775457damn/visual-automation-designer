@@ -43,6 +43,10 @@ pub enum ActionType {
     WaitTime,
     /// Input text via keyboard simulation
     InputText,
+    /// Extract text from screen via OCR
+    TextExtract,
+    /// Take screenshot and compare with reference image for assertion
+    ScreenshotAssert,
 }
 
 /// Control block types - control flow execution
@@ -55,6 +59,8 @@ pub enum ControlType {
     LoopInfinite,
     /// Conditional branching based on image presence
     Condition,
+    /// Conditional branching based on OCR text detection
+    TextCheck,
 }
 
 /// Block type classification
@@ -145,6 +151,15 @@ pub enum BlockConfig {
     },
     /// Infinite loop block configuration
     LoopInfinite,
+    /// Text extract block configuration (OCR)
+    TextExtract {
+        /// Image ID to OCR
+        #[serde(alias = "image_id")]
+        image_id: Option<crate::models::image::ImageId>,
+        /// Language tag (e.g. "zh-Hans-CN", "en-US")
+        #[serde(alias = "language")]
+        language: Option<String>,
+    },
     /// Conditional block configuration
     Condition {
         /// Image ID to check
@@ -156,6 +171,37 @@ pub enum BlockConfig {
         #[serde(alias = "true_branch")]
         true_branch: Vec<BlockId>,
         /// Block IDs to execute when condition is false
+        #[serde(alias = "false_branch")]
+        false_branch: Vec<BlockId>,
+    },
+    /// Screenshot assertion block configuration (screenshot comparison)
+    ScreenshotAssert {
+        /// Image ID of the reference image to compare against
+        #[serde(alias = "image_id")]
+        image_id: Option<crate::models::image::ImageId>,
+        /// Difference threshold (0.0 = exact match, 1.0 = ignore all differences)
+        /// Default: 0.0 (exact pixel match)
+        #[serde(alias = "threshold")]
+        threshold: Option<f64>,
+        /// Strict mode: if true, execution error when diff exceeds threshold.
+        /// If false, continue with a warning / output flag.
+        #[serde(alias = "strict_mode")]
+        strict_mode: bool,
+        /// Optional region to restrict comparison {x, y, width, height}
+        #[serde(alias = "region")]
+        region: Option<serde_json::Value>,
+    },
+    /// Text check block configuration (OCR-based conditional)
+    TextCheck {
+        /// Image ID to OCR
+        #[serde(alias = "image_id")]
+        image_id: Option<crate::models::image::ImageId>,
+        /// Keyword to search for in the extracted text
+        keyword: String,
+        /// Block IDs to execute when keyword is found
+        #[serde(alias = "true_branch")]
+        true_branch: Vec<BlockId>,
+        /// Block IDs to execute when keyword is not found
         #[serde(alias = "false_branch")]
         false_branch: Vec<BlockId>,
     },

@@ -12,6 +12,8 @@ import styles from './FlowEditor.module.css';
  * Context menu item definition
  */
 export interface ContextMenuItem {
+  /** Stable identifier for React key (falls back to index if not provided) */
+  id?: string;
   /** Display label */
   label: string;
   /** Optional icon (emoji or icon class) */
@@ -131,7 +133,7 @@ function ContextMenuComponent({
     >
       <ul className={styles.contextMenuList}>
         {items.map((item, index) => (
-          <li key={index} className={styles.contextMenuItemWrapper}>
+          <li key={item.id ?? index} className={styles.contextMenuItemWrapper}>
             <button
               className={`context-menu__item ${styles.contextMenuItem} ${item.disabled ? `context-menu__item--disabled ${styles.contextMenuItemDisabled}` : ''} ${item.danger ? `context-menu__item--danger ${styles.contextMenuItemDanger}` : ''} ${item.submenu ? `context-menu__item--has-submenu ${styles.contextMenuItemHasSubmenu}` : ''}`}
               onClick={() => handleItemClick(item)}

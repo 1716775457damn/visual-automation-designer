@@ -1,6 +1,6 @@
 [package]
 name = "visual-automation-designer"
-version = "0.5.23"
+version = "1.0.0"
 description = "Visual Automation Designer - A visual programming tool for screen automation"
 authors = ["Visual Automation Designer Team"]
 edition = "2021"
@@ -30,6 +30,18 @@ futures = "0.3"
 # Screen capture and input simulation
 screenshots = "0.8"
 enigo = "0.3"
+# Windows OCR API (Windows-only, conditionally compiled)
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Media_Ocr",
+    "Graphics_Imaging",
+    "Foundation",
+    "Storage_Streams",
+    "Foundation_Numerics",
+    "Globalization",
+    "implement",
+    "Data_Xml_Dom",
+] }
 # Logging
 log = "0.4"
 env_logger = "0.11"

@@ -2,18 +2,22 @@
  * BlockNode - 积木块节点渲染组件
  * 渲染单个积木块节点，支持选中、高亮状态
  * 使用 react-flow 的自定义节点接口
- * 
- * Validates: Requirements 2.2, 5.2
+ *
+ * 端口渲染基于端口系统（Phase A）：每个节点类型从 PortDefinitions
+ * 读取输入/输出端口信息，动态渲染手柄。
+ *
+ * Validates: Requirements 2.2, 5.2, Phase A
  */
 
 import { memo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
+import { getPortDefinitions, type PortSchema } from '../../types/port';
 import styles from './FlowEditor.module.css';
 
 // Block types
 export type BlockCategory = 'action' | 'control';
-export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text';
-export type ControlType = 'loop' | 'loop_infinite' | 'condition';
+export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text' | 'text_extract' | 'screenshot_assert';
+export type ControlType = 'loop' | 'loop_infinite' | 'condition' | 'text_check';
 
 export interface BlockNodeData {
   label: string;
@@ -40,6 +44,10 @@ function getBlockColor(blockType: string, blockCategory: string): string {
         return 'var(--color-block-wait, #9c27b0)';
       case 'input_text':
         return 'var(--color-block-action, #4caf50)';
+      case 'text_extract':
+        return 'var(--color-block-ocr, #795548)';
+      case 'screenshot_assert':
+        return 'var(--color-block-screenshot, #f44336)';
       default:
         return 'var(--color-block-action, #4caf50)';
     }
@@ -50,6 +58,8 @@ function getBlockColor(blockType: string, blockCategory: string): string {
         return 'var(--color-block-loop, #00bcd4)';
       case 'condition':
         return 'var(--color-block-condition, #e91e63)';
+      case 'text_check':
+        return 'var(--color-block-ocr-check, #795548)';
       default:
         return 'var(--color-block-control, #2196f3)';
     }
@@ -63,6 +73,8 @@ function getBlockIcon(blockType: string, blockCategory: string): string {
       case 'wait_image': return '🔍';
       case 'wait_time': return '⏱️';
       case 'input_text': return '⌨️';
+      case 'text_extract': return '👁️';
+      case 'screenshot_assert': return '📸';
       default: return '▶️';
     }
   } else {
@@ -70,6 +82,7 @@ function getBlockIcon(blockType: string, blockCategory: string): string {
       case 'loop':
       case 'loop_infinite': return '🔄';
       case 'condition': return '❓';
+      case 'text_check': return '🔤';
       default: return '🔀';
     }
   }
@@ -92,6 +105,18 @@ function getConfigSummary(blockType: string, blockCategory: string, config?: Rec
         return (config as { text?: string }).text
           ? `"${(config as { text?: string }).text}"`
           : null;
+      case 'text_extract':
+        return (config as { language?: string }).language
+          ? `语言: ${(config as { language?: string }).language}`
+          : null;
+      case 'screenshot_assert': {
+        const threshold = (config as { threshold?: number }).threshold;
+        const strict = (config as { strictMode?: boolean }).strictMode;
+        const parts: string[] = [];
+        if (threshold !== undefined) parts.push(`阈值: ${threshold}`);
+        if (strict) parts.push('严格模式');
+        return parts.length > 0 ? parts.join(', ') : '截图比对';
+      }
       default:
         return null;
     }
@@ -101,11 +126,32 @@ function getConfigSummary(blockType: string, blockCategory: string, config?: Rec
         return (config as { count?: number }).count
           ? `${(config as { count?: number }).count} 次`
           : null;
+      case 'text_check':
+        return (config as { keyword?: string }).keyword
+          ? `"${(config as { keyword?: string }).keyword}"`
+          : null;
       default:
         return null;
     }
   }
 }
+
+// ── Port type color mapping (Phase A) ─────────────────────────────
+
+const PORT_TYPE_COLORS: Record<string, string> = {
+  string: '#4caf50',
+  number: '#2196f3',
+  boolean: '#ff9800',
+  image_ref: '#e91e63',
+  coordinate: '#9c27b0',
+  any: '#607d8b',
+};
+
+function getPortColor(portType: string): string {
+  return PORT_TYPE_COLORS[portType] ?? '#607d8b';
+}
+
+// ── Existing helpers ───────────────────────────────────────────────
 
 function getFullDescription(blockType: string, label: string, config?: Record<string, unknown>): string {
   const lines: string[] = [label];
@@ -123,6 +169,17 @@ function getFullDescription(blockType: string, label: string, config?: Record<st
       lines.push(`等待: ${(config as { durationMs?: number }).durationMs || 1000}ms`);
     } else if (blockType === 'loop') {
       lines.push(`循环: ${(config as { count?: number }).count || 1} 次`);
+    } else if (blockType === 'text_extract') {
+      const lang = (config as { language?: string }).language;
+      lines.push(lang ? `OCR 语言: ${lang}` : 'OCR (全屏)');
+    } else if (blockType === 'screenshot_assert') {
+      const sc = config as { imageId?: string; threshold?: number; strictMode?: boolean; region?: { x: number; y: number; width: number; height: number } };
+      lines.push(`阈值: ${sc.threshold ?? 0.0}`);
+      lines.push(`严格模式: ${sc.strictMode ? '是' : '否'}`);
+      if (sc.region) { lines.push(`区域: (${sc.region.x},${sc.region.y}) ${sc.region.width}x${sc.region.height}`); }
+    } else if (blockType === 'text_check') {
+      const kw = (config as { keyword?: string }).keyword;
+      lines.push(kw ? `检测文字: "${kw}"` : '检测文字');
     }
   }
 
@@ -143,9 +200,15 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   const blockColor = getBlockColor(blockType, blockCategory);
   const configSummary = getConfigSummary(blockType, blockCategory, config);
 
+  // Port definitions (Phase A)
+  const portDefs = (() => {
+    const defs = getPortDefinitions(blockType);
+    return defs ? { inputs: defs.inputs, outputs: defs.outputs } : { inputs: [] as PortSchema[], outputs: [] as PortSchema[] };
+  })();
+
   const outputHintMessage = (() => {
-    if (blockType === 'condition') {
-      return '不支持默认出口；请使用“真/假”分支';
+    if (blockType === 'condition' || blockType === 'text_check') {
+      return '不支持默认出口；请使用"真/假"分支';
     }
 
     if (blockType === 'loop' || blockType === 'loop_infinite') {
@@ -183,14 +246,35 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       aria-label={ariaLabel}
       onKeyDown={handleKeyDown}
     >
-      {/* Input handle */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className={`block-node__handle block-node__handle--input ${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleTop}`}
-        onMouseEnter={() => setShowConnectionHint('input')}
-        onMouseLeave={() => setShowConnectionHint(null)}
-      />
+      {/* Input handles (动态渲染自端口定义, Phase A) */}
+      {portDefs.inputs.length > 0 ? (
+        portDefs.inputs.map((port, idx) => (
+          <Handle
+            key={port.name}
+            type="target"
+            position={Position.Top}
+            id={port.name}
+            className={`${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleTop}`}
+            style={{
+              left: `${((idx + 1) * 100) / (portDefs.inputs.length + 1)}%`,
+              backgroundColor: getPortColor(port.portType),
+              width: 12,
+              height: 12,
+              border: '2px solid #fff',
+            }}
+            title={`${port.label} (${port.portType})`}
+            onMouseEnter={() => setShowConnectionHint('input')}
+            onMouseLeave={() => setShowConnectionHint(null)}
+          />
+        ))
+      ) : (
+        <Handle
+          type="target"
+          position={Position.Top}
+          className={`${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleTop} ${styles.blockNodeHandleHidden}`}
+          style={{ opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+        />
+      )}
 
       {/* UX优化141: 连接提示 */}
       {showConnectionHint === 'input' && (
@@ -253,44 +337,43 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
         </div>
       )}
 
-      {/* Output handle */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className={`block-node__handle block-node__handle--output ${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleBottom}`}
-        onMouseEnter={() => setShowConnectionHint('output')}
-        onMouseLeave={() => setShowConnectionHint(null)}
-      />
+      {/* Output handles (动态渲染自端口定义, Phase A) */}
+      {portDefs.outputs.map((port, idx, arr) => {
+        // Special positioning for condition branch handles
+        let leftStyle = arr.length > 1 ? `${((idx + 1) * 100) / (arr.length + 1)}%` : '50%';
+        let handleHint: 'output' | 'condition-true' | 'condition-false' = 'output';
+        if (blockType === 'condition' || blockType === 'text_check') {
+          if (port.name === 'true') { leftStyle = '30%'; handleHint = 'condition-true'; }
+          if (port.name === 'false') { leftStyle = '70%'; handleHint = 'condition-false'; }
+        }
+        return (
+          <Handle
+            key={port.name}
+            type="source"
+            position={Position.Bottom}
+            id={port.name}
+            className={`${styles.blockNodeHandle} ${styles.reactFlowHandle} ${styles.reactFlowHandleBottom} ${
+              port.name === 'true' ? styles.blockNodeHandleTrue : ''
+            } ${port.name === 'false' ? styles.blockNodeHandleFalse : ''}`}
+            style={{
+              left: leftStyle,
+              backgroundColor: getPortColor(port.portType),
+              width: 12,
+              height: 12,
+              border: '2px solid #fff',
+            }}
+            title={`${port.label} (${port.portType})`}
+            onMouseEnter={() => setShowConnectionHint(handleHint)}
+            onMouseLeave={() => setShowConnectionHint(null)}
+          />
+        );
+      })}
 
       {/* UX优化141: 连接提示 */}
       {showConnectionHint === 'output' && (
         <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintOutput}`}>
           {outputHintMessage}
         </div>
-      )}
-
-      {/* Additional output handles for condition blocks */}
-      {blockType === 'condition' && (
-        <>
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="true"
-            style={{ left: '30%' }}
-            className={`${styles.blockNodeHandle} ${styles.blockNodeHandleTrue}`}
-            onMouseEnter={() => setShowConnectionHint('condition-true')}
-            onMouseLeave={() => setShowConnectionHint(null)}
-          />
-          <Handle
-            type="source"
-            position={Position.Bottom}
-            id="false"
-            style={{ left: '70%' }}
-            className={`${styles.blockNodeHandle} ${styles.blockNodeHandleFalse}`}
-            onMouseEnter={() => setShowConnectionHint('condition-false')}
-            onMouseLeave={() => setShowConnectionHint(null)}
-          />
-        </>
       )}
 
       {showConnectionHint === 'condition-true' && (

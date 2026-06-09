@@ -110,7 +110,7 @@ fn validate_control_block_structure(
         };
 
         match control {
-            ControlType::Condition => {
+            ControlType::Condition | ControlType::TextCheck => {
                 let outgoing = outgoing_by_source
                     .get(block_id)
                     .cloned()
@@ -124,7 +124,7 @@ fn validate_control_block_structure(
                     errors.push(
                         ValidationError::error(
                             "CONDITION_DEFAULT_OUTGOING_UNSUPPORTED",
-                            "Condition blocks only support true/false branch connections during execution. Remove default outgoing connections or move continuation into each branch.".to_string(),
+                            "Condition/TextCheck blocks only support true/false branch connections during execution. Remove default outgoing connections or move continuation into each branch.".to_string(),
                         )
                         .with_block(block_id.clone()),
                     );
@@ -132,6 +132,11 @@ fn validate_control_block_structure(
 
                 let branch_targets: HashSet<BlockId> = match &block.config {
                     BlockConfig::Condition {
+                        true_branch,
+                        false_branch,
+                        ..
+                    }
+                    | BlockConfig::TextCheck {
                         true_branch,
                         false_branch,
                         ..
@@ -151,7 +156,7 @@ fn validate_control_block_structure(
                             errors.push(
                                 ValidationError::error(
                                     "CONDITION_BRANCH_SUBCHAIN_UNSUPPORTED",
-                                    "Condition branches currently support only direct branch nodes. A branch node has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
+                                    "Condition/TextCheck branches currently support only direct branch nodes. A branch node has further outgoing connections that runtime execution cannot safely follow yet.".to_string(),
                                 )
                                 .with_block(branch_target.clone()),
                             );

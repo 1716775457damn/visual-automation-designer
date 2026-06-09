@@ -13,12 +13,12 @@ export type BlockId = string;
 /**
  * 动作积木块类型
  */
-export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text';
+export type ActionType = 'click' | 'wait_image' | 'wait_time' | 'input_text' | 'text_extract' | 'screenshot_assert';
 
 /**
  * 控制积木块类型
  */
-export type ControlType = 'loop' | 'loop_infinite' | 'condition';
+export type ControlType = 'loop' | 'loop_infinite' | 'condition' | 'text_check';
 
 /**
  * 积木块类型
@@ -81,6 +81,25 @@ export type BlockConfig =
       type: 'condition';
       imageId?: string;
       condition: ConditionOp;
+      trueBranch: BlockId[];
+      falseBranch: BlockId[];
+    }
+  | {
+      type: 'text_extract';
+      imageId?: string;
+      language?: string;
+    }
+  | {
+      type: 'screenshot_assert';
+      imageId?: string;
+      threshold?: number;
+      strictMode: boolean;
+      region?: { x: number; y: number; width: number; height: number };
+    }
+  | {
+      type: 'text_check';
+      imageId?: string;
+      keyword: string;
       trueBranch: BlockId[];
       falseBranch: BlockId[];
     };

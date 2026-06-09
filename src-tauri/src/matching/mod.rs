@@ -15,5 +15,5 @@ pub mod matcher;
 pub mod cache;
 
 // Re-export matching types
-pub use matcher::{ImageMatcher, MatchResult, MatchConfig, CachedImageMatcher, ConcurrentMatcher, MatchMetrics};
+pub use matcher::{ImageMatcher, MatchResult, MatchConfig, CachedImageMatcher, ConcurrentMatcher, MatchMetrics, DiffResult};
 pub use cache::{MatchCache, MatchCacheConfig, CacheKey, CachedMatch, CacheStats};
