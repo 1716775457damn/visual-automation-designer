@@ -3,7 +3,7 @@
  * 显示操作成功/失败/信息提示
  */
 
-import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, useEffect, ReactNode, useMemo } from 'react';
 import commonStyles from './common.module.css';
 
 export type ToastType = 'success' | 'error' | 'info' | 'warning';
@@ -98,7 +98,7 @@ interface ToastItemProps {
 }
 
 function ToastItem({ toast, onRemove }: ToastItemProps) {
-  const getIcon = () => {
+  const icon = useMemo(() => {
     switch (toast.type) {
       case 'success':
         return '✅';
@@ -110,11 +110,11 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
       default:
         return 'ℹ️';
     }
-  };
+  }, [toast.type]);
 
   return (
     <div className={`${commonStyles.toast} ${commonStyles[`toast${toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}`]}`} role="status" aria-live="polite">
-      <span className={commonStyles.toastIcon}>{getIcon()}</span>
+      <span className={commonStyles.toastIcon}>{icon}</span>
       <span className={commonStyles.toastMessage}>{toast.message}</span>
       <button
         className={commonStyles.toastClose}
