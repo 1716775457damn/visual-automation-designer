@@ -879,3 +879,221 @@ cursor: pointer;
   color: var(--color-text-secondary);
   font-family: var(--font-mono, monospace);
 }
+
+/* ============================================================================
+   Phase 8 — Apple-style shell refresh
+   ============================================================================ */
+
+.app {
+  position: relative;
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 9%, transparent) 0%, transparent 34%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 7%, transparent) 0%, transparent 28%),
+    linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 78%, var(--color-bg-primary) 22%) 0%, var(--color-bg-primary) 100%);
+}
+
+.app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), transparent 14%);
+  opacity: 0.45;
+}
+
+.theme-dark .app::before {
+  opacity: 0.08;
+}
+
+.app__content {
+  position: relative;
+  gap: 0;
+}
+
+.app__sidebar {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+}
+
+.app__sidebar--left,
+.app__sidebar--right {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.theme-dark .app__sidebar--left,
+.theme-dark .app__sidebar--right {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.app__sidebar--left {
+  width: 252px;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 92%, transparent);
+}
+
+.app__sidebar--right {
+  width: 332px;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 92%, transparent);
+}
+
+.app__main {
+  position: relative;
+  background: color-mix(in srgb, var(--color-bg-secondary) 76%, var(--color-bg-primary) 24%);
+}
+
+.app__canvas-container {
+  padding: 18px 18px 0;
+}
+
+.app__status {
+  position: relative;
+  padding: 10px 16px;
+  background: color-mix(in srgb, var(--glass-bg) 96%, transparent);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  box-shadow: 0 -10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.app__status-item--clean,
+.app__status-item--dirty,
+.app__status-item--stats,
+.app__status-item--flow,
+.app__status-item--loading,
+.app__status-item--error,
+.app__status-item--placement {
+  min-height: 30px;
+  border-color: color-mix(in srgb, var(--color-border-strong) 74%, transparent);
+  background: color-mix(in srgb, var(--color-bg-elevated) 92%, transparent);
+}
+
+.app__execution-log {
+  margin: 0 18px 18px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border-radius: 20px 20px 0 0;
+  background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.execution-log__resize-handle {
+  width: 100%;
+  height: 14px;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: color-mix(in srgb, var(--color-bg-secondary) 88%, transparent);
+  cursor: ns-resize;
+}
+
+.execution-log__resize-handle::before {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 4px;
+  margin: 4px auto 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-muted) 72%, transparent);
+}
+
+.config-placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 24px 20px;
+  background: transparent;
+}
+
+.config-placeholder__icon {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--color-primary-soft) 0%, var(--color-accent-soft) 100%);
+  box-shadow: var(--shadow-sm);
+  font-size: 28px;
+  opacity: 1;
+}
+
+.config-placeholder h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.config-placeholder p {
+  line-height: 1.6;
+}
+
+.config-placeholder__hint-box {
+  margin-top: 8px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  background: color-mix(in srgb, var(--color-bg-elevated) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.config-placeholder__action-btn {
+  min-height: 44px;
+  border-radius: 14px;
+  box-shadow: 0 14px 28px rgba(0, 122, 255, 0.16);
+}
+
+.config-placeholder__action-btn--secondary {
+  box-shadow: none;
+}
+
+.vscode-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 42px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 90%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  padding: 0 var(--spacing-sm);
+  user-select: none;
+  font-family: var(--font-body);
+}
+
+.vscode-panel-tab {
+  position: relative;
+  border-radius: 10px;
+}
+
+.vscode-panel-tab--active::after {
+  left: 10px;
+  right: 10px;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.vscode-panel-content,
+.vscode-problems-list {
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+}
+
+.vscode-problem-li:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 46%, transparent);
+}
+
+.app__validation-item {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+}
+
+.app__onboarding {
+  background: rgba(10, 14, 20, 0.28);
+  backdrop-filter: blur(20px);
+}
+
+.app__onboarding-card {
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  box-shadow: var(--shadow-lg);
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+}

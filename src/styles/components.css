@@ -8486,3 +8486,136 @@ line-height: 1.5;
     animation: none !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Phase 8 — Apple-style component refresh
+   -------------------------------------------------------------------------- */
+
+.flow-canvas {
+  background-color: color-mix(in srgb, var(--color-bg-secondary) 88%, var(--color-bg-primary) 12%);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--color-text-muted) 18%, transparent) 1px, transparent 1.6px);
+  background-size: 22px 22px;
+}
+
+.flow-toolbar {
+  gap: 10px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--glass-bg) 96%, transparent);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 90%, transparent);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.flow-toolbar__flow-name {
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+}
+
+.flow-toolbar__btn {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+}
+
+.flow-toolbar__btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary-soft) 45%, var(--color-bg-elevated) 55%);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border) 72%);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.flow-toolbar__btn--primary {
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: var(--color-text-on-primary);
+  border-color: transparent;
+  box-shadow: 0 12px 24px rgba(0, 122, 255, 0.24);
+}
+
+.flow-toolbar__btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--color-primary-hover) 0%, var(--color-primary-dark) 100%);
+  color: var(--color-text-on-primary);
+}
+
+.toolbox,
+.block-config,
+.execution-log {
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+}
+
+.toolbox__header,
+.block-config__header,
+.execution-log__header {
+  background: color-mix(in srgb, var(--color-bg-secondary) 92%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.toolbox__search-input,
+.block-config__input,
+.block-config__select,
+.block-config__textarea {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-bg-elevated) 98%, transparent);
+}
+
+.toolbox__search-input:focus,
+.block-config__input:focus,
+.block-config__select:focus,
+.block-config__textarea:focus {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border) 45%);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
+}
+
+.action-blocks__item,
+.control-blocks__item {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-bg-elevated) 98%, transparent);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.action-blocks__item:hover,
+.control-blocks__item:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 36%, var(--color-bg-elevated) 64%);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border) 72%);
+  transform: translateY(-1px);
+}
+
+.block-node {
+  border-width: 1px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-bg-elevated) 98%, transparent);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+}
+
+.block-node:hover {
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.block-node__header {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--color-bg-secondary) 86%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.block-node__type-badge {
+  background: color-mix(in srgb, var(--color-bg-elevated) 96%, transparent);
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  color: var(--color-text-secondary);
+}
+
+.execution-log__content {
+  background: color-mix(in srgb, var(--color-bg-elevated) 98%, transparent);
+}

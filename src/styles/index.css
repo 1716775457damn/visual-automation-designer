@@ -5,244 +5,35 @@
 @import './variables.css';
 @import './components.css';
 
-/* ============================================================================
-   2026 Premium Design Overlay
-   ============================================================================ */
-
-/* Glassmorphism Refinement for Layout Shell */
-.app {
-  background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.06), transparent 45%),
-              radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.05), transparent 45%),
-              var(--color-bg-secondary) !important;
-  position: relative;
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-bg-primary);
 }
 
-/* Glass panel enhancements */
-.app__sidebar--left,
-.app__sidebar--right,
-.flow-toolbar,
-.app__status,
-.app__execution-log {
-  background: var(--glass-bg) !important;
-  backdrop-filter: var(--glass-backdrop) !important;
-  -webkit-backdrop-filter: var(--glass-backdrop) !important;
-  border-color: var(--glass-border) !important;
-  box-shadow: var(--glass-shadow) !important;
-  z-index: 10;
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glass panel border lines */
-.app__sidebar--left {
-  border-right: 1px solid var(--glass-border) !important;
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
-.app__sidebar--right {
-  border-left: 1px solid var(--glass-border) !important;
+* {
+  box-sizing: border-box;
 }
 
-.flow-toolbar {
-  border-bottom: 1px solid var(--glass-border) !important;
-  padding: 12px var(--spacing-md) !important;
-}
-
-.app__status {
-  border-top: 1px solid var(--glass-border) !important;
-  padding: 12px 20px !important;
-}
-
-/* Premium Block Nodes styling overrides */
-.block-node {
-  border-radius: var(--radius-md) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-sm) !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  background: var(--color-bg-primary) !important;
-  overflow: hidden;
-}
-
-.block-node:hover {
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: var(--shadow-md) !important;
-  border-color: var(--color-border-strong) !important;
-}
-
-.block-node--selected {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px var(--color-primary-light), var(--shadow-md) !important;
-}
-
-.block-node--executing {
-  border-color: var(--color-status-running) !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25), var(--shadow-md) !important;
-}
-
-.block-node--action {
-  border-left: 4px solid var(--color-block-action) !important;
-  background: var(--gradient-block-action), var(--color-bg-primary) !important;
-}
-
-.block-node--control {
-  border-left: 4px solid var(--color-block-control) !important;
-  background: var(--gradient-block-control), var(--color-bg-primary) !important;
-}
-
-.block-node__header {
-  background: rgba(0, 0, 0, 0.02) !important;
-  padding: 10px 12px !important;
-  border-bottom: 1px solid var(--color-border) !important;
-}
-
-.block-node__label {
-  font-family: var(--font-display) !important;
-  font-weight: 600 !important;
-}
-
-/* Modern, Tactile Premium Buttons */
-.flow-toolbar__btn {
-  border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--color-border) !important;
-  font-weight: 600 !important;
-  font-family: var(--font-body) !important;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  background: var(--color-bg-primary) !important;
-  padding: 8px 14px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  color: var(--color-text-secondary) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-.flow-toolbar__btn:hover:not(:disabled) {
-  transform: translateY(-1.5px);
-  background: var(--color-bg-secondary) !important;
-  border-color: var(--color-border-strong) !important;
-  box-shadow: var(--shadow-md) !important;
-  color: var(--color-text-primary) !important;
-}
-
-.flow-toolbar__btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.flow-toolbar__btn--primary {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #2563eb 100%) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3) !important;
-}
-
-.flow-toolbar__btn--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4) !important;
-  color: white !important;
-}
-
-.flow-toolbar__btn--danger {
-  color: var(--color-danger) !important;
-  border-color: var(--color-danger) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.flow-toolbar__btn--danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border-color: var(--color-danger) !important;
-  color: var(--color-danger) !important;
-}
-
-/* Left Sidebar Toolbox enhancements */
-.toolbox__header {
-  background: rgba(0, 0, 0, 0.01) !important;
-  border-bottom: 1px solid var(--color-border) !important;
-}
-
-.toolbox__content {
-  padding: var(--spacing-md) !important;
-}
-
-.action-blocks__item,
-.control-blocks__item {
-  border-radius: var(--radius-md) !important;
-  border: 1px solid var(--color-border) !important;
-  background: var(--color-bg-primary) !important;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  padding: 12px 14px !important;
-  margin-bottom: var(--spacing-sm) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-.action-blocks__item:hover,
-.control-blocks__item:hover {
-  background: var(--color-primary-soft) !important;
-  border-color: var(--color-primary) !important;
-  transform: translateX(4px) translateY(-1px) !important;
-  box-shadow: var(--shadow-md) !important;
-}
-
-.action-blocks__label,
-.control-blocks__label {
-  font-family: var(--font-display) !important;
-  font-weight: 600 !important;
-}
-
-/* Config Panel placeholders and forms */
-.config-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  background: transparent !important;
-  height: 100%;
-}
-
-.config-placeholder__icon {
-  margin-bottom: 16px !important;
-  animation: premium-float 4s ease-in-out infinite;
-}
-
-@keyframes premium-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.config-placeholder__hint-box {
-  border-radius: var(--radius-lg) !important;
-  border: 1px solid var(--color-border) !important;
-  box-shadow: var(--shadow-sm) !important;
-}
-
-.block-config__input,
-.block-config__select,
-.block-config__textarea {
-  border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--color-border) !important;
-  transition: all 0.2s ease !important;
-}
-
-.block-config__input:focus,
-.block-config__select:focus,
-.block-config__textarea:focus {
-  border-color: var(--color-primary) !important;
-  box-shadow: 0 0 0 3px var(--color-primary-light) !important;
-}
-
-/* Execution Log Panel Overlay */
-.app__execution-log {
-  border-radius: 16px 16px 0 0 !important;
-  border: 1px solid var(--glass-border) !important;
-  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12) !important;
-}
-
-.execution-log__resize-handle {
-  border-bottom: 1px solid var(--color-border) !important;
-}
-
-/* Scrollbar polish */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -250,11 +41,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-strong);
-  border-radius: 99px;
+  background: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text-secondary) 60%, transparent);
 }
-

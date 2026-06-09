@@ -136,7 +136,6 @@ export function AppShell() {
       setActiveTab('problems');
       setLogCollapsed(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [errorsCount, warningsCount]);
 
   const buildQuickFlowName = useCallback(() => `快速流程_${new Date().toLocaleDateString()}`, []);

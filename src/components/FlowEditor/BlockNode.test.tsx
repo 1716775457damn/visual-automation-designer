@@ -64,15 +64,16 @@ describe('BlockNode connection hints', () => {
     expect(screen.getByText('等待时间为 0')).toBeInTheDocument();
   });
 
-  it('shows a default-exit warning for condition output handles', () => {
+  it('does not render a default output handle for condition nodes', () => {
     renderBlockNode({
       label: '条件判断',
       blockType: 'condition',
       blockCategory: 'control',
     });
 
-    fireEvent.mouseEnter(screen.getByTestId('handle-output'));
-    expect(screen.getByText('不支持默认出口；请使用“真/假”分支')).toBeInTheDocument();
+    expect(screen.queryByTestId('handle-output')).not.toBeInTheDocument();
+    expect(screen.getByTestId('handle-true')).toBeInTheDocument();
+    expect(screen.getByTestId('handle-false')).toBeInTheDocument();
   });
 
   it('shows branch-specific hints for condition handles', () => {
@@ -97,7 +98,7 @@ describe('BlockNode connection hints', () => {
       blockCategory: 'control',
     });
 
-    fireEvent.mouseEnter(screen.getByTestId('handle-output'));
+    fireEvent.mouseEnter(screen.getByTestId('handle-iterationIndex'));
     expect(screen.getByText('循环体暂仅支持 1 个直接子节点')).toBeInTheDocument();
   });
 

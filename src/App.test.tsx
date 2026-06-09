@@ -660,7 +660,8 @@ describe('App execution uses saved flow state', () => {
       expect(screen.getByTestId('validation-panel')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /错误.*条件判断暂不支持默认出口连接/ }));
+    fireEvent.click(screen.getByRole('button', { name: /问题/ }));
+    fireEvent.click(screen.getByTestId('validation-item-error-CONDITION_DEFAULT_OUTGOING_UNSUPPORTED-condition-1-0'));
 
     await waitFor(() => {
       expect(screen.getByTestId('flow-canvas-focused-node')).toHaveTextContent('condition-1');
@@ -700,8 +701,13 @@ describe('App execution uses saved flow state', () => {
     await waitFor(() => {
       expect(screen.getByTestId('validation-panel')).toBeInTheDocument();
       expect(screen.getByText('🩺 流程问题清单')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /错误.*条件判断暂不支持默认出口连接/ })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /警告.*等待时间不能为 0ms/ })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /问题/ }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('validation-item-error-CONDITION_DEFAULT_OUTGOING_UNSUPPORTED-condition-1-0')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-item-warning-ZERO_WAIT_TIME-wait-1-0')).toBeInTheDocument();
     });
   });
 });
