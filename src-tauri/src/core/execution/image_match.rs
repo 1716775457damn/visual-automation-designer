@@ -12,6 +12,18 @@ use crate::models::ImageId;
 
 use super::runner::{safe_execute, Executor};
 
+/// Compute the screen-global center coordinates from a capture offset and match result.
+fn match_center(
+    origin_x: &i32,
+    origin_y: &i32,
+    result: &crate::matching::MatchResult,
+) -> (u32, u32) {
+    (
+        (*origin_x as u32).saturating_add(result.center_x.unwrap_or(0)),
+        (*origin_y as u32).saturating_add(result.center_y.unwrap_or(0)),
+    )
+}
+
 impl Executor {
     /// Find an image on screen with caching and performance tracking
     ///
@@ -52,19 +64,13 @@ impl Executor {
             };
 
             if result.found {
-                let center = (
-                    (capture.origin_x as u32)
-                        .saturating_add(result.center_x.unwrap_or(0)),
-                    (capture.origin_y as u32)
-                        .saturating_add(result.center_y.unwrap_or(0)),
-                );
                 let duration = start.elapsed();
                 log::debug!(
                     "Image matching found on primary screen in {}ms for image_id: {}",
                     duration.as_millis(),
                     image_id
                 );
-                return Ok((true, center));
+                return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result)));
             }
         }
 
@@ -83,12 +89,6 @@ impl Executor {
                     };
 
                     if result.found {
-                        let center = (
-                            (capture.origin_x as u32)
-                                .saturating_add(result.center_x.unwrap_or(0)),
-                            (capture.origin_y as u32)
-                                .saturating_add(result.center_y.unwrap_or(0)),
-                        );
                         let duration = start.elapsed();
                         log::info!(
                             "Image matching found on secondary screen {} in {}ms for image_id: {}",
@@ -96,7 +96,7 @@ impl Executor {
                             duration.as_millis(),
                             image_id
                         );
-                        return Ok((true, center));
+                        return Ok((true, match_center(&capture.origin_x, &capture.origin_y, &result)));
                     }
                 }
             }

@@ -1563,4 +1563,447 @@ mod tests {
             assert_eq!(result.center_y, Some(50 + 10 / 2), "Center y should be 55");
         }
     }
+
+    // ========================================================================
+    // Comprehensive runtime-simulation tests
+    // ========================================================================
+
+    /// Helper: create a position-hash pixel value that is unique per (x,y) window.
+    /// Two different (x,y) pairs are extremely unlikely to produce the same value.
+    fn position_hash_pixel(x: u32, y: u32) -> u8 {
+        let h = (x.wrapping_mul(374761393) ^ y.wrapping_mul(668265263)).wrapping_add(1274126177);
+        let base = ((h >> 16) & 0xFF) as u8;
+        if base < 128 { 28 + base % 100 } else { 128 + base % 100 }
+    }
+
+    /// Helper: create an ImageBuffer with position-hash pattern
+    fn create_position_hash_image(w: u32, h: u32) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let mut img = ImageBuffer::new(w, h);
+        for y in 0..h {
+            for x in 0..w {
+                let v = position_hash_pixel(x, y);
+                img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+        img
+    }
+
+    #[test]
+    fn should_find_exact_match_at_ncc_one() {
+        // Prove the algorithm produces NCC ≈ 1.0 for exact sub-region matches.
+        // The threshold 0.99 guarantees any match found has NCC > 0.99 (≈ 1.0).
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.99));
+
+        let (w, h) = (100, 100);
+        let (nw, nh) = (20, 20);
+        let (origin_x, origin_y) = (37, 42);
+
+        let haystack_img = create_position_hash_image(w, h);
+
+        // Extract needle as exact sub-region
+        let mut needle_img = ImageBuffer::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_img.get_pixel(origin_x + x, origin_y + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Exact sub-region match should give NCC ≈ 1.0 (≥0.99), got confidence={:?}",
+            result.confidence
+        );
+
+        if let Some(conf) = result.confidence {
+            assert!(
+                conf >= 0.99,
+                "Exact match confidence should be ≥ 0.99, got {}",
+                conf
+            );
+        }
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(
+                result.center_x,
+                Some(expected_cx),
+                "Center x should be at {}",
+                expected_cx
+            );
+            assert_eq!(
+                result.center_y,
+                Some(expected_cy),
+                "Center y should be at {}",
+                expected_cy
+            );
+        }
+    }
+
+    #[test]
+    fn should_find_exact_match_after_png_roundtrip() {
+        // Simulate the exact runtime flow:
+        // 1. Create a "screenshot" and "template" image
+        // 2. Save both as PNG (via write_to)
+        // 3. Load both back (via load_from_memory — same as image::open for in-memory)
+        // 4. Run NCC matching at production threshold (0.9)
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.9));
+
+        let (w, h) = (200, 200);
+        let (nw, nh) = (30, 30);
+        let (origin_x, origin_y) = (55, 65);
+
+        let haystack_raw = create_position_hash_image(w, h);
+
+        // Extract needle sub-region
+        let mut needle_raw = ImageBuffer::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_raw.get_pixel(origin_x + x, origin_y + y);
+                needle_raw.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        // Round-trip haystack through PNG (simulates screen capture → save → load)
+        let mut haystack_png = Vec::new();
+        DynamicImage::ImageRgba8(haystack_raw.clone())
+            .write_to(&mut std::io::Cursor::new(&mut haystack_png), image::ImageFormat::Png)
+            .expect("Haystack PNG encode");
+        let haystack = image::load_from_memory(&haystack_png)
+            .expect("Haystack PNG decode");
+
+        // Round-trip needle through PNG (simulates paste → encode → save → load)
+        let mut needle_png = Vec::new();
+        DynamicImage::ImageRgba8(needle_raw.clone())
+            .write_to(&mut std::io::Cursor::new(&mut needle_png), image::ImageFormat::Png)
+            .expect("Needle PNG encode");
+        let needle = image::load_from_memory(&needle_png)
+            .expect("Needle PNG decode");
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "After PNG round-trip, exact sub-region should be found at threshold 0.9, got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(result.center_x, Some(expected_cx), "Center x mismatch after PNG round-trip");
+            assert_eq!(result.center_y, Some(expected_cy), "Center y mismatch after PNG round-trip");
+        }
+    }
+
+    #[test]
+    fn should_find_match_with_image_rgb8_variant() {
+        // Pasted images may be loaded as ImageRgb8 (no alpha channel).
+        // Screen captures are always ImageRgba8.
+        // Test that matching works when needle is ImageRgb8 and haystack is ImageRgba8.
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.9));
+
+        let (w, h) = (150, 150);
+        let (nw, nh) = (25, 25);
+        let (origin_x, origin_y) = (40, 50);
+
+        // Create haystack as ImageRgba8 (simulates screen capture)
+        let mut haystack_rgba = ImageBuffer::<Rgba<u8>, Vec<u8>>::new(w, h);
+        for y in 0..h {
+            for x in 0..w {
+                let v = position_hash_pixel(x, y);
+                haystack_rgba.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+
+        // Create needle as ImageRgb8 (simulates pasted image loaded without alpha)
+        use image::RgbImage;
+        let mut needle_rgb = RgbImage::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_rgba.get_pixel(origin_x + x, origin_y + y);
+                needle_rgb.put_pixel(x, y, image::Rgb([p[0], p[1], p[2]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_rgba);
+        let needle = DynamicImage::ImageRgb8(needle_rgb);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Needle (ImageRgb8) should be found in haystack (ImageRgba8) at threshold 0.9, got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(result.center_x, Some(expected_cx), "Center x with ImageRgb8 needle");
+            assert_eq!(result.center_y, Some(expected_cy), "Center y with ImageRgb8 needle");
+        }
+    }
+
+    #[test]
+    fn should_find_match_with_step2_large_needle() {
+        // Needles >50px trigger step=2 scanning + refinement.
+        // Test that this path correctly finds the best match.
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.9));
+
+        let (w, h) = (200, 200);
+        let (nw, nh) = (60, 60);  // >50 → triggers step=2
+        let (origin_x, origin_y) = (70, 80);
+
+        let haystack_img = create_position_hash_image(w, h);
+
+        let mut needle_img = ImageBuffer::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_img.get_pixel(origin_x + x, origin_y + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Large needle (60x60, step=2) should be found at threshold 0.9, got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(result.center_x, Some(expected_cx), "Center x with step=2 needle (expected {})", expected_cx);
+            assert_eq!(result.center_y, Some(expected_cy), "Center y with step=2 needle (expected {})", expected_cy);
+        }
+    }
+
+    #[test]
+    fn should_find_match_in_large_haystack_at_high_threshold() {
+        // Simulate a production-scale scenario: large screenshot with
+        // a small needle, matching at 0.95 threshold.
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.95));
+
+        let (w, h) = (400, 300);
+        let (nw, nh) = (32, 32);
+        let (origin_x, origin_y) = (120, 90);
+
+        let haystack_img = create_position_hash_image(w, h);
+
+        let mut needle_img = ImageBuffer::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_img.get_pixel(origin_x + x, origin_y + y);
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], p[3]]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Exact sub-region in large haystack (400x300) should be found at threshold 0.95, got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(result.center_x, Some(expected_cx), "Center x in large haystack");
+            assert_eq!(result.center_y, Some(expected_cy), "Center y in large haystack");
+        }
+    }
+
+    #[test]
+    fn should_find_match_with_alpha_needle_in_opaque_haystack() {
+        // Pasted PNGs may have alpha < 255 for some pixels.
+        // Screen captures always have alpha = 255.
+        // Test that matching still works when needle has varying alpha.
+        let matcher = ImageMatcher::with_config(MatchConfig::with_threshold(0.9));
+
+        let (w, h) = (100, 100);
+        let (nw, nh) = (15, 15);
+        let (origin_x, origin_y) = (30, 25);
+
+        let mut haystack_img = ImageBuffer::new(w, h);
+        for y in 0..h {
+            for x in 0..w {
+                let v = position_hash_pixel(x, y);
+                haystack_img.put_pixel(x, y, Rgba([v, v, v, 255]));
+            }
+        }
+
+        // Needle with varying alpha (some fully opaque, some semi-transparent)
+        let mut needle_img = ImageBuffer::new(nw, nh);
+        for y in 0..nh {
+            for x in 0..nw {
+                let p = haystack_img.get_pixel(origin_x + x, origin_y + y);
+                // Half the pixels get alpha = 128, others get alpha = 255
+                let alpha = if (x + y) % 2 == 0 { 255 } else { 128 };
+                needle_img.put_pixel(x, y, Rgba([p[0], p[1], p[2], alpha]));
+            }
+        }
+
+        let haystack = DynamicImage::ImageRgba8(haystack_img);
+        let needle = DynamicImage::ImageRgba8(needle_img);
+
+        let result = matcher.find_image(&haystack, &needle);
+
+        assert!(
+            result.found,
+            "Needle with alpha < 255 should still be found (NCC ignores alpha), got confidence={:?}",
+            result.confidence
+        );
+
+        if result.found {
+            let expected_cx = origin_x + nw / 2;
+            let expected_cy = origin_y + nh / 2;
+            assert_eq!(result.center_x, Some(expected_cx));
+            assert_eq!(result.center_y, Some(expected_cy));
+        }
+    }
+
+    #[test]
+    fn should_produce_same_ncc_as_old_centered_formula() {
+        // CRITICAL TEST: Compare the new fast NCC formula against the old
+        // centered formula on identical data. They MUST produce the same result.
+        //
+        // Old formula (reconstructed from pre-e63a9d7 code):
+        //   mean_h = Σh / n
+        //   numerator   = Σ((h - mean_h) * (n - mean_n))
+        //   denominator = √(Σ(h - mean_h)² · Σ(n - mean_n)²)
+        //
+        // New formula (current implementation):
+        //   numerator   = n·Σhn - Σh·Σn
+        //   denominator = √((n·Σh² - (Σh)²) · (n·Σn² - (Σn)²))
+        //
+        // Mathematically: NCC = old_numerator / old_denom = new_numerator / new_denom
+
+        fn old_centered_ncc(h_values: &[f64], n_values: &[f64]) -> f64 {
+            assert_eq!(h_values.len(), n_values.len());
+            let n = h_values.len() as f64;
+            if n == 0.0 { return 0.0; }
+
+            let sum_h: f64 = h_values.iter().sum();
+            let sum_n: f64 = n_values.iter().sum();
+            let mean_h = sum_h / n;
+            let mean_n = sum_n / n;
+
+            let mut numerator = 0.0;
+            let mut var_h = 0.0;
+            let mut var_n = 0.0;
+
+            for i in 0..h_values.len() {
+                let hc = h_values[i] - mean_h;
+                let nc = n_values[i] - mean_n;
+                numerator += hc * nc;
+                var_h += hc * hc;
+                var_n += nc * nc;
+            }
+
+            let denom = (var_h * var_n).sqrt();
+            if denom == 0.0 { 0.0 } else { numerator / denom }
+        }
+
+        fn fast_ncc(h_values: &[f64], n_values: &[f64]) -> f64 {
+            let n = h_values.len() as f64;
+            if n == 0.0 { return 0.0; }
+
+            let sum_h: f64 = h_values.iter().sum();
+            let sum_n: f64 = n_values.iter().sum();
+            let sum_h_sq: f64 = h_values.iter().map(|v| v * v).sum();
+            let sum_n_sq: f64 = n_values.iter().map(|v| v * v).sum();
+
+            // Fast formula (same as calculate_ncc_at)
+            let num = n * h_values.iter().zip(n_values.iter()).map(|(a, b)| a * b).sum::<f64>()
+                - sum_h * sum_n;
+            let denom_h = n * sum_h_sq - sum_h * sum_h;
+            let denom_n = n * sum_n_sq - sum_n * sum_n;
+
+            const EPS: f64 = 1e-12;
+            if denom_h <= EPS || denom_n <= EPS { return 0.0; }
+            let denom = (denom_h * denom_n).sqrt();
+            if denom == 0.0 { 0.0 } else { (num / denom).clamp(-1.0, 1.0) }
+        }
+
+        // Test 1: White noise data (high variance)
+        let h1: Vec<f64> = vec![128.0, 200.0, 50.0, 180.0, 30.0, 210.0, 90.0, 160.0, 75.0, 220.0];
+        let n1: Vec<f64> = vec![128.0, 200.0, 50.0, 180.0, 30.0, 210.0, 90.0, 160.0, 75.0, 220.0]; // exact match
+        let old1 = old_centered_ncc(&h1, &n1);
+        let new1 = fast_ncc(&h1, &n1);
+        assert!((old1 - new1).abs() < 1e-10,
+            "Exact match: old={}, new={}, diff={}", old1, new1, (old1 - new1).abs());
+        assert!((old1 - 1.0).abs() < 1e-10, "Exact match should give 1.0, got old={}", old1);
+
+        // Test 2: Different data (low correlation)
+        let h2: Vec<f64> = vec![10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0];
+        let n2: Vec<f64> = vec![100.0, 90.0, 80.0, 70.0, 60.0, 50.0, 40.0, 30.0, 20.0, 10.0];
+        let old2 = old_centered_ncc(&h2, &n2);
+        let new2 = fast_ncc(&h2, &n2);
+        assert!((old2 - new2).abs() < 1e-10,
+            "Anti-correlated: old={}, new={}, diff={}", old2, new2, (old2 - new2).abs());
+
+        // Test 3: Near-uniform data (low variance edge case)
+        let h3: Vec<f64> = vec![100.0, 101.0, 99.0, 100.0, 102.0, 98.0, 100.0, 101.0, 99.0, 100.0];
+        let n3: Vec<f64> = vec![100.0, 101.0, 99.0, 100.0, 102.0, 98.0, 100.0, 101.0, 99.0, 100.0];
+        let old3 = old_centered_ncc(&h3, &n3);
+        let new3 = fast_ncc(&h3, &n3);
+        assert!((old3 - new3).abs() < 1e-10,
+            "Near-uniform exact match: old={}, new={}, diff={}", old3, new3, (old3 - new3).abs());
+
+        // Test 4: All identical (zero variance → both should give 0.0)
+        let h4: Vec<f64> = vec![128.0; 10];
+        let n4: Vec<f64> = vec![128.0; 10];
+        let old4 = old_centered_ncc(&h4, &n4);
+        let new4 = fast_ncc(&h4, &n4);
+        assert_eq!(old4, 0.0, "Zero variance old should be 0.0");
+        assert_eq!(new4, 0.0, "Zero variance new should be 0.0");
+
+                        // Test 5: Large dataset (1000 values, random-like using hash-free approach)
+        let mut h5 = Vec::with_capacity(1000);
+        let mut n5 = Vec::with_capacity(1000);
+        for i in 0..1000u64 {
+            let r = ((i.wrapping_mul(374761393).wrapping_add(1274126177) >> 16) & 0xFF) as f64;
+            h5.push(r);
+            // n5 = h5 but with small noise (simulates near-match)
+            let noise = (((i.wrapping_mul(668265263).wrapping_add(1640531527) >> 16) & 0x07) as f64) - 2.0;
+            n5.push((r + noise).clamp(0.0, 255.0));
+        }
+        let old5 = old_centered_ncc(&h5, &n5);
+        let new5 = fast_ncc(&h5, &n5);
+        let diff5 = (old5 - new5).abs();
+        assert!(diff5 < 1e-8,
+            "Large dataset (1000 values): old={}, new={}, diff={}", old5, new5, diff5);
+
+        // Test 6: Realistic-sized window (30×30 = 900 values, same as typical needle)
+        let mut h6 = Vec::with_capacity(900);
+        let mut n6 = Vec::with_capacity(900);
+        for y in 0..30i32 {
+            for x in 0..30i32 {
+                let val = ((x * 7 + y * 13) % 200 + 28) as f64;
+                h6.push(val);
+                n6.push(val); // exact match
+            }
+        }
+        let old6 = old_centered_ncc(&h6, &n6);
+        let new6 = fast_ncc(&h6, &n6);
+        assert!((old6 - new6).abs() < 1e-10,
+            "30x30 exact match: old={}, new={}, diff={}", old6, new6, (old6 - new6).abs());
+        assert!((old6 - 1.0).abs() < 1e-10, "30x30 exact match should give 1.0, got old={}", old6);
+    }
 }
