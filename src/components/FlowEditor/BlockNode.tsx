@@ -9,7 +9,7 @@
  * Validates: Requirements 2.2, 5.2, Phase A
  */
 
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { getPortDefinitions, type PortSchema } from '../../types/port';
 import styles from './FlowEditor.module.css';
@@ -200,13 +200,13 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   const blockColor = getBlockColor(blockType, blockCategory);
   const configSummary = getConfigSummary(blockType, blockCategory, config);
 
-  // Port definitions (Phase A)
-  const portDefs = (() => {
+  // Port definitions (Phase A) — memoized to avoid recomputation on ReactFlow re-renders
+  const portDefs = useMemo(() => {
     const defs = getPortDefinitions(blockType);
     return defs ? { inputs: defs.inputs, outputs: defs.outputs } : { inputs: [] as PortSchema[], outputs: [] as PortSchema[] };
-  })();
+  }, [blockType]);
 
-  const outputHintMessage = (() => {
+  const outputHintMessage = useMemo(() => {
     if (blockType === 'condition' || blockType === 'text_check') {
       return '不支持默认出口；请使用"真/假"分支';
     }
@@ -216,7 +216,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
     }
 
     return '连接到下一节点';
-  })();
+  }, [blockType]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -230,6 +230,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
   };
 
   const categoryLabel = blockCategory === 'action' ? '动作' : '控制';
+  const categoryEyebrow = blockCategory === 'action' ? '执行单元' : '流程控制';
   const ariaLabel = `${categoryLabel}节点：${label}，类型：${blockType}`;
 
   return (
@@ -283,22 +284,37 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
         </div>
       )}
 
-      {/* UX优化62: 入口点标记 */}
-      {isEntryPoint && (
-        <div className={styles.blockNodeEntryBadge} title="起点">
-          🚀
-        </div>
-      )}
+      <div className={styles.blockNodeStatusStack}>
+        {/* UX优化62: 入口点标记 */}
+        {isEntryPoint && (
+          <div className={styles.blockNodeEntryBadge} title="起点">
+            起点
+          </div>
+        )}
 
-      {validationSeverity && (
-        <div
-          className={`${styles.blockNodeValidationBadge} ${styles[`blockNodeValidationBadge${validationSeverity.charAt(0).toUpperCase() + validationSeverity.slice(1)}`]}`}
-          title={validationMessage ?? ''}
-          aria-label={validationSeverity === 'error' ? '节点存在错误' : '节点存在警告'}
-        >
-          {validationSeverity === 'error' ? '错' : '警'}
-        </div>
-      )}
+        {validationSeverity && (
+          <div
+            className={`${styles.blockNodeValidationBadge} ${styles[`blockNodeValidationBadge${validationSeverity.charAt(0).toUpperCase() + validationSeverity.slice(1)}`]}`}
+            title={validationMessage ?? ''}
+            aria-label={validationSeverity === 'error' ? '节点存在错误' : '节点存在警告'}
+          >
+            {validationSeverity === 'error' ? '错误' : '警告'}
+          </div>
+        )}
+
+        {recent && (
+          <div className={styles.blockNodeRecentIndicator} aria-hidden="true">
+            新
+          </div>
+        )}
+
+        {executing && (
+          <div className={styles.blockNodeExecutingIndicator} aria-hidden="true">
+            <span className={styles.blockNodeStatusDot} />
+            运行中
+          </div>
+        )}
+      </div>
 
       {/* UX优化63: 禁用状态覆盖层 */}
       {disabled && (
@@ -309,12 +325,16 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
 
       <div className={styles.blockNodeHeader} style={{ backgroundColor: `${blockColor}20` }}>
         <span className={styles.blockNodeIcon}>{getBlockIcon(blockType, blockCategory)}</span>
-        <span className={styles.blockNodeLabel}>{label}</span>
+        <div className={styles.blockNodeTitleStack}>
+          <span className={styles.blockNodeEyebrow}>{categoryEyebrow}</span>
+          <span className={styles.blockNodeLabel}>{label}</span>
+        </div>
         <span className={styles.blockNodeTypeBadge}>{blockCategory === 'action' ? '动作' : '控制'}</span>
       </div>
 
       {configSummary && (
         <div className={styles.blockNodeContent}>
+          <span className={styles.blockNodeSummaryLabel}>配置摘要</span>
           <span className={styles.blockNodeConfig}>{configSummary}</span>
         </div>
       )}
@@ -385,19 +405,6 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       {showConnectionHint === 'condition-false' && (
         <div className={`${styles.blockNodeConnectionHint} ${styles.blockNodeConnectionHintOutput}`}>
           假分支：仅连接 1 个直接节点
-        </div>
-      )}
-
-      {/* Executing indicator */}
-      {executing && (
-        <div className={styles.blockNodeExecutingIndicator}>
-          <span className={styles.blockNodePulse} />
-        </div>
-      )}
-
-      {recent && (
-        <div className={styles.blockNodeRecentIndicator} aria-hidden="true">
-          ✨
         </div>
       )}
 
