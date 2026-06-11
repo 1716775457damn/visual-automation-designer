@@ -124,6 +124,8 @@ export function AppShell() {
     return window.localStorage.getItem(ONBOARDING_DISMISSED_KEY) !== 'true';
   });
   const viewportCenterRef = useRef<(() => { x: number; y: number } | null) | null>(null);
+  const nodesLengthRef = useRef(nodes.length);
+  nodesLengthRef.current = nodes.length;
   const [focusedValidationNodeId, setFocusedValidationNodeId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'output' | 'problems'>('output');
   const [frontendRuntimeEvents, setFrontendRuntimeEvents] = useState<InternalExecutionEvent[]>([]);
@@ -495,14 +497,14 @@ export function AppShell() {
     try {
       if (isDirty) await saveFlow();
       await validateBeforeExecution();
-      resetProgress(nodes.length);
+      resetProgress(nodesLengthRef.current);
       await tauriExecuteFlow(flow.id);
       showToast('info', '开始执行流程');
     } catch (err) {
       console.error('Failed to execute flow:', err);
       showToast('error', '执行失败');
     }
-  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, tauriExecuteFlow, showToast, validateBeforeExecution]);
+  }, [flow, isDirty, resetProgress, saveFlow, tauriExecuteFlow, showToast, validateBeforeExecution]);
 
   const handlePause = useCallback(() => {
     if (executionStatus === 'paused') resumeExecution();
@@ -520,13 +522,13 @@ export function AppShell() {
     try {
       if (isDirty) await saveFlow();
       await validateBeforeExecution();
-      resetProgress(nodes.length);
+      resetProgress(nodesLengthRef.current);
       await stepExecution(flow.id);
     } catch (err) {
       console.error('Failed to step execution:', err);
       showToast('error', '单步执行失败');
     }
-  }, [flow, isDirty, nodes.length, resetProgress, saveFlow, showToast, stepExecution, validateBeforeExecution]);
+  }, [flow, isDirty, resetProgress, saveFlow, showToast, stepExecution, validateBeforeExecution]);
 
   const handleSave = useCallback(async () => {
     if (!flow) { showToast('warning', '没有可保存的流程'); return; }
