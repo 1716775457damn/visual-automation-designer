@@ -362,29 +362,18 @@ export function AppShell() {
   }, [logHeight]);
 
   useEffect(() => {
-    const handleWindowError = (event: ErrorEvent) => {
-      if (!event.message) return;
+    const handleRuntimeError = (event: Event) => {
+      const detail = (event as CustomEvent<{ source: string; error: string }>).detail;
+      if (!detail?.error) return;
       setFrontendRuntimeEvents((current) => [
         ...current,
-        { type: 'block_error', source: 'frontend', error: event.message, timestamp: new Date() },
+        { type: 'block_error', source: 'frontend', error: detail.error, timestamp: new Date() },
       ]);
-      showToast('error', `[前端异常] ${event.message}`);
+      showToast('error', `[前端异常] ${detail.error}`);
     };
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const reason = event.reason;
-      const message = reason instanceof Error ? reason.message : String(reason);
-      if (!message) return;
-      setFrontendRuntimeEvents((current) => [
-        ...current,
-        { type: 'block_error', source: 'frontend', error: message, timestamp: new Date() },
-      ]);
-      showToast('error', `[前端异常] ${message}`);
-    };
-    window.addEventListener('error', handleWindowError);
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('vad:runtime-error', handleRuntimeError);
     return () => {
-      window.removeEventListener('error', handleWindowError);
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('vad:runtime-error', handleRuntimeError);
     };
   }, [showToast]);
 
