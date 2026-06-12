@@ -591,6 +591,12 @@ export function AppShell() {
 
   const cancelCreateFlow = useCallback(() => { setShowNewFlowDialog(false); setNewFlowName(''); }, []);
 
+  const handleShowHelp = useCallback(() => { setShowShortcutHelp(true); }, []);
+
+  const handleViewportCenterReady = useCallback((getCenter: () => { x: number; y: number } | null) => {
+    viewportCenterRef.current = getCenter;
+  }, []);
+
   const cancelUnsavedAction = useCallback(() => { setPendingUnsavedAction(null); }, []);
 
   const confirmUnsavedAction = useCallback(async () => {
@@ -703,7 +709,7 @@ export function AppShell() {
         onStep={handleStep}
         onNew={openNewFlowDialog}
         onToggleTheme={toggleTheme}
-        onHelp={() => setShowShortcutHelp(true)}
+        onHelp={handleShowHelp}
       />
 
       <div className="app__content">
@@ -731,7 +737,7 @@ export function AppShell() {
               onAddNode={handleAddNode}
               pendingPlacement={pendingPlacement}
               onPlacePendingNode={handlePlacePendingNode}
-              onViewportCenterReady={(getCenter) => { viewportCenterRef.current = getCenter; }}
+              onViewportCenterReady={handleViewportCenterReady}
               recentNodeId={recentNodeId}
               onNodeDelete={handleDeleteNode}
               onEdgeDelete={handleDeleteEdge}
