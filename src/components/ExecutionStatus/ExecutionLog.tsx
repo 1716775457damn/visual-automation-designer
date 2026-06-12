@@ -5,7 +5,7 @@
  * Validates: Requirements 5.2, 5.4
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { classifyDiagnosticKind, classifyDiagnosticSource, type DiagnosticEventSource } from './diagnostics';
 import styles from './ExecutionStatus.module.css';
 
@@ -97,24 +97,24 @@ export function ExecutionLog({
     });
   };
 
-  // UX优化82: 筛选日志
-  const filteredEntries = entries.filter((entry) => {
+  // UX优化82: 筛选日志 — memoized
+  const filteredEntries = useMemo(() => entries.filter((entry) => {
     if (filter !== 'all' && entry.type !== filter) return false;
     if (searchQuery && !entry.message.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
-  });
+  }), [entries, filter, searchQuery]);
 
   // Empty state
   const isEmpty = filteredEntries.length === 0;
 
-  // UX优化85: 统计各类型日志数量
-  const counts = {
-    all: entries.length,
-    info: entries.filter(e => e.type === 'info').length,
-    success: entries.filter(e => e.type === 'success').length,
-    error: entries.filter(e => e.type === 'error').length,
-    warning: entries.filter(e => e.type === 'warning').length,
-  };
+  // UX优化85: 统计各类型日志数量 — memoized, single-pass
+  const counts = useMemo(() => {
+    const result = { all: entries.length, info: 0, success: 0, error: 0, warning: 0 };
+    for (const e of entries) {
+      if (e.type in result) result[e.type as keyof typeof result]++;
+    }
+    return result;
+  }, [entries]);
 
   return (
     <div
