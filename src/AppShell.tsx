@@ -160,8 +160,9 @@ export function AppShell() {
     [executionLog, frontendRuntimeEvents]
   );
 
-  const logEntries = mergedExecutionLog.map((event, index) =>
-    executionEventToLogEntry(event, index)
+  const logEntries = useMemo(
+    () => mergedExecutionLog.map((event, index) => executionEventToLogEntry(event, index)),
+    [mergedExecutionLog]
   );
 
   const formattedFlowValidationErrors = useMemo(
