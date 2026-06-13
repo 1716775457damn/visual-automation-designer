@@ -6,7 +6,7 @@
  */
 
 import type { ThemeMode } from '../../hooks';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import styles from './FlowEditor.module.css';
 
 export interface FlowToolbarProps {
@@ -54,29 +54,34 @@ export const FlowToolbar = memo(function FlowToolbar({
   onToggleTheme,
   onHelp,
 }: FlowToolbarProps) {
-  // UX优化103: 主题图标
-  const getThemeIcon = () => {
+  const currentModeLabel = useMemo(
+    () => isExecuting ? (isPaused ? '已暂停，可继续或单步' : '正在执行自动化流程') : '准备编辑并运行流程',
+    [isExecuting, isPaused],
+  );
+
+  const themeIcon = useMemo(() => {
     switch (themeMode) {
       case 'light': return '☀️';
       case 'dark': return '🌙';
       case 'auto': return '🔄';
     }
-  };
+  }, [themeMode]);
 
-  const getThemeTitle = () => {
+  const themeTitle = useMemo(() => {
     switch (themeMode) {
       case 'light': return '当前: 亮色主题 (点击切换)';
       case 'dark': return '当前: 暗色主题 (点击切换)';
       case 'auto': return '当前: 跟随系统 (点击切换)';
     }
-  };
+  }, [themeMode]);
 
   return (
     <div className={styles.flowToolbar} data-testid="flow-toolbar" role="toolbar" aria-label="流程编辑工具栏">
       {/* Flow Name Display - UX优化1: 显示当前流程名称 */}
       {flowName && (
         <div className={styles.flowToolbarFlowName} title={flowName}>
-          📁 {flowName}
+          <span className={styles.flowToolbarFlowNameLabel}>当前流程</span>
+          <span className={styles.flowToolbarFlowNameValue}>📁 {flowName}</span>
         </div>
       )}
       
@@ -146,6 +151,10 @@ export const FlowToolbar = memo(function FlowToolbar({
 
       {/* Execution Control Group */}
       <div className="flow-toolbar__group flow-toolbar__group--execute" role="group" aria-label="执行控制">
+        <div className={styles.flowToolbarExecuteMeta} aria-live="polite">
+          <span className={styles.flowToolbarExecuteMetaLabel}>运行状态</span>
+          <span className={styles.flowToolbarExecuteMetaValue}>{currentModeLabel}</span>
+        </div>
         {!isExecuting ? (
           // Execute button (shown when not executing)
           <button
@@ -207,12 +216,12 @@ export const FlowToolbar = memo(function FlowToolbar({
         <button
           className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnTheme}`}
           onClick={onToggleTheme}
-          title={getThemeTitle()}
+          title={themeTitle}
           data-testid="btn-theme"
           type="button"
           aria-label="切换主题"
         >
-          {getThemeIcon()}
+          {themeIcon}
         </button>
         <button
           className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnHelp}`}
