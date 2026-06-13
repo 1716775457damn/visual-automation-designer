@@ -593,6 +593,44 @@ export function AppShell() {
 
   const handleShowHelp = useCallback(() => { setShowShortcutHelp(true); }, []);
 
+  // 性能优化: 避免每次渲染重新创建内联 style 对象和内联 onClick 箭头函数
+  const handleProblemsTabClick = useCallback(() => {
+    setActiveTab('problems');
+    setLogCollapsed(false);
+  }, []);
+
+  const handleOutputTabClick = useCallback(() => {
+    setActiveTab('output');
+    setLogCollapsed(false);
+  }, []);
+
+  const panelContentStyle = useMemo(
+    () => ({
+      height: logCollapsed ? 0 : Math.max(logHeight - 40, 80),
+      overflow: 'hidden' as const,
+      display: 'flex' as const,
+      flexDirection: 'column' as const,
+    }),
+    [logCollapsed, logHeight]
+  );
+
+  const problemsTabStyle = useMemo(
+    () => ({
+      display: activeTab === 'problems' ? ('block' as const) : ('none' as const),
+      height: '100%',
+      overflowY: 'auto' as const,
+    }),
+    [activeTab]
+  );
+
+  const outputTabStyle = useMemo(
+    () => ({
+      display: activeTab === 'output' ? ('block' as const) : ('none' as const),
+      height: '100%',
+    }),
+    [activeTab]
+  );
+
   const handleViewportCenterReady = useCallback((getCenter: () => { x: number; y: number } | null) => {
     viewportCenterRef.current = getCenter;
   }, []);
@@ -763,7 +801,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className={`vscode-panel-tab ${activeTab === 'problems' ? 'vscode-panel-tab--active' : ''}`}
-                  onClick={() => { setActiveTab('problems'); setLogCollapsed(false); }}
+                  onClick={handleProblemsTabClick}
                 >
                   问题
                   {validationItems.length > 0 && (
@@ -773,7 +811,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className={`vscode-panel-tab ${activeTab === 'output' ? 'vscode-panel-tab--active' : ''}`}
-                  onClick={() => { setActiveTab('output'); setLogCollapsed(false); }}
+                  onClick={handleOutputTabClick}
                 >
                   输出
                 </button>
@@ -804,18 +842,13 @@ export function AppShell() {
 
             <div
               className="vscode-panel-content"
-              style={{
-                height: logCollapsed ? 0 : Math.max(logHeight - 40, 80),
-                overflow: 'hidden',
-                display: 'flex',
-                flexDirection: 'column'
-              }}
+              style={panelContentStyle}
             >
               {/* Problems Tab Content (Always in DOM, visible when active) */}
               <div
                 className="config-placeholder__hint-box app__validation-panel vscode-problems-list"
                 data-testid="validation-panel"
-                style={{ display: activeTab === 'problems' ? 'block' : 'none', height: '100%', overflowY: 'auto' }}
+                style={problemsTabStyle}
               >
                 <p className="config-placeholder__hint-title">🩺 流程问题清单</p>
                 {validationItems.length === 0 ? (
@@ -841,7 +874,7 @@ export function AppShell() {
               </div>
 
               {/* Output Tab Content (Always in DOM, visible when active) */}
-              <div style={{ display: activeTab === 'output' ? 'block' : 'none', height: '100%' }}>
+              <div style={outputTabStyle}>
                 <ExecutionLog
                   entries={logEntries}
                   maxHeight={Math.max(logHeight - 40, 80)}
