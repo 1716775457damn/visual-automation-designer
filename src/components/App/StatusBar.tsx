@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import type { ValidationErrorResponse } from '../../tauri';
 import { ExecutionBar } from '../ExecutionStatus';
 import styles from './App.module.css';
@@ -41,13 +42,23 @@ export function StatusBar({
 }: StatusBarProps) {
   const saveStatusLabel = loading ? '同步中' : isDirty ? '未保存' : '已同步';
   const validationMessage = primaryFlowValidationError?.message ?? primaryFlowValidationWarning?.message ?? null;
-  const validationClassName = primaryFlowValidationError
-    ? 'app__status-item app__status-item--error'
-    : 'app__status-item app__status-item--warning';
-  const validationSummary = [
-    flowValidationErrors.length > 0 ? `错误 ${flowValidationErrors.length}` : null,
-    flowValidationWarnings.length > 0 ? `警告 ${flowValidationWarnings.length}` : null,
-  ].filter(Boolean).join(' · ');
+  const validationClassName = useMemo(
+    () => primaryFlowValidationError
+      ? 'app__status-item app__status-item--error'
+      : 'app__status-item app__status-item--warning',
+    [primaryFlowValidationError],
+  );
+  const validationSummary = useMemo(() => {
+    return [
+      flowValidationErrors.length > 0 ? `错误 ${flowValidationErrors.length}` : null,
+      flowValidationWarnings.length > 0 ? `警告 ${flowValidationWarnings.length}` : null,
+    ].filter(Boolean).join(' · ');
+  }, [flowValidationErrors.length, flowValidationWarnings.length]);
+
+  const handleValidationFocus = useCallback(() => {
+    const blockId = primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId;
+    if (blockId && onFocusNode) onFocusNode(blockId);
+  }, [primaryFlowValidationError?.blockId, primaryFlowValidationWarning?.blockId, onFocusNode]);
 
   return (
     <div className={styles.appStatus} role="status" aria-live="polite" aria-label="状态栏">
@@ -77,10 +88,7 @@ export function StatusBar({
           (primaryFlowValidationError?.blockId || primaryFlowValidationWarning?.blockId) && onFocusNode ? (
             <button
               className={`${validationClassName} ${styles.appStatusItemClickable}`}
-              onClick={() => {
-                const blockId = primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId;
-                if (blockId) onFocusNode(blockId);
-              }}
+              onClick={handleValidationFocus}
               title={`定位到积木块 ${primaryFlowValidationError?.blockId ?? primaryFlowValidationWarning?.blockId ?? ''}`}
               type="button"
             >
