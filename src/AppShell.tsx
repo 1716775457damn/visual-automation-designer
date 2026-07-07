@@ -593,6 +593,12 @@ export function AppShell() {
 
   const handleShowHelp = useCallback(() => { setShowShortcutHelp(true); }, []);
 
+  const handleFocusNode = useCallback((blockId: string) => {
+    setFocusedValidationNodeId(blockId);
+    setActiveTab('problems');
+    setLogCollapsed(false);
+  }, []);
+
   // 性能优化: 避免每次渲染重新创建内联 style 对象和内联 onClick 箭头函数
   const handleProblemsTabClick = useCallback(() => {
     setActiveTab('problems');
@@ -953,11 +959,7 @@ export function AppShell() {
         primaryFlowValidationError={primaryFlowValidationError}
         primaryFlowValidationWarning={primaryFlowValidationWarning}
         placementLabel={pendingPlacement?.type ?? null}
-        onFocusNode={(blockId) => {
-          setFocusedValidationNodeId(blockId);
-          setActiveTab('problems');
-          setLogCollapsed(false);
-        }}
+        onFocusNode={handleFocusNode}
       />
 
       <FlowListModal
