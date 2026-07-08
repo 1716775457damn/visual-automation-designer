@@ -88,6 +88,15 @@ function getBlockIcon(blockType: string, blockCategory: string): string {
   }
 }
 
+function handleBlockNodeKeyDown(e: React.KeyboardEvent<HTMLDivElement>): void {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).click();
+  } else if (e.key === 'Escape') {
+    e.currentTarget.blur();
+  }
+}
+
 function getConfigSummary(blockType: string, blockCategory: string, config?: Record<string, unknown>): string | null {
   if (!config) return null;
 
@@ -218,17 +227,6 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
     return '连接到下一节点';
   }, [blockType]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      // Let ReactFlow handle selection via click simulation
-      (e.currentTarget as HTMLElement).click();
-    } else if (e.key === 'Escape') {
-      e.currentTarget.blur();
-    }
-    // Delete/Backspace handled by FlowCanvas global hotkeys
-  };
-
   const categoryLabel = blockCategory === 'action' ? '动作' : '控制';
   const categoryEyebrow = blockCategory === 'action' ? '执行单元' : '流程控制';
   const ariaLabel = `${categoryLabel}节点：${label}，类型：${blockType}`;
@@ -245,7 +243,7 @@ function BlockNodeComponent({ data, selected }: NodeProps<BlockNodeData>) {
       role="button"
       tabIndex={0}
       aria-label={ariaLabel}
-      onKeyDown={handleKeyDown}
+      onKeyDown={handleBlockNodeKeyDown}
     >
       {/* Input handles (动态渲染自端口定义, Phase A) */}
       {portDefs.inputs.length > 0 ? (
