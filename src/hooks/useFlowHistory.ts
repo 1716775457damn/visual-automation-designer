@@ -19,6 +19,30 @@ import {
   synchronizeNodeSemantics,
 } from './flowHelpers';
 
+// ── Module-level history action factory ────────────────────────────
+
+type HistoryAction = (flowId: string) => Promise<Flow | null>;
+
+async function executeHistoryAction(
+  label: string,
+  action: HistoryAction,
+  flow: Flow | null,
+  applySnapshot: (result: Flow) => Promise<void>,
+): Promise<void> {
+  if (!flow) {
+    console.warn(`No flow to ${label.toLowerCase()}`);
+    return;
+  }
+  try {
+    const result = await action(flow.id);
+    if (result) {
+      await applySnapshot(result);
+    }
+  } catch (err) {
+    console.error(`${label} failed:`, err);
+  }
+}
+
 export interface UseFlowHistoryParams {
   flow: Flow | null;
   setFlow: React.Dispatch<React.SetStateAction<Flow | null>>;
@@ -85,39 +109,17 @@ export function useFlowHistory(params: UseFlowHistoryParams): UseFlowHistoryRetu
     [setFlow, setNodes, setEdges, setIsDirty, updateUndoRedoState]
   );
 
-  // ── undo ────────────────────────────────────────────────────────
+  // ── undo / redo (module-level factory to eliminate duplication) ──
 
-  const undo = useCallback(async (): Promise<void> => {
-    if (!flow) {
-      console.warn('No flow to undo');
-      return;
-    }
-    try {
-      const result = await tauriUndo(flow.id);
-      if (result) {
-        await applyFlowSnapshot(result);
-      }
-    } catch (err) {
-      console.error('Undo failed:', err);
-    }
-  }, [flow, applyFlowSnapshot]);
+  const undo = useCallback(
+    () => executeHistoryAction('Undo', tauriUndo, flow, applyFlowSnapshot),
+    [flow, applyFlowSnapshot],
+  );
 
-  // ── redo ────────────────────────────────────────────────────────
-
-  const redo = useCallback(async (): Promise<void> => {
-    if (!flow) {
-      console.warn('No flow to redo');
-      return;
-    }
-    try {
-      const result = await tauriRedo(flow.id);
-      if (result) {
-        await applyFlowSnapshot(result);
-      }
-    } catch (err) {
-      console.error('Redo failed:', err);
-    }
-  }, [flow, applyFlowSnapshot]);
+  const redo = useCallback(
+    () => executeHistoryAction('Redo', tauriRedo, flow, applyFlowSnapshot),
+    [flow, applyFlowSnapshot],
+  );
 
   // ── Auto-sync history state ─────────────────────────────────────
 
