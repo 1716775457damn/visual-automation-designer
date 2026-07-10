@@ -78,6 +78,13 @@ export function useExecution(): UseExecutionReturn {
   
   // Track if we've set up the event listener
   const listenerSetupRef = useRef(false);
+  // Track latest status for use in stable callbacks
+  const statusRef = useRef<ExecutionStatusType>('idle');
+
+  // Keep statusRef in sync with status state
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
 
   // Add event to log
   const addEvent = useCallback((event: InternalExecutionEvent) => {
@@ -289,7 +296,7 @@ export function useExecution(): UseExecutionReturn {
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Stop failed');
     }
-  }, [addEvent]);
+  }, []);
 
   // Get current execution status
   const getExecutionStatus = useCallback(async (): Promise<ExecutionStatusType> => {
@@ -300,9 +307,9 @@ export function useExecution(): UseExecutionReturn {
       return mappedStatus;
     } catch (error) {
       console.error('Failed to get execution status:', error);
-      return status;
+      return statusRef.current;
     }
-  }, [status]);
+  }, []);
 
   // Clear execution log
   const clearLog = useCallback(() => {
@@ -319,6 +326,7 @@ export function useExecution(): UseExecutionReturn {
 
   const setExecutionState = useCallback((nextStatus: ExecutionStatusType, nextErrorMessage: string | null = null) => {
     setStatus(nextStatus);
+    statusRef.current = nextStatus;
     setErrorMessage(nextErrorMessage);
     if (nextStatus !== 'running' && nextStatus !== 'paused') {
       setCurrentBlockId(null);
