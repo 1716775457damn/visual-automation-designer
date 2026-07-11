@@ -22,6 +22,7 @@ import type { Flow as TauriFlow, ValidationErrorResponse } from './tauri/flow';
 import { validateFlow } from './tauri/flow';
 import { formatValidationResponse } from './validation/formatValidationMessage';
 import { getConnectionGuardValidation } from './validation/connectionGuards';
+import { isInputElement } from './utils/dom';
 
 // ── Types & Constants ──────────────────────────────────────────────
 
@@ -35,13 +36,6 @@ const ONBOARDING_DISMISSED_KEY = 'vad-onboarding-dismissed';
 const LOG_COLLAPSED_STORAGE_KEY = 'vad-log-collapsed';
 const LOG_HEIGHT_STORAGE_KEY = 'vad-log-height';
 const DEFAULT_LOG_HEIGHT = 240;
-
-function isInputLikeElement(target: EventTarget | null): boolean {
-  const element = target as HTMLElement | null;
-  if (!element) return false;
-  const tagName = element.tagName;
-  return tagName === 'INPUT' || tagName === 'TEXTAREA' || element.isContentEditable;
-}
 
 // ── Component ──────────────────────────────────────────────────────
 
@@ -705,7 +699,7 @@ export function AppShell() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const target = e.target as HTMLElement;
-        if (!isInputLikeElement(target)) setShowShortcutHelp(prev => !prev);
+        if (!isInputElement(target)) setShowShortcutHelp(prev => !prev);
       }
       if (e.key === 'Escape') {
         setPendingPlacement(null);

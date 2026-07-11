@@ -4,6 +4,13 @@
 
 ---
 
+## [1.0.1] - 2026-07-11
+
+### Changed
+- 提取 `isInputElement` 到 `src/utils/dom.ts`，消除 `AppShell.tsx` 与 `useKeyboardShortcuts.ts` 中的重复代码
+
+---
+
 ## [1.0.0] - 2026-06-09
 
 ### 🎉 V1 正式发布 — 功能完备，生产就绪

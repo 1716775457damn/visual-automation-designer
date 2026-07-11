@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
+import { isInputElement } from '../utils/dom';
 
 /**
  * Check if the user is on macOS — cached at module level (platform never changes).
@@ -29,33 +30,6 @@ const isMacOS: boolean = (() => {
     return false;
   }
 })();
-
-/**
- * Check if a keyboard event is from an input element
- * (input, textarea, or contenteditable)
- */
-function isInputElement(event: KeyboardEvent): boolean {
-  const target = event.target as HTMLElement | null;
-  
-  // If no target or target is not an element, it's not an input
-  if (!target || !target.tagName) {
-    return false;
-  }
-  
-  const tagName = target.tagName.toLowerCase();
-  
-  // Check for input and textarea elements
-  if (tagName === 'input' || tagName === 'textarea') {
-    return true;
-  }
-  
-  // Check for contenteditable elements
-  if (target.isContentEditable) {
-    return true;
-  }
-  
-  return false;
-}
 
 /**
  * Check if the meta/ctrl key is pressed (platform-specific)
@@ -110,7 +84,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): void
     }
 
     // Don't trigger shortcuts when typing in input fields
-    if (isInputElement(event)) {
+    if (isInputElement(event.target)) {
       return;
     }
 
