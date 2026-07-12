@@ -59,19 +59,11 @@ export const FlowToolbar = memo(function FlowToolbar({
     [isExecuting, isPaused],
   );
 
-  const themeIcon = useMemo(() => {
+  const themeInfo = useMemo(() => {
     switch (themeMode) {
-      case 'light': return '☀️';
-      case 'dark': return '🌙';
-      case 'auto': return '🔄';
-    }
-  }, [themeMode]);
-
-  const themeTitle = useMemo(() => {
-    switch (themeMode) {
-      case 'light': return '当前: 亮色主题 (点击切换)';
-      case 'dark': return '当前: 暗色主题 (点击切换)';
-      case 'auto': return '当前: 跟随系统 (点击切换)';
+      case 'light': return { icon: '☀️', title: '当前: 亮色主题 (点击切换)' };
+      case 'dark': return { icon: '🌙', title: '当前: 暗色主题 (点击切换)' };
+      case 'auto': return { icon: '🔄', title: '当前: 跟随系统 (点击切换)' };
     }
   }, [themeMode]);
 
@@ -216,12 +208,12 @@ export const FlowToolbar = memo(function FlowToolbar({
         <button
           className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnTheme}`}
           onClick={onToggleTheme}
-          title={themeTitle}
+          title={themeInfo.title}
           data-testid="btn-theme"
           type="button"
           aria-label="切换主题"
         >
-          {themeIcon}
+          {themeInfo.icon}
         </button>
         <button
           className={`${styles.flowToolbarBtn} ${styles.flowToolbarBtnHelp}`}
