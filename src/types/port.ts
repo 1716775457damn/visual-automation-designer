@@ -84,29 +84,12 @@ export type PortValue =
 // ── 所有节点类型的端口定义 ────────────────────────────────
 
 /** 获取所有已知端口定义 */
-export function getAllPortDefinitions(): PortDefinitions[] {
-  return [
-    clickPorts(),
-    waitImagePorts(),
-    waitTimePorts(),
-    inputTextPorts(),
-    screenshotPorts(),
-    loopPorts(),
-    loopInfinitePorts(),
-    conditionPorts(),
-    textExtractPorts(),
-    textCheckPorts(),
-    screenshotAssertPorts(),
-  ];
-}
-
 /** 查找特定节点类型的端口定义 */
 export function getPortDefinitions(blockType: string): PortDefinitions | undefined {
-  return getAllPortDefinitions().find((p) => p.blockType === blockType);
+  return ALL_PORT_DEFINITIONS.find((p) => p.blockType === blockType);
 }
 
-function clickPorts(): PortDefinitions {
-  return {
+const CLICK_PORTS: PortDefinitions = {
     blockType: 'click',
     inputs: [
       {
@@ -146,10 +129,8 @@ function clickPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function waitImagePorts(): PortDefinitions {
-  return {
+const WAIT_IMAGE_PORTS: PortDefinitions = {
     blockType: 'wait_image',
     inputs: [
       {
@@ -197,10 +178,8 @@ function waitImagePorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function waitTimePorts(): PortDefinitions {
-  return {
+const WAIT_TIME_PORTS: PortDefinitions = {
     blockType: 'wait_time',
     inputs: [
       {
@@ -215,10 +194,8 @@ function waitTimePorts(): PortDefinitions {
     ],
     outputs: [],
   };
-}
 
-function inputTextPorts(): PortDefinitions {
-  return {
+const INPUT_TEXT_PORTS: PortDefinitions = {
     blockType: 'input_text',
     inputs: [
       {
@@ -250,10 +227,8 @@ function inputTextPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function screenshotPorts(): PortDefinitions {
-  return {
+const SCREENSHOT_PORTS: PortDefinitions = {
     blockType: 'screenshot',
     inputs: [
       {
@@ -284,10 +259,8 @@ function screenshotPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function loopPorts(): PortDefinitions {
-  return {
+const LOOP_PORTS: PortDefinitions = {
     blockType: 'loop',
     inputs: [
       {
@@ -310,10 +283,8 @@ function loopPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function loopInfinitePorts(): PortDefinitions {
-  return {
+const LOOP_INFINITE_PORTS: PortDefinitions = {
     blockType: 'loop_infinite',
     inputs: [],
     outputs: [
@@ -327,10 +298,8 @@ function loopInfinitePorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function textExtractPorts(): PortDefinitions {
-  return {
+const TEXT_EXTRACT_PORTS: PortDefinitions = {
     blockType: 'text_extract',
     inputs: [
       {
@@ -361,10 +330,8 @@ function textExtractPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function screenshotAssertPorts(): PortDefinitions {
-  return {
+const SCREENSHOT_ASSERT_PORTS: PortDefinitions = {
     blockType: 'screenshot_assert',
     inputs: [
       {
@@ -420,10 +387,8 @@ function screenshotAssertPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function textCheckPorts(): PortDefinitions {
-  return {
+const TEXT_CHECK_PORTS: PortDefinitions = {
     blockType: 'text_check',
     inputs: [
       {
@@ -462,10 +427,8 @@ function textCheckPorts(): PortDefinitions {
       },
     ],
   };
-}
 
-function conditionPorts(): PortDefinitions {
-  return {
+const CONDITION_PORTS: PortDefinitions = {
     blockType: 'condition',
     inputs: [
       {
@@ -505,4 +468,17 @@ function conditionPorts(): PortDefinitions {
       },
     ],
   };
-}
+
+const ALL_PORT_DEFINITIONS: PortDefinitions[] = [
+  CLICK_PORTS,
+  WAIT_IMAGE_PORTS,
+  WAIT_TIME_PORTS,
+  INPUT_TEXT_PORTS,
+  SCREENSHOT_PORTS,
+  LOOP_PORTS,
+  LOOP_INFINITE_PORTS,
+  TEXT_EXTRACT_PORTS,
+  SCREENSHOT_ASSERT_PORTS,
+  TEXT_CHECK_PORTS,
+  CONDITION_PORTS
+];
