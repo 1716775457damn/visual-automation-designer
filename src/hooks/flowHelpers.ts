@@ -103,10 +103,6 @@ function createPlaceholderImageId(): string {
   return '00000000-0000-0000-0000-000000000000';
 }
 
-function blockConfigToRecord(config: BlockConfig): Record<string, unknown> {
-  return config as Record<string, unknown>;
-}
-
 export function blockNodeToReactFlowNode(block: TauriBlockNode, isEntryPoint = false): Node<BlockNodeData> {
   const label = getNodeLabel(block.blockType);
   const blockTypeStr = getBlockTypeString(block.blockType);
@@ -120,7 +116,7 @@ export function blockNodeToReactFlowNode(block: TauriBlockNode, isEntryPoint = f
       label,
       blockType: blockTypeStr as never,
       blockCategory,
-      config: blockConfigToRecord(block.config),
+      config: block.config as Record<string, unknown>,
       isEntryPoint,
       executing: false,
     },

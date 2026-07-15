@@ -17,19 +17,11 @@ import {
   runtimeSelfCheck as tauriRuntimeSelfCheck,
   type ExecutionEvent,
   type RuntimeCheckResponse,
-  type ExecutionStatusType as TauriExecutionStatusType,
   type ExecutionStatusResponse,
 } from '../tauri/execution';
 
 // Re-export ExecutionStatusType for compatibility
 export type ExecutionStatusType = 'idle' | 'running' | 'paused' | 'completed' | 'stopped' | 'validation_blocked' | 'error';
-
-/**
- * Map Tauri execution status to local status type
- */
-function mapStatus(status: TauriExecutionStatusType): ExecutionStatusType {
-  return status;
-}
 
 /**
  * Internal execution event for log tracking
@@ -302,9 +294,8 @@ export function useExecution(): UseExecutionReturn {
   const getExecutionStatus = useCallback(async (): Promise<ExecutionStatusType> => {
     try {
       const response: ExecutionStatusResponse = await tauriGetExecutionStatus();
-      const mappedStatus = mapStatus(response.status);
-      setStatus(mappedStatus);
-      return mappedStatus;
+      setStatus(response.status);
+      return response.status;
     } catch (error) {
       console.error('Failed to get execution status:', error);
       return statusRef.current;
